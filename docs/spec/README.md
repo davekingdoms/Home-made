@@ -5,5 +5,6 @@ Una specifica per modulo, da leggere prima di scrivere codice. Descrivono compor
 | File | Contenuto | Stato |
 |---|---|---|
 | [`stile.md`](stile.md) | Colori, carattere, spaziature, componenti, casa dell'hub e cielo, corrispondenza con il tema Flutter | Pronta |
+| [`categorie.md`](categorie.md) | Categorie iniziali, gestione delle categorie condivise e personali, righe e quote, flag 730, Differenza di cassa, salvadanai | Pronta |
 
 In arrivo: schema dati, collegamento bancario e sincronizzazione, accesso e primo avvio, hub, riepilogo e saldi, movimenti, dettaglio della transazione, inserimento manuale, analisi, conti, impostazioni.
