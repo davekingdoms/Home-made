@@ -12,6 +12,8 @@ key.properties
 .env
 .env.*
 !.env.example
+env.*.json
+!env.example.json
 google-services.json
 GoogleService-Info.plist
 service-account*.json
@@ -77,6 +79,7 @@ venv/
 *.iml
 .vscode/*
 !.vscode/extensions.json
+.claude/settings.local.json
 .DS_Store
 Thumbs.db
 *.log
