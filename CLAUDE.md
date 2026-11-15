@@ -14,14 +14,22 @@ App Flutter per le finanze di una casa con uno o più membri: movimenti importat
    - Le risposte delle banche nei test si **ricostruiscono** sul formato (stessi campi, valori inventati), non si copiano da risposte vere.
    - Se un compito richiede dati reali, fermati e chiedi. I file locali con dati reali stanno in `private/`, che è ignorata da git.
    - Se un dato personale finisce in un commit, non basta un commit che lo cancella: va riscritta la cronologia prima del push.
-3. **Mai segreti nel codice.** Chiavi PEM, chiave `service_role`, password del database, keystore e `google-services.json` stanno nel password manager e nei secret della CI o delle Edge Functions. Nell'app solo l'URL e la chiave `anon` di Supabase.
+3. **Nessun segreto nel repository, né in chiaro né cifrato.** La fonte unica è il password manager.
+   - **Sul PC** i valori stanno in `private/` (ignorata da git) e arrivano all'app con `--dart-define-from-file`; il modello delle chiavi è `app/env.example.json`, con soli segnaposto.
+   - **In CI** stanno nei secrets degli environment `dev` e `prod` di GitHub Actions; i file si salvano come base64, si ricostruiscono nel job e non si caricano mai come artifact.
+   - **Lato server** stanno nei secrets delle Edge Functions e in Supabase Vault.
+   - **Nell'app** solo valori pubblici per natura (URL e chiave publishable di Supabase, client ID OAuth), comunque fuori dal repository: nel codice si scrivono solo i nomi delle variabili.
+   - **Mai**, in nessun file del repository né nell'app: chiave `service_role`, password del database, chiavi private, keystore.
+   - **In caso di fuga:** rotazione immediata del segreto; cancellarlo dal repository non basta.
 4. **Importi in centesimi interi**, mai numeri decimali in virgola mobile.
 5. **Niente logica condivisa nell'app.** Le regole che valgono per più membri (quote, conguaglio, visibilità) stanno in Postgres (schema, RLS, funzioni SQL) e nelle Edge Functions.
 6. **Ogni tabella nuova** arriva con le sue policy RLS e i suoi test pgTAP.
-7. **Codice in inglese, testi dell'interfaccia in italiano.**
+7. **Codice in inglese, testi dell'interfaccia in italiano.** Unica eccezione: i campi di `AppColors` e i token di `lib/theme/tokens.dart` tengono i nomi italiani di `docs/spec/stile.md` (`testoTerziario`, `banda`, `suPrimarioTenue`, `avviso`, `credito`, `debito`, `nastroGiallo`, `nastroNero`).
 8. **Stile solo da `docs/spec/stile.md`:** nelle schermate si usano i ruoli colore, mai codici esadecimali. Dopo ogni modifica ai token: `python3 tools/contrasti/contrasti.py docs/spec/stile.md`.
 9. **Branch e pull request** (GitHub Flow, sezione sotto). `main` è sempre rilasciabile; il merge solo con la CI verde.
 10. **CI:** nei log solo esiti (riuscito, fallito), mai dati; nessun dump o dato come artifact dei workflow.
+11. **Non leggere né copiare il contenuto di `private/`.** I file che contiene li legge solo la build; se serve sapere cosa c'è dentro, chiedi. Claude Code si avvia dalla radice del repository, dove vale `.claude/settings.json`, che nega lettura e modifica di `private/`.
+12. **Analisi con `very_good_analysis`:** `fvm flutter analyze` deve dare zero problemi prima di ogni commit, e il codice deve essere formattato (`fvm dart format .`). Nessuna regola si disattiva senza chiedere.
 
 ## Branch e pull request
 
@@ -46,6 +54,50 @@ Ogni commit segue [Conventional Commits](https://www.conventionalcommits.org/) e
 - Commit piccoli e coerenti: uno per passo logico, non uno per file.
 - Nessun dato personale nei messaggi (regola 2).
 
+## Struttura
+
+| Cartella | Contenuto |
+|---|---|
+| `app/lib/core/config/` | Configurazione letta da `--dart-define-from-file` (`AppConfig`) |
+| `app/lib/core/router/` | Router (go_router) e catalogo delle schermate e dei fogli |
+| `app/lib/theme/` | Token dei colori, `AppColors`, scala tipografica, tema chiaro e scuro |
+| `app/lib/design/` | Componenti condivisi tra le schermate (oggi il segnaposto) |
+| `app/lib/features/auth/` | Sblocco, accesso, primo accesso (A1–A3) |
+| `app/lib/features/household/` | Crea o entra in una casa, inviti (A7–A10) |
+| `app/lib/features/hub/` | Hub (B1) |
+| `app/lib/features/finance/` | Sezione Finanze: `summary`, `transactions`, `manual_entry`, `analytics`, `accounts` |
+| `app/lib/features/settings/` | Impostazioni (I1–I10) |
+| `app/lib/features/dev/` | Indice delle schermate, temporaneo |
+| `app/test/` | Test dell'app |
+| `supabase/` | Configurazione locale di Supabase; migrazioni, test pgTAP ed Edge Functions in arrivo |
+
+Rotte, livelli e tasto indietro: `docs/spec/navigazione.md`. Ogni schermata nuova si aggiunge prima al catalogo (`app/lib/core/router/screen_catalog.dart`).
+
+L'interfaccia Material si importa da `package:material_ui/material_ui.dart`, non da `package:flutter/material.dart` (deprecato). Flutter e Dart si usano sempre tramite fvm: la versione è fissata in `.fvmrc`.
+
 ## Comandi
 
-Da aggiungere con lo scheletro dell'app: avvio, test, reset del database locale.
+In PowerShell. Da `app/`:
+
+```powershell
+fvm flutter pub get                       # dipendenze
+fvm dart run build_runner build -d        # generazione del codice (*.g.dart, *.freezed.dart)
+fvm flutter analyze                       # analisi: zero problemi
+fvm dart format .                         # formattazione
+fvm flutter test                          # test
+fvm flutter run --dart-define-from-file=../private/env.dev.json                   # avvio sul telefono
+fvm flutter build apk --release --dart-define-from-file=../private/env.dev.json   # build della release firmata
+fvm flutter install --release             # installazione della release sul telefono
+```
+
+La build release richiede `private/key.properties` e il keystore; le build debug no.
+
+Dalla radice del repository:
+
+```powershell
+supabase start                            # avvia Supabase in locale (serve Docker)
+supabase db reset                         # ricrea il database locale dalle migrazioni
+supabase test db                          # test pgTAP
+supabase stop                             # ferma Supabase
+python3 tools/contrasti/contrasti.py docs/spec/stile.md   # controllo dei contrasti
+```

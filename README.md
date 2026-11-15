@@ -2,7 +2,7 @@
 
 App per le finanze di casa: importa i movimenti dalle banche, li classifica, divide le spese tra i membri della casa (da uno a N) e calcola il conguaglio. In seguito: scontrini e dispensa.
 
-**Stato:** in progettazione. Il codice arriva con le prime iterazioni.
+**Stato:** in sviluppo. C'è lo scheletro dell'app; le funzionalità arrivano con le prossime iterazioni.
 
 ## Stack
 
@@ -12,8 +12,8 @@ Flutter (Android, telefono e tablet) · Supabase (Postgres, accesso con Google, 
 
 | Cartella | Contenuto |
 |---|---|
-| `app/` | App Flutter (in arrivo) |
-| `supabase/` | Migrazioni, test pgTAP, Edge Functions (in arrivo) |
+| `app/` | App Flutter: scheletro installabile con tema, navigazione e schermate segnaposto |
+| `supabase/` | Configurazione locale di Supabase; migrazioni, test pgTAP ed Edge Functions in arrivo |
 | `infra/backup/` | Backup notturno del database |
 | `infra/pages/` | Pagine per gli App Link e il ritorno dal collegamento bancario |
 | `docs/spec/` | Specifiche tecniche, da leggere prima di scrivere codice |
