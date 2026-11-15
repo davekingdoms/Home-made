@@ -52,7 +52,7 @@ supabase/.env
 .pub-cache/
 .pub/
 build/
-.fvm/flutter_sdk
+.fvm/
 # Contiene il percorso dell'SDK, quindi il nome utente del PC
 local.properties
 **/android/.gradle/
