@@ -198,6 +198,10 @@ void main() {
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
       expect(inSheet(find.text('F1 · Menu "+"')), findsOneWidget);
+      expect(
+        inSheet(find.text('F2 · Nuovo movimento · Giroconto o prelievo')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('F2 · Nuovo movimento · Entrata'));
       await tester.pumpAndSettle();
