@@ -1,10 +1,29 @@
 import 'package:material_ui/material_ui.dart';
 
+/// Family name of Google Sans Flex, as declared in `pubspec.yaml`.
+const appFontFamily = 'GoogleSansFlex';
+
+/// [style] in [weight]. Google Sans Flex is a variable font: the weight goes
+/// both in `fontWeight` and on the `wght` axis (section 3 of
+/// `docs/spec/stile.md`).
+TextStyle withWeight(TextStyle style, FontWeight weight) => style.copyWith(
+  fontWeight: weight,
+  fontVariations: [FontVariation('wght', weight.value.toDouble())],
+);
+
 TextStyle _style(double size, double lineHeight, FontWeight weight) =>
-    TextStyle(fontSize: size, height: lineHeight / size, fontWeight: weight);
+    withWeight(
+      TextStyle(
+        fontFamily: appFontFamily,
+        fontSize: size,
+        height: lineHeight / size,
+        letterSpacing: 0,
+      ),
+      weight,
+    );
 
 /// Type scale from section 3 of `docs/spec/stile.md` (size/line height in dp,
-/// weight), on the platform default font. Google Sans Flex arrives later.
+/// weight), in Google Sans Flex.
 final TextTheme appTextTheme = TextTheme(
   displaySmall: _style(40, 48, FontWeight.w500),
   headlineLarge: _style(32, 40, FontWeight.w500),
@@ -20,3 +39,13 @@ final TextTheme appTextTheme = TextTheme(
   labelMedium: _style(12, 16, FontWeight.w500),
   labelSmall: _style(11, 16, FontWeight.w600),
 );
+
+/// Styles of the amounts: always tabular figures (section 3).
+extension AmountTextStyle on TextStyle {
+  /// This style for an amount, with tabular figures.
+  TextStyle get amount =>
+      copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+
+  /// This style for an amount in a list: tabular figures, weight 600.
+  TextStyle get listAmount => withWeight(amount, FontWeight.w600);
+}

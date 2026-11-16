@@ -2,19 +2,27 @@ import 'dart:async';
 
 import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
+import 'package:homemade/design/fade_through_stack.dart';
 import 'package:homemade/features/finance/accounts/accounts_routes.dart';
 import 'package:homemade/features/finance/analytics/analytics_routes.dart';
 import 'package:homemade/features/finance/manual_entry/manual_entry_routes.dart';
 import 'package:homemade/features/finance/summary/summary_routes.dart';
 import 'package:homemade/features/finance/transactions/transactions_routes.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// The Finance section: four tabs, each with its own navigation stack.
+/// The Finance section: four tabs, each with its own navigation stack, that
+/// "fade through" one another.
 RouteBase financeRoute(GlobalKey<NavigatorState> rootKey) =>
-    StatefulShellRoute.indexedStack(
+    StatefulShellRoute(
       parentNavigatorKey: rootKey,
       builder: (context, state, navigationShell) =>
           FinanceShell(navigationShell: navigationShell),
+      navigatorContainerBuilder: (context, navigationShell, children) =>
+          FadeThroughStack(
+            currentIndex: navigationShell.currentIndex,
+            children: children,
+          ),
       branches: [
         summaryBranch(rootKey),
         transactionsBranch(rootKey),
@@ -51,7 +59,7 @@ class FinanceShell extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               onPressed: () => context.go(screenByCode('B1').location!),
-              icon: const Icon(Icons.chevron_left_rounded),
+              icon: const Icon(Symbols.chevron_left_rounded),
               label: const Text('Finanze'),
             ),
           ),
@@ -61,7 +69,7 @@ class FinanceShell extends StatelessWidget {
             ? FloatingActionButton(
                 tooltip: 'Aggiungi',
                 onPressed: () => unawaited(showManualEntryMenu(context)),
-                child: const Icon(Icons.add_rounded),
+                child: const Icon(Symbols.add_rounded),
               )
             : null,
         bottomNavigationBar: NavigationBar(
@@ -73,23 +81,23 @@ class FinanceShell extends StatelessWidget {
           ),
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard_rounded),
+              icon: Icon(Symbols.dashboard_rounded),
+              selectedIcon: Icon(Symbols.dashboard_rounded, fill: 1),
               label: 'Riepilogo',
             ),
             NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long_rounded),
+              icon: Icon(Symbols.receipt_long_rounded),
+              selectedIcon: Icon(Symbols.receipt_long_rounded, fill: 1),
               label: 'Movimenti',
             ),
             NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights_rounded),
+              icon: Icon(Symbols.insights_rounded),
+              selectedIcon: Icon(Symbols.insights_rounded, fill: 1),
               label: 'Analisi',
             ),
             NavigationDestination(
-              icon: Icon(Icons.account_balance_outlined),
-              selectedIcon: Icon(Icons.account_balance_rounded),
+              icon: Icon(Symbols.account_balance_rounded),
+              selectedIcon: Icon(Symbols.account_balance_rounded, fill: 1),
               label: 'Conti',
             ),
           ],
