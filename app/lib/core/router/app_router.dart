@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:homemade/features/auth/auth_routes.dart';
+import 'package:homemade/features/dev/component_catalog_screen.dart';
 import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/features/finance/finance_shell.dart';
 import 'package:homemade/features/finance/manual_entry/manual_entry_routes.dart';
@@ -31,6 +32,7 @@ GoRouter buildAppRouter({String initialLocation = '/'}) {
           manualEntryRoute(rootKey),
           settingsRoute(),
           screenIndexRoute(),
+          componentCatalogRoute(),
         ],
       ),
     ],
