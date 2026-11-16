@@ -59,19 +59,23 @@ Ogni commit segue [Conventional Commits](https://www.conventionalcommits.org/) e
 | Cartella | Contenuto |
 |---|---|
 | `app/lib/core/config/` | Configurazione letta da `--dart-define-from-file` (`AppConfig`) |
+| `app/lib/core/money/` | `Money`: importo in centesimi interi e valuta ISO 4217, formato italiano |
 | `app/lib/core/router/` | Router (go_router) e catalogo delle schermate e dei fogli |
-| `app/lib/theme/` | Token dei colori, `AppColors`, scala tipografica, tema chiaro e scuro |
-| `app/lib/design/` | Componenti condivisi tra le schermate (oggi il segnaposto) |
+| `app/lib/theme/` | Sistema grafico da `docs/spec/stile.md`: token delle sei combinazioni (`tokens.dart`), `AppColors`, `CasaColors` (colori della casa, calcolati in OKLab), scala tipografica in Google Sans Flex, spaziature, raggi e dimensioni (`dimens.dart`), durate e transizioni, temi dei componenti Material, varianti dei bottoni (`AppButtonStyles`), palette e tema scelti (`appearance.dart`) |
+| `app/lib/design/` | Componenti fatti a mano, condivisi tra le schermate: biscotto, banda diagonale, card in evidenza, avviso, card di sezione dell'hub, tessere, riga movimento, barra dei Saldi, tastierino, "fade through" tra le schede; più il segnaposto. Ricevono valori già pronti: niente logica di business |
+| `app/assets/fonts/` | Google Sans Flex (file variabile ufficiale) con la sua licenza `OFL.txt` |
 | `app/lib/features/auth/` | Sblocco, accesso, primo accesso (A1–A3) |
 | `app/lib/features/household/` | Crea o entra in una casa, inviti (A7–A10) |
 | `app/lib/features/hub/` | Hub (B1) |
 | `app/lib/features/finance/` | Sezione Finanze: `summary`, `transactions`, `manual_entry`, `analytics`, `accounts` |
 | `app/lib/features/settings/` | Impostazioni (I1–I10) |
-| `app/lib/features/dev/` | Indice delle schermate, temporaneo |
-| `app/test/` | Test dell'app |
+| `app/lib/features/dev/` | Indice delle schermate e catalogo dei componenti (`/dev/components`), temporanei |
+| `app/test/` | Test dell'app; in `test/golden/` i golden test dei componenti (tag `golden`), con le immagini in `test/golden/goldens/` |
 | `supabase/` | Configurazione locale di Supabase; migrazioni, test pgTAP ed Edge Functions in arrivo |
 
 Rotte, livelli e tasto indietro: `docs/spec/navigazione.md`. Ogni schermata nuova si aggiunge prima al catalogo (`app/lib/core/router/screen_catalog.dart`).
+
+Ogni componente nuovo si aggiunge anche al catalogo dei componenti (`app/lib/features/dev/component_catalog.dart`): da lì lo leggono la schermata `/dev/components`, i widget test e i golden test. Le icone sono Material Symbols Rounded (`Symbols.*_rounded` di `material_symbols_icons`), mai `Icons.*`.
 
 L'interfaccia Material si importa da `package:material_ui/material_ui.dart`, non da `package:flutter/material.dart` (deprecato). Flutter e Dart si usano sempre tramite fvm: la versione è fissata in `.fvmrc`.
 
@@ -85,6 +89,7 @@ fvm dart run build_runner build -d        # generazione del codice (*.g.dart, *.
 fvm flutter analyze                       # analisi: zero problemi
 fvm dart format .                         # formattazione
 fvm flutter test                          # test
+fvm flutter test --tags golden --update-goldens   # rigenera le immagini dei golden test
 fvm flutter run --dart-define-from-file=../private/env.dev.json                   # avvio sul telefono
 fvm flutter build apk --release --dart-define-from-file=../private/env.dev.json   # build della release firmata
 fvm flutter install --release             # installazione della release sul telefono
