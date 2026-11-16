@@ -12,6 +12,8 @@ key.properties
 .env
 .env.*
 !.env.example
+env.*.json
+!env.example.json
 google-services.json
 GoogleService-Info.plist
 service-account*.json
@@ -52,7 +54,7 @@ supabase/.env
 .pub-cache/
 .pub/
 build/
-.fvm/flutter_sdk
+.fvm/
 # Contiene il percorso dell'SDK, quindi il nome utente del PC
 local.properties
 **/android/.gradle/
@@ -77,6 +79,7 @@ venv/
 *.iml
 .vscode/*
 !.vscode/extensions.json
+.claude/settings.local.json
 .DS_Store
 Thumbs.db
 *.log
