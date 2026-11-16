@@ -1,0 +1,4 @@
+# Golden tests compare pictures and depend on the machine that draws them:
+# the CI can run or skip them apart with --tags / --exclude-tags.
+tags:
+  golden:
