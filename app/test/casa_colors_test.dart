@@ -79,8 +79,11 @@ void main() {
       expect(fitted.chroma, lessThan(vivid.chroma));
       // As much chroma as fits: a little more is already out.
       expect(
-        Oklab.fromLch(fitted.l, fitted.chroma + 0.005, fitted.hue)
-            .isInSrgbGamut,
+        Oklab.fromLch(
+          fitted.l,
+          fitted.chroma + 0.005,
+          fitted.hue,
+        ).isInSrgbGamut,
         isFalse,
       );
 
@@ -132,9 +135,8 @@ void main() {
     test('the other palettes turn the hue by that of their primary', () {
       for (final palette in [AppPalette.dollari, AppPalette.mauriziani]) {
         final shift = CasaColors.paletteHueShift(palette);
-        final primaryHue = Oklab.fromColor(
-          paletteTokens[palette]!.dark.primary,
-        ).hue;
+        final primaryHue = Oklab.fromColor(paletteTokens[palette]!.dark.primary)
+            .hue;
         final tealHue = Oklab.fromColor(tealDark.primary).hue;
         expect(shift, closeTo(primaryHue - tealHue, 1e-12));
         expect(shift, isNot(0));

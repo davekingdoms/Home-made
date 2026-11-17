@@ -197,9 +197,8 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byIcon(kind.icon));
-        final colors = Theme.of(
-          tester.element(find.byType(NoticeCard)),
-        ).extension<AppColors>()!;
+        final colors = Theme.of(tester.element(find.byType(NoticeCard)))
+            .extension<AppColors>()!;
         expect(icon.color, switch (kind) {
           NoticeKind.error => tealLight.error,
           NoticeKind.warning => colors.avviso,
@@ -289,9 +288,8 @@ void main() {
         find.bySemanticsLabel(RegExp(r'Dispensa\s+In arrivo')),
         findsOneWidget,
       );
-      final colors = Theme.of(
-        tester.element(find.byType(HubSectionCard)),
-      ).extension<AppColors>()!;
+      final colors = Theme.of(tester.element(find.byType(HubSectionCard)))
+          .extension<AppColors>()!;
       final status = tester.widget<Text>(
         find.text(HubSectionCard.comingSoonLabel),
       );
@@ -346,9 +344,7 @@ void main() {
     });
   });
 
-  testWidgets('number tile: caption and amount, read together', (
-    tester,
-  ) async {
+  testWidgets('number tile: caption and amount, read together', (tester) async {
     final semantics = tester.ensureSemantics();
     await pumpInTheme(
       tester,
@@ -417,9 +413,8 @@ void main() {
 
         expect(find.text(label), findsOneWidget);
         expect(find.bySemanticsLabel('$label, $amount'), findsOneWidget);
-        final colors = Theme.of(
-          tester.element(find.byType(BalanceBar)),
-        ).extension<AppColors>()!;
+        final colors = Theme.of(tester.element(find.byType(BalanceBar)))
+            .extension<AppColors>()!;
         expect(
           tester.widget<Text>(find.text(amount)).style?.color,
           value < 0 ? colors.debito : colors.credito,
@@ -442,9 +437,7 @@ void main() {
   });
 
   group('numeric keypad', () {
-    testWidgets('reports its twelve keys, each a touch target', (
-      tester,
-    ) async {
+    testWidgets('reports its twelve keys, each a touch target', (tester) async {
       final semantics = tester.ensureSemantics();
       final pressed = <String>[];
       await pumpInTheme(

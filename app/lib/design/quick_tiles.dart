@@ -57,12 +57,7 @@ class CookieTile extends StatelessWidget {
 /// Quick tile with a caption and a value in a pill (section 8): for example
 /// a balance, already formatted.
 class PillTile extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.value,
-    this.onTap,
-    super.key,
-  });
+  const new({required this.label, required this.value, this.onTap, super.key});
 
   final String label;
 

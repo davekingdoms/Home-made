@@ -37,10 +37,7 @@ List<String> _readStyleSpec() =>
 ({List<String> headers, List<Map<String, Color>> columns}) readPaletteTable() {
   final lines = _readStyleSpec();
   final start = lines.indexWhere((line) => line.startsWith('### 2.1'));
-  final columns = List.generate(
-    combinations.length,
-    (_) => <String, Color>{},
-  );
+  final columns = List.generate(combinations.length, (_) => <String, Color>{});
   var headers = <String>[];
   for (final line in lines.skip(start + 1)) {
     if (line.startsWith('#')) break;
@@ -68,9 +65,10 @@ Map<String, Color> readCasaRoles() {
   final line = _readStyleSpec().firstWhere((line) => line.contains(marker));
   final list = line.substring(line.indexOf(marker) + marker.length);
   return {
-    for (final [name, value] in list.split(' · ').map(
-      (role) => role.replaceFirst(RegExp(r'\.$'), '').split(' '),
-    ))
+    for (final [name, value]
+        in list
+            .split(' · ')
+            .map((role) => role.replaceFirst(RegExp(r'\.$'), '').split(' ')))
       name: parseSpecColor(value),
   };
 }

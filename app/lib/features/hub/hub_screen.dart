@@ -41,10 +41,7 @@ class HubScreen extends StatelessWidget {
             const SizedBox(height: 12),
             const _SectionCard(icon: Symbols.kitchen_rounded, name: 'Dispensa'),
             const SizedBox(height: 12),
-            const _SectionCard(
-              icon: Symbols.folder_rounded,
-              name: 'Documenti',
-            ),
+            const _SectionCard(icon: Symbols.folder_rounded, name: 'Documenti'),
             const SizedBox(height: 12),
             const _SectionCard(icon: Symbols.pets_rounded, name: 'Animali'),
             const SizedBox(height: 24),

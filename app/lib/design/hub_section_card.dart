@@ -121,10 +121,7 @@ class HubSectionCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            fact.value,
-                            style: textTheme.titleSmall?.amount,
-                          ),
+                          Text(fact.value, style: textTheme.titleSmall?.amount),
                           Text(
                             fact.label,
                             style: textTheme.labelMedium?.copyWith(

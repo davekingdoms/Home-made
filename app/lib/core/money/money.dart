@@ -17,10 +17,7 @@ enum MoneySign {
 @immutable
 class Money implements Comparable<Money> {
   const new(this.cents, {this.currency = euro})
-    : assert(
-        currency.length == 3,
-        'An ISO 4217 code has three letters',
-      );
+    : assert(currency.length == 3, 'An ISO 4217 code has three letters');
 
   /// ISO 4217 code of the euro.
   static const euro = 'EUR';
@@ -45,15 +42,11 @@ class Money implements Comparable<Money> {
   /// Symbol of the currency, or its code when it has none here.
   String get symbol => _symbols[currency] ?? currency;
 
-  Money operator +(Money other) => Money(
-    cents + _sameCurrency(other).cents,
-    currency: currency,
-  );
+  Money operator +(Money other) =>
+      Money(cents + _sameCurrency(other).cents, currency: currency);
 
-  Money operator -(Money other) => Money(
-    cents - _sameCurrency(other).cents,
-    currency: currency,
-  );
+  Money operator -(Money other) =>
+      Money(cents - _sameCurrency(other).cents, currency: currency);
 
   Money operator -() => Money(-cents, currency: currency);
 

@@ -12,10 +12,7 @@ import 'package:material_ui/material_ui.dart';
   final transform = tester.widget<Transform>(
     find.ancestor(of: child, matching: find.byType(Transform)).first,
   );
-  return (
-    opacity: opacity.opacity,
-    dx: transform.transform.getTranslation().x,
-  );
+  return (opacity: opacity.opacity, dx: transform.transform.getTranslation().x);
 }
 
 Widget _app(Widget child, {bool reduceMotion = false}) => MaterialApp(
@@ -90,10 +87,7 @@ void main() {
       expect(_frameOf(tester, find.text('second')).opacity, 1);
       final scale = tester.widget<Transform>(
         find
-            .ancestor(
-              of: find.text('second'),
-              matching: find.byType(Transform),
-            )
+            .ancestor(of: find.text('second'), matching: find.byType(Transform))
             .first,
       );
       expect(scale.transform.getMaxScaleOnAxis(), 1);

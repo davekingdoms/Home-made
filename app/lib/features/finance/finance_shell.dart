@@ -13,23 +13,22 @@ import 'package:material_ui/material_ui.dart';
 
 /// The Finance section: four tabs, each with its own navigation stack, that
 /// "fade through" one another.
-RouteBase financeRoute(GlobalKey<NavigatorState> rootKey) =>
-    StatefulShellRoute(
-      parentNavigatorKey: rootKey,
-      builder: (context, state, navigationShell) =>
-          FinanceShell(navigationShell: navigationShell),
-      navigatorContainerBuilder: (context, navigationShell, children) =>
-          FadeThroughStack(
-            currentIndex: navigationShell.currentIndex,
-            children: children,
-          ),
-      branches: [
-        summaryBranch(rootKey),
-        transactionsBranch(rootKey),
-        analyticsBranch(rootKey),
-        accountsBranch(rootKey),
-      ],
-    );
+RouteBase financeRoute(GlobalKey<NavigatorState> rootKey) => StatefulShellRoute(
+  parentNavigatorKey: rootKey,
+  builder: (context, state, navigationShell) =>
+      FinanceShell(navigationShell: navigationShell),
+  navigatorContainerBuilder: (context, navigationShell, children) =>
+      FadeThroughStack(
+        currentIndex: navigationShell.currentIndex,
+        children: children,
+      ),
+  branches: [
+    summaryBranch(rootKey),
+    transactionsBranch(rootKey),
+    analyticsBranch(rootKey),
+    accountsBranch(rootKey),
+  ],
+);
 
 /// Top bar with "‹ Finanze", bottom bar and "+" button around the Finance
 /// tabs.

@@ -116,9 +116,8 @@ class _ComponentCatalogScreenState
                 heading(component.title),
                 MediaQuery(
                   key: ValueKey('component-${component.id}'),
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.linear(_textScale)),
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: TextScaler.linear(_textScale)),
                   // The component chooses its own size, up to the width.
                   child: Align(
                     alignment: AlignmentDirectional.topStart,

@@ -91,9 +91,7 @@ void main() {
     });
   }
 
-  testWidgets('the palette changes the theme of the whole app', (
-    tester,
-  ) async {
+  testWidgets('the palette changes the theme of the whole app', (tester) async {
     await pumpApp(tester, location: _path);
     expect(_themeOf(tester).colorScheme.primary, tealLight.primary);
 

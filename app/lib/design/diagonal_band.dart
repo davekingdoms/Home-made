@@ -69,12 +69,7 @@ class _DiagonalBandPainter extends CustomPainter {
   }) {
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          -thickness,
-          offset - thickness / 2,
-          length,
-          thickness,
-        ),
+        Rect.fromLTWH(-thickness, offset - thickness / 2, length, thickness),
         Radius.circular(thickness / 2),
       ),
       paint,

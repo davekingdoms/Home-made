@@ -12,13 +12,11 @@ abstract final class AppTextScale {
   ///
   /// The app wraps every screen with the default limit; the hub wraps itself
   /// again with [hubMax].
-  static Widget clamp({
-    required Widget child,
-    double maxScaleFactor = max,
-  }) => MediaQuery.withClampedTextScaling(
-    maxScaleFactor: maxScaleFactor,
-    child: child,
-  );
+  static Widget clamp({required Widget child, double maxScaleFactor = max}) =>
+      MediaQuery.withClampedTextScaling(
+        maxScaleFactor: maxScaleFactor,
+        child: child,
+      );
 
   /// The text scaler of [context], limited to [hubMax].
   static TextScaler hubScalerOf(BuildContext context) =>

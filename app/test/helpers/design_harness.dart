@@ -24,9 +24,9 @@ const _goldenFontFamilies = {
 /// Without them the tests draw every letter as a rectangle.
 Future<void> loadAppFonts() async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  final manifest =
-      json.decode(await rootBundle.loadString('FontManifest.json'))
-          as List<dynamic>;
+  final manifest = json.decode(
+    await rootBundle.loadString('FontManifest.json'),
+  ) as List<dynamic>;
   for (final entry in manifest.cast<Map<String, dynamic>>()) {
     final family = entry['family'] as String;
     if (!_goldenFontFamilies.contains(family)) continue;
@@ -55,9 +55,8 @@ Widget inTheme(
     supportedLocales: const [Locale('it')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     builder: (context, app) => MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: TextScaler.linear(textScale)),
       child: app!,
     ),
     home: Scaffold(
@@ -132,9 +131,8 @@ class _GoldenCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: TextScaler.linear(textScale)),
       child: Material(
         color: Theme.of(context).colorScheme.surface,
         child: Padding(

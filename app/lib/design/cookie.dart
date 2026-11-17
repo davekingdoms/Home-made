@@ -38,8 +38,7 @@ class CookieBorder extends OutlinedBorder {
   }
 
   @override
-  Path getOuterPath(Rect rect, {TextDirection? textDirection}) =>
-      _cookie(rect);
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) => _cookie(rect);
 
   @override
   Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>

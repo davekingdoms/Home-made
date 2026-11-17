@@ -497,16 +497,10 @@ Widget _numberTile(BuildContext context) => Row(
   spacing: AppSpacing.xs,
   children: [
     Expanded(
-      child: NumberTile(
-        label: 'Entrate',
-        amount: const Money(245000).format(),
-      ),
+      child: NumberTile(label: 'Entrate', amount: const Money(245000).format()),
     ),
     Expanded(
-      child: NumberTile(
-        label: 'Uscite',
-        amount: const Money(-131275).format(),
-      ),
+      child: NumberTile(label: 'Uscite', amount: const Money(-131275).format()),
     ),
   ],
 );
