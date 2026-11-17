@@ -1,0 +1,93 @@
+# Builds the release APK of a branch, configured for the dev project and
+# signed with the upload key, and sends it to the testers with Firebase App
+# Distribution. Start it by hand (Run workflow) on any branch.
+#
+# The repository is public: the APK is never uploaded as an artifact, the
+# secrets live in the "dev" environment and the logs show outcomes only.
+name: Distribute test build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: distribute-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  distribute:
+    name: distribute
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      PRIVATE_DIR: ${{ github.workspace }}/private
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Mask the project identifiers
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+        run: |
+          account_file="$RUNNER_TEMP/firebase-service-account.json"
+          echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > "$account_file"
+          echo "::add-mask::$(jq -r .project_id "$account_file")"
+          echo "::add-mask::$(jq -r .client_email "$account_file")"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$account_file" >> "$GITHUB_ENV"
+
+      - name: Write the configuration and the signing files
+        env:
+          APP_ENV_JSON_BASE64: ${{ secrets.APP_ENV_JSON_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        # Same files and paths as private/ on the PC, read by the build.
+        run: |
+          mkdir -p "$PRIVATE_DIR"
+          echo "$APP_ENV_JSON_BASE64" | base64 --decode > "$PRIVATE_DIR/env.dev.json"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$PRIVATE_DIR/upload-keystore.jks"
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+          } > "$PRIVATE_DIR/key.properties"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: ./.github/actions/flutter-setup
+
+      - name: Build the release APK for dev
+        working-directory: app
+        run: >-
+          flutter build apk --release
+          --dart-define-from-file="$PRIVATE_DIR/env.dev.json"
+          --build-number=${{ github.run_number }}
+
+      - name: Send it to the testers
+        env:
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          notes="Branch $BRANCH, commit ${GITHUB_SHA::7}, build $RUN_NUMBER"
+          if npx --yes firebase-tools@15 appdistribution:distribute \
+              app/build/app/outputs/flutter-apk/app-release.apk \
+              --app "$FIREBASE_APP_ID" \
+              --groups testers \
+              --release-notes "$notes" > "$RUNNER_TEMP/distribute.log" 2>&1; then
+            echo "Build $RUN_NUMBER sent to the testers."
+          else
+            echo "Distribution failed:"
+            tail -n 20 "$RUNNER_TEMP/distribute.log"
+            exit 1
+          fi
+
+      - name: Remove the private files
+        if: always()
+        run: rm -rf "$PRIVATE_DIR" "$RUNNER_TEMP/firebase-service-account.json" "$RUNNER_TEMP/distribute.log"
