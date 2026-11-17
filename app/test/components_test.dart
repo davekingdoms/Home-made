@@ -467,6 +467,29 @@ void main() {
       );
       expect(scaler.scale(10), closeTo(13, 1e-9));
     });
+
+    testWidgets('the error of a text field wraps instead of being cut', (
+      tester,
+    ) async {
+      const message = 'Scrivi un importo maggiore di zero';
+      await pumpInTheme(
+        tester,
+        _tealDark,
+        const Material(
+          child: TextField(
+            decoration: InputDecoration(
+              labelText: 'Importo',
+              errorText: message,
+            ),
+          ),
+        ),
+        textScale: 2,
+      );
+
+      final style = Theme.of(tester.element(find.text(message))).textTheme;
+      final oneLine = 2 * style.bodySmall!.fontSize! * style.bodySmall!.height!;
+      expect(tester.getSize(find.text(message)).height, greaterThan(oneLine));
+    });
   });
 
   group('balance bar', () {

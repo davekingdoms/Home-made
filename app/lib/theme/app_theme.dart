@@ -4,6 +4,7 @@ import 'package:homemade/theme/app_text_theme.dart';
 import 'package:homemade/theme/casa_colors.dart';
 import 'package:homemade/theme/dimens.dart';
 import 'package:homemade/theme/page_transitions.dart';
+import 'package:homemade/theme/text_scale.dart';
 import 'package:homemade/theme/tokens.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
@@ -239,6 +240,10 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
       errorBorder: fieldBorder(scheme.error),
       focusedErrorBorder: fieldBorder(scheme.error, width: 2),
       disabledBorder: fieldBorder(disabledContainer),
+      // Material keeps helper and error texts on one line and cuts them:
+      // with the text at 200% (section 7) they need room to wrap.
+      helperMaxLines: AppTextScale.maxFieldMessageLines,
+      errorMaxLines: AppTextScale.maxFieldMessageLines,
     ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: scheme.surfaceContainerLow,

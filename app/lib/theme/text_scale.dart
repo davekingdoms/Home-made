@@ -8,6 +8,10 @@ abstract final class AppTextScale {
   /// Limit in the hub, which does not scroll: 130%.
   static const double hubMax = 1.3;
 
+  /// Lines that the helper and error texts of a text field may take before
+  /// they are cut, enough for a message at [max].
+  static const int maxFieldMessageLines = 5;
+
   /// [child] with the system text size limited to [maxScaleFactor].
   ///
   /// The app wraps every screen with the default limit; the hub wraps itself
