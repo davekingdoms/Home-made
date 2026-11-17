@@ -1,0 +1,66 @@
+# Regenerates the golden images on Linux, the reference platform, and
+# commits them to the branch as github-actions[bot].
+#
+# Start it with the "update-goldens" label on a pull request, or by hand
+# (Run workflow) on a branch other than main. Then pull the branch.
+name: Update goldens
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goldens-${{ github.head_ref || github.ref_name }}
+
+jobs:
+  update:
+    name: update goldens
+    # Only branches of this repository, never main, never pull requests
+    # from forks.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref_name != 'main') ||
+      (github.event.label.name == 'update-goldens' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+    env:
+      BRANCH: ${{ github.head_ref || github.ref_name }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: ./.github/actions/flutter-setup
+      - name: Regenerate the golden images
+        working-directory: app
+        run: flutter test --tags golden --update-goldens
+      - name: Commit the changed images
+        id: commit
+        run: |
+          git add app/test/golden/goldens
+          if git diff --cached --quiet; then
+            echo "No image changed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test(design): update golden images on linux"
+          git push origin "HEAD:$BRANCH"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      - name: Run the checks on the new commit
+        if: steps.commit.outputs.pushed == 'true'
+        # Works once ci.yml is on main; until then push any commit to the
+        # branch to start the checks.
+        continue-on-error: true
+        run: gh workflow run ci.yml --ref "$BRANCH"
+      - name: Remove the label
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: gh pr edit "${{ github.event.pull_request.number }}" --remove-label update-goldens

@@ -64,6 +64,9 @@ local.properties
 **/android/app/release/
 **/ios/Pods/
 **/ios/Flutter/Generated.xcconfig
+# Codice generato da build_runner: non si committa, lo rigenerano il PC e la CI
+*.g.dart
+*.freezed.dart
 # Differenze dei golden test non riusciti
 **/failures/
 coverage/
