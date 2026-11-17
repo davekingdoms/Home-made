@@ -56,6 +56,10 @@ Future<void> _pumpGolden(
   addTearDown(() => tester.binding.setSurfaceSize(null));
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetDevicePixelRatio);
+  // The tests draw shadows as solid black outlines; the catalog shows the
+  // real ones, as the phone draws them.
+  debugDisableShadows = false;
+  addTearDown(() => debugDisableShadows = true);
 
   await tester.pumpWidget(sixCombinations(builder, textScale: textScale));
   await tester.pumpAndSettle();
