@@ -29,7 +29,7 @@ class Money implements Comparable<Money> {
   /// line never ends between the two.
   static const symbolSeparator = ' ';
 
-  static const _symbols = {euro: '€'};
+  static const Map<String, String> _symbols = {euro: '€'};
 
   final int cents;
 

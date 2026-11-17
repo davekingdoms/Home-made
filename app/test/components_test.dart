@@ -21,8 +21,8 @@ import 'package:material_ui/material_ui.dart';
 import 'helpers/design_harness.dart';
 import 'helpers/spec.dart';
 
-const _tealDark = (AppPalette.teal, Brightness.dark);
-const _tealLight = (AppPalette.teal, Brightness.light);
+const (AppPalette, Brightness) _tealDark = (AppPalette.teal, Brightness.dark);
+const (AppPalette, Brightness) _tealLight = (AppPalette.teal, Brightness.light);
 
 /// Matches a size with both sides of at least 48: the minimum touch target.
 final Matcher _isTouchTarget = predicate<Size>(

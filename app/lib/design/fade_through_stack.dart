@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:homemade/theme/motion.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -42,7 +40,7 @@ class _FadeThroughStackState extends State<FadeThroughStack>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentIndex != widget.currentIndex) {
       _previousIndex = oldWidget.currentIndex;
-      unawaited(_controller.forward(from: 0));
+      _controller.forward(from: 0);
     }
   }
 

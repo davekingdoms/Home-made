@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:homemade/core/money/money.dart';
 import 'package:homemade/design/balance_bar.dart';
 import 'package:homemade/design/chip_arrow_label.dart';
@@ -377,13 +375,11 @@ Widget _bottomSheet(BuildContext context) => _Variants([
   const _SheetPreview(),
   FilledButton.tonal(
     style: context.buttonStyles.tonal,
-    onPressed: () => unawaited(
-      showModalBottomSheet<void>(
-        context: context,
-        useRootNavigator: true,
-        showDragHandle: true,
-        builder: (context) => SafeArea(child: _sheetContent(context)),
-      ),
+    onPressed: () => showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(child: _sheetContent(context)),
     ),
     child: const Text('Apri il foglio'),
   ),

@@ -31,6 +31,13 @@ class Oklab {
   factory fromLch(double l, double chroma, double hue) =>
       Oklab(l, chroma * math.cos(hue), chroma * math.sin(hue));
 
+  /// The colour between [from] and [to] at [t], on a straight line in OKLab.
+  factory lerp(Oklab from, Oklab to, double t) => Oklab(
+    from.l + (to.l - from.l) * t,
+    from.a + (to.a - from.a) * t,
+    from.b + (to.b - from.b) * t,
+  );
+
   final double l;
   final double a;
   final double b;
@@ -50,13 +57,6 @@ class Oklab {
   /// This colour with the hue turned by [radians]; lightness and chroma stay
   /// the same.
   Oklab rotated(double radians) => Oklab.fromLch(l, chroma, hue + radians);
-
-  /// The colour between [from] and [to] at [t], on a straight line in OKLab.
-  static Oklab lerp(Oklab from, Oklab to, double t) => Oklab(
-    from.l + (to.l - from.l) * t,
-    from.a + (to.a - from.a) * t,
-    from.b + (to.b - from.b) * t,
-  );
 
   /// Linear sRGB channels, not clamped.
   ({double r, double g, double b}) get _linearSrgb {

@@ -14,7 +14,7 @@ const phoneWidth = 360.0;
 
 /// Font families that the golden tests draw with: the app font, the icons
 /// and the icons Material uses inside its own components.
-const _goldenFontFamilies = {
+const Set<String> _goldenFontFamilies = {
   appFontFamily,
   'packages/material_symbols_icons/MaterialSymbolsRounded',
   'MaterialIcons',
@@ -88,7 +88,7 @@ Future<void> pumpInTheme(
 }
 
 /// Key of the area that a golden test compares.
-const goldenKey = ValueKey('golden');
+const ValueKey<String> goldenKey = ValueKey('golden');
 
 /// [builder] in the six combinations side by side, each as wide as a phone
 /// and with the text at [textScale]: the picture of a golden test.
