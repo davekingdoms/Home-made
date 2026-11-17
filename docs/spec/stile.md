@@ -145,7 +145,7 @@ Stati per tutti: normale, premuto (livello di stato 10%), focus (10% più anello
 | Card sezione dell'hub | personalizzata | attiva, "in arrivo" | Icona tonda, nome, stato, 2 dati rapidi |
 | Tessere rapide | personalizzate | biscotto con numero, pillola con valore | Biscotto `tertiary` |
 | Tessera numerica | personalizzata | — | Etichetta piccola + importo |
-| Riga movimento | `ListTile` personalizzato | normale, suggerimento (icona tratteggiata, testo in `primary`, tasto ✓) | — |
+| Riga movimento | `ListTile` personalizzato | normale | — |
 | Barra dei Saldi | personalizzata | credito, debito | Divisa al centro; `credito`/`debito` su traccia `surfaceContainerHighest` |
 | Tastierino numerico | personalizzato | — | Tasti a pillola |
 | Trascina per aggiornare | `RefreshIndicator` | — | — |

@@ -14,13 +14,13 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 ## 2. Regole
 
 - **Ingresso:** l'hub (B1) è sempre la schermata d'ingresso.
-- **Sessione:** il router controlla la sessione all'avvio e a ogni suo cambio: senza sessione ogni percorso porta ad Accesso (A2); con sessione `/sign-in` porta all'hub. Sblocco (A1) e primo avvio (A3, A7–A10) restano da collegare: arrivano con la specifica dell'accesso e fino ad allora si aprono solo dall'indice delle schermate, con la sessione attiva.
+- **Avvio e primo avvio** (dettagli in [`accesso.md`](accesso.md)): il router controlla in ordine, all'avvio e a ogni cambio di stato: nessuna sessione → Accesso (A2); informativa non letta → Primo accesso (A3); nessuna casa → A7 (o A10 se c'è un invito in sospeso); posizione mai chiesta su questo dispositivo → Posizione (A11); riapertura con una sessione salvata → Sblocco (A1); altrimenti l'hub. Lo sblocco non si chiede subito dopo l'accesso. Oggi il codice controlla solo la sessione: gli altri passi si collegano con l'involucro dell'app.
 - **Finanze:** barra Riepilogo · Movimenti · Analisi · Conti, con etichette sempre visibili (badge su Movimenti in arrivo). Ogni scheda ricorda il proprio stato (filtri, scorrimento): una pila di navigazione per scheda (`StatefulShellRoute.indexedStack`).
 - **Tasto "+":** specifico per sezione; in Finanze apre il menu F1, da cui si apre F2.
 - **Tasto indietro di Android:** chiude il foglio → chiude il dettaglio → dalla seconda, terza o quarta scheda torna alla prima (Riepilogo) → dalla prima torna all'hub → dall'hub esce dall'app. Indietro predittivo attivo.
 - **Impostazioni:** si aprono dall'avatar dell'hub; l'indietro torna all'hub.
-- **Link diretti** (notifiche, inviti, ritorno dal collegamento bancario): da definire. Ogni link apre la schermata con sotto la sua sezione, così l'indietro funziona.
-- **Tablet:** barra laterale e layout dedicati da definire; finché non sono decisi, la navigazione è quella del telefono.
+- **Link diretti** (notifiche, inviti, ritorno dal collegamento bancario): App Link su Cloudflare Pages; il link di invito apre A10 con il codice compilato (anche dopo A2 e A3, se manca l'account). Gli altri link da definire. Ogni link apre la schermata con sotto la sua sezione, così l'indietro funziona.
+- **Schermi larghi:** regole nella sezione 5.
 - **Percorsi** in inglese (codice), titoli in italiano (interfaccia). I parametri (`:…Id`) sono identificativi, mai dati leggibili.
 
 ## 3. Rotte
@@ -35,7 +35,8 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 | A7 | Crea o entra in una casa | `/household` | A3 |
 | A8 | Crea casa | `/household/create` | A7 |
 | A9 | Invita | `/household/invite` | A8; I4 |
-| A10 | Entra con invito | `/household/join` | A7; link di invito (in arrivo) |
+| A10 | Entra con invito | `/household/join` | A7; link di invito |
+| A11 | Posizione | `/location` | ultimo passo del primo avvio, una volta per dispositivo |
 | B1 | Hub | `/` | avvio |
 | I1 | Impostazioni | `/settings` | avatar dell'hub |
 | I2 | Account | `/settings/account` | I1 |
@@ -85,7 +86,7 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 | F1 | Menu "+" | tasto "+" di C1 e D1 |
 | H3 | Riconciliazione contanti | H2 |
 
-Totale: 31 schermate e 7 fogli.
+Totale: 32 schermate e 7 fogli.
 
 ## 4. Indice delle schermate e catalogo dei componenti (sviluppo)
 
@@ -93,10 +94,18 @@ Totale: 31 schermate e 7 fogli.
 
 `/dev/components`: catalogo dei componenti della specifica dello stile (sezione 8), con dati inventati; si apre dall'indice delle schermate e l'indietro torna lì. In alto ha la scelta della palette e del tema, che cambiano tutta l'app, e il testo al 100%, 130% e 200%. Sta fuori dall'inventario delle schermate (codice `DEV`) ed è temporaneo come l'indice.
 
-## 5. Da definire
+## 5. Schermi larghi (tablet)
 
-- Sblocco: quando si chiede (all'apertura, dopo quanto tempo in background) e cosa succede senza blocco schermo.
-- Primo avvio: ordine di A3, permesso di posizione e A7–A10, e loro collegamento al router.
-- Link diretti e App Link.
-- Tablet: barra laterale e layout dedicati.
+Una sola app adattiva, regolata dalla **larghezza della finestra**, non dal dispositivo: da Android 16 (SDK 36), sui dispositivi con lato corto ≥ 600 dp, i blocchi di orientamento e ridimensionamento sono ignorati, quindi un tablet può mostrare l'app in una finestra stretta (schermo diviso, finestra mobile).
+
+1. **Classi di larghezza** Material 3: compatta < 600 dp (layout del telefono), media 600–839 dp, estesa ≥ 840 dp.
+2. **Barra laterale:** da 600 dp la barra in basso di Finanze diventa un `NavigationRail` con le stesse quattro schede, etichette sempre visibili, badge su Movimenti e "+" in cima; "‹ Finanze" resta in alto. Stessa `StatefulShellRoute` e stesso tasto indietro: cambia solo il guscio della sezione.
+3. **Tutte le altre schermate:** layout del telefono centrato, larghezza massima circa 640 dp.
+4. **Layout dedicati** solo per l'hub (B1) e per Movimenti + dettaglio dalla classe estesa (elenco a sinistra, E1 a destra). Nel doppio pannello `/finance/transactions/:transactionId` si apre nel pannello destro con la barra laterale visibile: la rotta di E1 passa dentro la scheda Movimenti e, nella classe compatta, la barra si nasconde sui dettagli. Un altro layout dedicato solo con una motivazione nella specifica del gruppo.
+5. **Fogli dal basso:** restano fogli, larghezza massima 640 dp.
+6. **Orientamento:** telefono (lato corto < 600 dp) solo in verticale; tablet in entrambi gli orientamenti; lo stato si conserva quando la finestra cambia.
+7. **Golden test** in formato tablet solo per la barra laterale, l'hub e Movimenti + dettaglio.
+
+## 6. Da definire
+
 - Badge di Movimenti.
