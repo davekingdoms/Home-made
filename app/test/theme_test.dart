@@ -224,6 +224,11 @@ void main() {
           ),
         );
         expect(theme.listTileTheme.minTileHeight, AppSizes.listRowMinHeight);
+        expect(theme.listTileTheme.titleTextStyle?.color, tokens.onSurface);
+        expect(
+          theme.listTileTheme.subtitleTextStyle?.color,
+          tokens.onSurfaceVariant,
+        );
         expect(theme.progressIndicatorTheme.color, tokens.primary);
       });
 

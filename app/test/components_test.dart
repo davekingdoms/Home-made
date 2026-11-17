@@ -526,4 +526,42 @@ void main() {
     expect(chosen, AppPalette.dollari);
     semantics.dispose();
   });
+
+  group('list rows paint their title in onSurface', () {
+    // The style a Text paints with: its own, merged with the inherited one.
+    Color? paintedColor(WidgetTester tester, String text) => tester
+        .widget<RichText>(
+          find.descendant(of: find.text(text), matching: find.byType(RichText)),
+        )
+        .text
+        .style
+        ?.color;
+
+    for (final combination in combinations) {
+      testWidgets(describeCombination(combination), (tester) async {
+        await pumpInTheme(
+          tester,
+          combination,
+          RadioGroup<AppPalette>(
+            groupValue: AppPalette.teal,
+            onChanged: (_) {},
+            child: Column(
+              children: [
+                const PaletteRadioTile(palette: AppPalette.dollari),
+                SwitchListTile(
+                  title: const Text('Notifiche'),
+                  value: true,
+                  onChanged: (_) {},
+                ),
+              ],
+            ),
+          ),
+        );
+
+        final onSurface = tokensOf(combination.$1, combination.$2).onSurface;
+        expect(paintedColor(tester, AppPalette.dollari.label), onSurface);
+        expect(paintedColor(tester, 'Notifiche'), onSurface);
+      });
+    }
+  });
 }

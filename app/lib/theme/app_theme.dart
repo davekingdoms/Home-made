@@ -276,8 +276,12 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
         horizontal: AppSpacing.screenMargin,
       ),
       iconColor: scheme.onSurfaceVariant,
-      titleTextStyle: textTheme.bodyLarge,
-      subtitleTextStyle: textTheme.bodySmall,
+      // With a colour: a ListTile paints an enabled title in the colour of
+      // this style, and the type scale has none.
+      titleTextStyle: textTheme.bodyLarge?.copyWith(color: scheme.onSurface),
+      subtitleTextStyle: textTheme.bodySmall?.copyWith(
+        color: scheme.onSurfaceVariant,
+      ),
     ),
     dividerTheme: DividerThemeData(color: scheme.outlineVariant),
     // Pull to refresh.
