@@ -13,15 +13,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Only the default scopes are used (name, email, picture): no further
 /// authorization and no access token.
 class SupabaseAuthRepository implements AuthRepository {
-  /// [googleSignIn] must already be initialized with the hash of
-  /// [rawNonce]: use [start].
+  /// `googleSignIn` must already be initialized with the hash of
+  /// `rawNonce`: use [start].
   new({
     required GoTrueClient auth,
-    required GoogleSignIn googleSignIn,
-    required String rawNonce,
+    required this._googleSignIn,
+    required this._rawNonce,
   }) : _auth = auth,
-       _googleSignIn = googleSignIn,
-       _rawNonce = rawNonce,
        _hasSession = ValueNotifier(auth.currentSession != null) {
     _authStateSubscription = auth.onAuthStateChange.listen(
       (state) => _hasSession.value = state.session != null,
