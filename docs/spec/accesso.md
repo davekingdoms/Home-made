@@ -75,11 +75,12 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 - Dal link (codice compilato) o scrivendo il codice; anteprima con nome della casa, chi invita e membri presenti → "Entra".
 - **Senza app:** il link apre una pagina con le istruzioni e il codice. **Con l'app ma senza account:** A2 → A3 → A10.
 - **Errori:** codice sbagliato, scaduto, già usato, revocato; casa piena; "Fai già parte di una casa" (un account sta in una sola casa).
-- **Casa già avviata:** il nuovo membro parte con il saldo del conguaglio a zero e non vede le righe precedenti. La sua **data di inizio** è la data di ingresso, modificabile qui all'indietro fino a quella della casa.
+- **Casa già avviata:** il nuovo membro parte con il saldo del conguaglio a zero e non vede le righe precedenti alla sua data di inizio. La sua **data di inizio** è la data di ingresso, modificabile qui all'indietro fino a quella della casa.
+- **Casa non ancora iniziata** (data di inizio della casa nel futuro): la data di inizio del membro è quella della casa e non si modifica.
 - **Contanti:** come in A8, se la data di inizio del membro è il giorno stesso.
-- **Quote predefinite:** all'ingresso diventano uguali per tutti i membri, valide dalla data di ingresso; gli altri membri ricevono una notifica per modificarle.
+- **Quote predefinite:** all'ingresso diventano uguali per tutti i membri, valide dalla **data di inizio del nuovo membro**; gli altri membri ricevono una notifica per modificarle.
 
-Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La sua data di inizio è il 10 aprile (può spostarla fino al 1° marzo); le quote passano da 1 a 1:1 per le spese dal 10 aprile.
+Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La sua data di inizio è il 10 aprile e le quote passano da 1 a 1:1 per le spese dal 10 aprile; se Bruno sposta la sua data al 1° marzo, le quote 1:1 valgono dal 1° marzo. Se invece la casa inizia il 1° maggio e Bruno entra il 10 aprile, la sua data di inizio è il 1° maggio.
 
 ## 9. A11 — Posizione
 
@@ -101,17 +102,17 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 | Nel futuro | Nella card da quel giorno: "Quanti contanti hai oggi?", poi con la data |
 
 - È il saldo iniziale del conto Contanti, non un'entrata, e resta fuori dal bilancio; si modifica dal dettaglio del conto. Se non viene mai indicato, la prima conta dei contanti diventa il saldo iniziale.
-- **Saldo iniziale tra i membri:** con almeno due membri la card mostra a tutti la voce "Saldo iniziale tra i membri": quanto ogni membro deve o riceve alla data di inizio della casa (somma zero; con due membri "Bruno ti deve …"), solo per i membri con quella data di inizio. La inserisce qualunque membro, senza approvazione; poi la voce sparisce per tutti e gli altri ricevono una notifica con la cifra. Si corregge dai Saldi, con la regola dei conflitti. I conguagli pagati dopo lo azzerano normalmente.
+- **Saldo iniziale tra i membri:** con almeno due membri la card mostra a tutti la voce "Saldo iniziale tra i membri": quanto ogni membro deve o riceve alla data di inizio della casa (somma zero; con due membri "Bruno ti deve …"), solo per i membri con quella data di inizio. La inserisce qualunque membro, senza approvazione, oppure chiunque tocca **"Nessun saldo da riportare"**, che lo fissa a zero per tutti; in entrambi i casi la voce sparisce per tutti e gli altri ricevono una notifica (con la cifra, o con l'indicazione che non c'è nessun saldo). Si corregge dai Saldi, con la regola dei conflitti. I conguagli pagati dopo lo azzerano normalmente.
 
 ## 11. Dati
 
 - **Profilo:** nome visualizzato, versione e data di presa visione dell'informativa.
 - **Casa:** nome, data di inizio, creata da.
-- **Membro:** casa, utente, data di ingresso, data di inizio propria.
+- **Membro:** casa, utente, data di ingresso, data di inizio propria (da cui valgono anche le sue quote predefinite).
 - **Invito:** casa, hash del token, codice breve, creato da, etichetta, scadenza, usato da e quando, revocato.
 - **Dispositivo:** utente, piattaforma (token per le notifiche quando arrivano).
 - **Conto Contanti:** creato con il membro; saldo iniziale con la data a cui si riferisce.
-- **Saldo iniziale tra i membri:** casa, membro, importo, data (= data di inizio della casa), inserito o modificato da.
+- **Saldo iniziale tra i membri:** casa, membro, importo, data (= data di inizio della casa), inserito o modificato da; "Nessun saldo da riportare" salva importi a zero.
 
 ## 12. Criteri di accettazione
 
@@ -121,5 +122,8 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - Il campo dei contanti in A8 compare solo se la data di inizio è il giorno stesso.
 - Un invito usato, scaduto o revocato non fa entrare nessuno; un account con una casa non può entrare in un'altra.
 - Un membro entrato dopo non vede le righe precedenti alla sua data di inizio e parte con il saldo del conguaglio a zero.
+- Un membro che entra in una casa non ancora iniziata ha la data di inizio della casa e non può cambiarla.
+- Le quote predefinite uguali dopo un ingresso valgono dalla data di inizio del nuovo membro.
 - Accesso annullato: nessun messaggio.
 - La voce "Saldo iniziale tra i membri" compare solo con almeno due membri e accetta solo cifre con somma zero.
+- "Nessun saldo da riportare" fissa a zero il saldo iniziale di ogni membro e toglie la voce a tutti.
