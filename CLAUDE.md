@@ -25,7 +25,7 @@ App Flutter per le finanze di una casa con uno o più membri: movimenti importat
 5. **Niente logica condivisa nell'app.** Le regole che valgono per più membri (quote, conguaglio, visibilità) stanno in Postgres (schema, RLS, funzioni SQL) e nelle Edge Functions.
 6. **Ogni tabella nuova** arriva con le sue policy RLS e i suoi test pgTAP.
 7. **Codice in inglese, testi dell'interfaccia in italiano.** Unica eccezione: i campi di `AppColors` e i token di `lib/theme/tokens.dart` tengono i nomi italiani di `docs/spec/stile.md` (`testoTerziario`, `banda`, `suPrimarioTenue`, `avviso`, `credito`, `debito`, `nastroGiallo`, `nastroNero`).
-8. **Stile solo da `docs/spec/stile.md`:** nelle schermate si usano i ruoli colore, mai codici esadecimali. Dopo ogni modifica ai token: `python3 tools/contrasti/contrasti.py docs/spec/stile.md`.
+8. **Stile solo da `docs/spec/stile.md`:** nelle schermate si usano i ruoli colore, mai codici esadecimali. Dopo ogni modifica ai token: `python tools/contrasti/contrasti.py docs/spec/stile.md`.
 9. **Branch e pull request** (GitHub Flow, sezione sotto). `main` è sempre rilasciabile; il merge solo con la CI verde.
 10. **CI:** nei log solo esiti (riuscito, fallito), mai dati; nessun dump o dato come artifact dei workflow.
 11. **Non leggere né copiare il contenuto di `private/`.** I file che contiene li legge solo la build; se serve sapere cosa c'è dentro, chiedi. Claude Code si avvia dalla radice del repository, dove vale `.claude/settings.json`, che nega lettura e modifica di `private/`.
@@ -99,5 +99,5 @@ supabase start                            # avvia Supabase in locale (serve Dock
 supabase db reset                         # ricrea il database locale dalle migrazioni
 supabase test db                          # test pgTAP
 supabase stop                             # ferma Supabase
-python3 tools/contrasti/contrasti.py docs/spec/stile.md   # controllo dei contrasti
+python tools/contrasti/contrasti.py docs/spec/stile.md   # controllo dei contrasti
 ```
