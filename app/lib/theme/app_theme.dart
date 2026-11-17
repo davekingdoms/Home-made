@@ -263,6 +263,15 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
     ),
     listTileTheme: ListTileThemeData(
       minTileHeight: AppSizes.listRowMinHeight,
+      // A two-line ListTile whose lines do not fit the Material offsets falls
+      // back to a compact layout, as tall as its lines plus this padding
+      // twice, which ignores the minimum height: with this padding a title
+      // and a subtitle fill the minimum row exactly.
+      minVerticalPadding:
+          (AppSizes.listRowMinHeight -
+              _lineHeight(textTheme.bodyLarge) -
+              _lineHeight(textTheme.bodySmall)) /
+          2,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenMargin,
       ),
@@ -281,6 +290,9 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
     ),
   );
 }
+
+/// Height of one line of [style], in dp.
+double _lineHeight(TextStyle? style) => style!.fontSize! * style.height!;
 
 ColorScheme _colorScheme(PaletteTokens t, Brightness brightness) => ColorScheme(
   brightness: brightness,

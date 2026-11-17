@@ -66,8 +66,9 @@ abstract final class AppSizes {
 
   static const double fab = 56;
 
-  /// Minimum height of a list row (60–64 in the specification).
-  static const double listRowMinHeight = 60;
+  /// Minimum height of a list row (60–64 in the specification): 64, so that
+  /// a row with two lines of text has room around them.
+  static const double listRowMinHeight = 64;
 
   static const double topBarHeight = 64;
 
