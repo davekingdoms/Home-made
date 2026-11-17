@@ -34,7 +34,7 @@ jobs:
       BRANCH: ${{ github.head_ref || github.ref_name }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref || github.ref_name }}
       - uses: ./.github/actions/flutter-setup
