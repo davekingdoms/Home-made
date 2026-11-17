@@ -396,6 +396,79 @@ void main() {
     semantics.dispose();
   });
 
+  group('with the text at 200%', () {
+    testWidgets('the transaction row puts the amount under the texts', (
+      tester,
+    ) async {
+      await pumpInTheme(
+        tester,
+        _tealDark,
+        const Material(
+          child: TransactionRow(
+            icon: Symbols.shopping_cart_rounded,
+            counterparty: 'Mercato del Borgo',
+            details: 'Spesa',
+            amount: '−45,20 €',
+          ),
+        ),
+        textScale: 2,
+      );
+
+      final counterparty = tester.getRect(find.text('Mercato del Borgo'));
+      final amount = tester.getRect(find.text('−45,20 €'));
+      expect(amount.top, greaterThanOrEqualTo(counterparty.bottom));
+      expect(amount.left, counterparty.left);
+      // The counterparty keeps the width of the row, minus the icon.
+      final row = tester.getRect(find.byType(TransactionRow));
+      expect(counterparty.width, greaterThan(row.width / 2));
+    });
+
+    testWidgets('the number tile keeps the amount on one line', (tester) async {
+      const amount = '−1.312,75 €';
+      await pumpInTheme(
+        tester,
+        _tealDark,
+        const Row(
+          children: [
+            Expanded(
+              child: NumberTile(label: 'Entrate', amount: '0,00 €'),
+            ),
+            Expanded(
+              child: NumberTile(label: 'Uscite', amount: amount),
+            ),
+          ],
+        ),
+        textScale: 2,
+      );
+
+      final style = tester.widget<Text>(find.text(amount)).style!;
+      final oneLine = 2 * style.fontSize! * style.height!;
+      expect(tester.getSize(find.text(amount)).height, oneLine);
+      expect(
+        tester.getRect(find.text(amount)).right,
+        lessThanOrEqualTo(tester.getRect(find.byType(NumberTile).last).right),
+      );
+    });
+
+    testWidgets('the hub section card stops at 130%', (tester) async {
+      await pumpInTheme(
+        tester,
+        _tealDark,
+        HubSectionCard(
+          icon: Symbols.account_balance_wallet_rounded,
+          name: 'Finanze',
+          onTap: () {},
+        ),
+        textScale: 2,
+      );
+
+      final scaler = MediaQuery.textScalerOf(
+        tester.element(find.text('Finanze')),
+      );
+      expect(scaler.scale(10), closeTo(13, 1e-9));
+    });
+  });
+
   group('balance bar', () {
     for (final (value, label, amount) in const [
       (0.6, 'Deve ricevere', '+62,00'),

@@ -2,6 +2,7 @@ import 'package:homemade/design/pressable.dart';
 import 'package:homemade/theme/app_colors.dart';
 import 'package:homemade/theme/app_text_theme.dart';
 import 'package:homemade/theme/dimens.dart';
+import 'package:homemade/theme/text_scale.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// One of the two quick facts of a [HubSectionCard]: a value with a short
@@ -138,7 +139,11 @@ class HubSectionCard extends StatelessWidget {
         ),
       ),
     );
-    // A section that cannot be opened is read as one sentence.
-    return active ? card : MergeSemantics(child: card);
+    // A section that cannot be opened is read as one sentence. The card lives
+    // in the hub, whose text stops at 130% (section 7).
+    return AppTextScale.clamp(
+      maxScaleFactor: AppTextScale.hubMax,
+      child: active ? card : MergeSemantics(child: card),
+    );
   }
 }

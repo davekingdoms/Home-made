@@ -1,5 +1,6 @@
 import 'package:homemade/theme/app_text_theme.dart';
 import 'package:homemade/theme/dimens.dart';
+import 'package:homemade/theme/text_scale.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Row of a transaction in a list: icon, counterparty, a line of details
@@ -36,6 +37,24 @@ class TransactionRow extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final details = this.details;
+    final amountText = Text(
+      amount,
+      style: theme.textTheme.bodyLarge?.listAmount.copyWith(
+        color: scheme.onSurface,
+      ),
+    );
+    // With large text the amount goes under the texts instead of beside,
+    // so that it does not squeeze the counterparty into a narrow column.
+    final stacked =
+        MediaQuery.textScalerOf(context).scale(1) > AppTextScale.hubMax;
+    final subtitle = stacked
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [if (details != null) Text(details), amountText],
+          )
+        : details == null
+        ? null
+        : Text(details);
     return ListTile(
       onTap: onTap,
       leading: SizedBox.square(
@@ -50,13 +69,8 @@ class TransactionRow extends StatelessWidget {
       ),
       title: Text(counterparty),
       titleTextStyle: theme.textTheme.titleMedium,
-      subtitle: details == null ? null : Text(details),
-      trailing: Text(
-        amount,
-        style: theme.textTheme.bodyLarge?.listAmount.copyWith(
-          color: scheme.onSurface,
-        ),
-      ),
+      subtitle: subtitle,
+      trailing: stacked ? null : amountText,
     );
   }
 }

@@ -442,9 +442,16 @@ Widget _card(BuildContext context) {
                   color: context.appColors.suPrimarioTenue,
                 ),
               ),
-              Text(
-                const Money(184250).format(),
-                style: onCard.headlineMedium?.amount,
+              // A large amount shrinks to stay on one line.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  const Money(184250).format(),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: onCard.headlineMedium?.amount,
+                ),
               ),
             ],
           );

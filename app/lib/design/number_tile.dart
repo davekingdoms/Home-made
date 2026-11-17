@@ -40,10 +40,18 @@ class NumberTile extends StatelessWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
-              Text(
-                amount,
-                style: theme.textTheme.titleMedium?.amount.copyWith(
-                  color: scheme.onSurface,
+              // An amount never breaks in the middle: when the tile is too
+              // narrow for it, it shrinks to stay on one line.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  amount,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.titleMedium?.amount.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
               ),
             ],
