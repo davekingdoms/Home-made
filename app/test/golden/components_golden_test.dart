@@ -16,8 +16,9 @@ const _surface = Size(phoneWidth * 6, 2400);
 /// six combinations side by side, plus one with the text at 200% for the
 /// components that have text. They are the catalog of the specification.
 ///
-/// Regenerate the pictures, from `app/`, with:
-/// `fvm flutter test --tags golden --update-goldens`
+/// The reference pictures are drawn on Linux, by the CI: to regenerate them,
+/// add the `update-goldens` label to the pull request or run the "Update
+/// goldens" workflow on the branch (see CLAUDE.md, section CI).
 void main() {
   setUpAll(loadAppFonts);
 

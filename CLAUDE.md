@@ -26,10 +26,11 @@ App Flutter per le finanze di una casa con uno o più membri: movimenti importat
 6. **Ogni tabella nuova** arriva con le sue policy RLS e i suoi test pgTAP.
 7. **Codice in inglese, testi dell'interfaccia in italiano.** Unica eccezione: i campi di `AppColors` e i token di `lib/theme/tokens.dart` tengono i nomi italiani di `docs/spec/stile.md` (`testoTerziario`, `banda`, `suPrimarioTenue`, `avviso`, `credito`, `debito`, `nastroGiallo`, `nastroNero`).
 8. **Stile solo da `docs/spec/stile.md`:** nelle schermate si usano i ruoli colore, mai codici esadecimali. Dopo ogni modifica ai token: `python tools/contrasti/contrasti.py docs/spec/stile.md`.
-9. **Branch e pull request** (GitHub Flow, sezione sotto). `main` è sempre rilasciabile; il merge solo con la CI verde.
+9. **Branch e pull request** (GitHub Flow, sezione sotto). `main` è sempre rilasciabile; il merge solo con la CI verde: i controlli obbligatori sono `gitleaks`, `app`, `golden`, `tokens` e `database` (sezione CI).
 10. **CI:** nei log solo esiti (riuscito, fallito), mai dati; nessun dump o dato come artifact dei workflow.
 11. **Non leggere né copiare il contenuto di `private/`.** I file che contiene li legge solo la build; se serve sapere cosa c'è dentro, chiedi. Claude Code si avvia dalla radice del repository, dove vale `.claude/settings.json`, che nega lettura e modifica di `private/`.
 12. **Analisi con `very_good_analysis`:** `fvm flutter analyze` deve dare zero problemi prima di ogni commit, e il codice deve essere formattato (`fvm dart format .`). Nessuna regola si disattiva senza chiedere.
+13. **Il codice generato non si committa:** `*.g.dart` e `*.freezed.dart` sono in `.gitignore`. Dopo ogni checkout o pull si rigenerano con `build_runner`; la CI li genera da sola.
 
 ## Branch e pull request
 
@@ -40,6 +41,7 @@ App Flutter per le finanze di una casa con uno o più membri: movimenti importat
 - **Prima del merge:** branch aggiornato con `main` (tasto "Update branch" o `git merge main`), CI verde, conversazioni risolte.
 - **Merge solo con merge commit**, niente squash né rebase: su `main` restano i singoli commit e un merge commit per funzionalità. `git log --first-parent main` mostra una riga per funzionalità; per annullarne una intera basta `git revert -m 1 <merge commit>`.
 - Dopo il merge il branch si cancella (impostazione del repository).
+- Le pull request di Dependabot (branch `dependabot/…`, titoli `build(deps): …` e `ci(deps): …`) seguono le stesse regole: CI verde e merge commit.
 - **Rilasci:** tag `vX.Y.Z` su un commit di `main`; i tag `v*` non si spostano né si cancellano.
 
 ## Commit
@@ -72,6 +74,7 @@ Ogni commit segue [Conventional Commits](https://www.conventionalcommits.org/) e
 | `app/lib/features/dev/` | Indice delle schermate e catalogo dei componenti (`/dev/components`), temporanei |
 | `app/test/` | Test dell'app; in `test/golden/` i golden test dei componenti (tag `golden`), con le immagini in `test/golden/goldens/` |
 | `supabase/` | Configurazione locale di Supabase; migrazioni, test pgTAP ed Edge Functions in arrivo |
+| `.github/` | Workflow (`ci.yml` per le pull request, `goldens.yml` per le immagini dei golden test), azione comune `actions/flutter-setup`, template della pull request, Dependabot |
 
 Rotte, livelli e tasto indietro: `docs/spec/navigazione.md`. Ogni schermata nuova si aggiunge prima al catalogo (`app/lib/core/router/screen_catalog.dart`).
 
@@ -85,17 +88,32 @@ In PowerShell. Da `app/`:
 
 ```powershell
 fvm flutter pub get                       # dipendenze
-fvm dart run build_runner build -d        # generazione del codice (*.g.dart, *.freezed.dart)
+fvm dart run build_runner build -d        # generazione del codice (*.g.dart, *.freezed.dart): dopo ogni checkout o pull
 fvm flutter analyze                       # analisi: zero problemi
 fvm dart format .                         # formattazione
-fvm flutter test                          # test
-fvm flutter test --tags golden --update-goldens   # rigenera le immagini dei golden test
+fvm flutter test --exclude-tags golden    # test (i golden girano solo in CI, su Linux)
 fvm flutter run --dart-define-from-file=../private/env.dev.json                   # avvio sul telefono
 fvm flutter build apk --release --dart-define-from-file=../private/env.dev.json   # build della release firmata
 fvm flutter install --release             # installazione della release sul telefono
 ```
 
 La build release richiede `private/key.properties` e il keystore; le build debug no.
+
+## CI
+
+`.github/workflows/ci.yml` gira su ogni pull request verso `main` e su ogni push su `main`. Un job per controllo, con il nome usato nel ruleset di `main`:
+
+| Job | Cosa controlla |
+|---|---|
+| `gitleaks` | Segreti nei commit |
+| `app` | Formattazione dei file committati, generazione del codice, `flutter analyze` (anche le info), test senza i golden |
+| `golden` | Golden test (`--tags golden`) |
+| `tokens` | Contrasti dei token di `docs/spec/stile.md` |
+| `database` | Migrazioni e test pgTAP su Supabase avviato nel runner (salta se non ce ne sono) |
+
+**Golden test:** le immagini di riferimento si generano **solo su Linux**, nella CI, perché Windows disegna i caratteri in modo diverso. Per aggiornarle: etichetta `update-goldens` sulla pull request, oppure workflow "Update goldens" avviato a mano sul branch (mai su `main`). Il workflow rigenera le immagini, le committa sul branch a nome di `github-actions[bot]` e fa ripartire la CI; poi `git pull` sul branch. Sul PC i golden non si lanciano.
+
+Nei workflow: niente `pull_request_target`, niente segreti nei job delle pull request, nessun artifact, nei log solo esiti.
 
 Dalla radice del repository:
 
