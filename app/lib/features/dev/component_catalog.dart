@@ -496,16 +496,27 @@ Widget _quickTiles(BuildContext context) => Wrap(
   ],
 );
 
-Widget _numberTile(BuildContext context) => Row(
-  spacing: AppSpacing.xs,
-  children: [
-    Expanded(
-      child: NumberTile(label: 'Entrate', amount: const Money(245000).format()),
-    ),
-    Expanded(
-      child: NumberTile(label: 'Uscite', amount: const Money(-131275).format()),
-    ),
-  ],
+// Side by side the tiles are as tall as the taller one, also when an amount
+// shrinks to fit.
+Widget _numberTile(BuildContext context) => IntrinsicHeight(
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: AppSpacing.xs,
+    children: [
+      Expanded(
+        child: NumberTile(
+          label: 'Entrate',
+          amount: const Money(245000).format(),
+        ),
+      ),
+      Expanded(
+        child: NumberTile(
+          label: 'Uscite',
+          amount: const Money(-131275).format(),
+        ),
+      ),
+    ],
+  ),
 );
 
 Widget _transactionRow(BuildContext context) => Card(
