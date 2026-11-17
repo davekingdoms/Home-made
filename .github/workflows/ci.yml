@@ -27,7 +27,7 @@ jobs:
     name: gitleaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v3
@@ -42,7 +42,7 @@ jobs:
     name: app
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/flutter-setup
       - name: Check formatting
         working-directory: app
@@ -59,7 +59,7 @@ jobs:
     name: golden
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/flutter-setup
       - name: Golden tests
         working-directory: app
@@ -71,7 +71,7 @@ jobs:
     name: tokens
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Contrast of the colour tokens
         run: python3 tools/contrasti/contrasti.py docs/spec/stile.md
 
@@ -79,7 +79,7 @@ jobs:
     name: database
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Look for migrations and tests
         id: find
         run: |
