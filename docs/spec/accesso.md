@@ -31,7 +31,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 ## 3. A2 — Accesso
 
-- Logo, "Home-made", una frase breve, tasto "Continua con Google". Unico metodo di accesso e registrazione.
+- Logo, "Home-made", la frase "Conti, spese e conguagli di casa in un posto solo.", tasto "Continua con Google" e sotto il tasto "Accedi o registrati con il tuo account Google.". Unico metodo di accesso e registrazione.
 - Durante l'accesso il tasto mostra un indicatore ed è disattivato.
 
 | Caso | Messaggio |
@@ -47,6 +47,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 ## 4. A3 — Primo accesso
 
 - Foto dell'account Google (nessun caricamento; se manca, le iniziali), **nome** preso da Google e modificabile (obbligatorio), casella **"Ho letto l'informativa privacy"** con il link all'informativa, tasto "Continua" (attivo con nome e casella).
+- **"Esci dall'account"** nel menu della barra in alto, per chi ha scelto l'account Google sbagliato (con conferma, poi A2).
 - Sul profilo si salvano nome visualizzato, versione dell'informativa e data di presa visione. Con una nuova versione dell'informativa A3 ricompare con la sola casella.
 - La casella registra la presa visione dell'informativa, non un consenso.
 
@@ -54,6 +55,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 - Due scelte con una riga di spiegazione: "Crea una casa" → A8; "Ho un invito" → A10.
 - Con un invito in sospeso A7 si salta.
+- **"Esci dall'account"** nel menu della barra in alto, come in A3.
 
 ## 6. A8 — Crea casa
 
@@ -65,16 +67,25 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 ## 7. A9 — Invita
 
-- Un invito per persona: **link monouso** (App Link), **QR** dello stesso link e **codice di 8 caratteri** senza caratteri ambigui; etichetta facoltativa "per chi".
+- Un invito per persona: **link monouso** (App Link), **QR** dello stesso link e **codice di 8 caratteri** senza caratteri ambigui, mostrato in due gruppi da 4 (es. "K7QM X2PA"); etichetta facoltativa "per chi".
 - Scadenza **7 giorni**; revocabile dalle impostazioni della casa; può invitare qualunque membro. Il limite di membri conta anche gli inviti aperti.
-- Azioni: condividi, copia link, copia codice, "Invita un'altra persona", "Continua" (da A8: "Più tardi").
+- Azioni: condividi, copia link, copia codice, "Invita un'altra persona", "Continua". Arrivando da A8 il tasto dice "Più tardi" e diventa "Continua" dopo che un invito è stato condiviso o copiato.
 - Il token del link si salva lato server solo come hash; i tentativi con il codice breve sono limitati lato server.
 
 ## 8. A10 — Entra con invito
 
-- Dal link (codice compilato) o scrivendo il codice; anteprima con nome della casa, chi invita e membri presenti → "Entra".
+- Dal link (codice compilato) o scrivendo il codice, accettato con o senza lo spazio tra i due gruppi; anteprima con nome della casa, chi invita e membri presenti → "Entra".
 - **Senza app:** il link apre una pagina con le istruzioni e il codice. **Con l'app ma senza account:** A2 → A3 → A10.
-- **Errori:** codice sbagliato, scaduto, già usato, revocato; casa piena; "Fai già parte di una casa" (un account sta in una sola casa).
+- **Errori:**
+
+| Caso | Messaggio |
+|---|---|
+| Codice sbagliato | "Codice non valido. Controlla e riprova." |
+| Invito scaduto | "Questo invito è scaduto: chiedine uno nuovo a chi ti ha invitato." |
+| Invito già usato | "Questo invito è già stato usato." |
+| Invito revocato | "Questo invito è stato annullato." |
+| Casa piena | "Questa casa ha già il numero massimo di membri." |
+| Account già in una casa | "Fai già parte di una casa" (un account sta in una sola casa) |
 - **Casa già avviata:** il nuovo membro parte con il saldo del conguaglio a zero e non vede le righe precedenti alla sua data di inizio. La sua **data di inizio** è la data di ingresso, modificabile qui all'indietro fino a quella della casa.
 - **Casa non ancora iniziata** (data di inizio della casa nel futuro): la data di inizio del membro è quella della casa e non si modifica.
 - **Contanti:** come in A8, se la data di inizio del membro è il giorno stesso.
@@ -85,7 +96,7 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 ## 9. A11 — Posizione
 
 - Ultimo passo del primo avvio, **una volta per dispositivo**.
-- Testo: "Per mostrare il cielo e il meteo sopra la tua casa, Home-made usa la posizione approssimativa (circa 10 km). Resta sul telefono: non viene salvata né mostrata agli altri membri."
+- Testo: "Per mostrare il cielo e il meteo sopra la tua casa, Home-made usa la posizione approssimativa (circa 10 km). Resta su questo dispositivo: non viene salvata né mostrata agli altri membri." (vale anche su tablet)
 - "Consenti" → richiesta di sistema per la sola posizione approssimativa (`ACCESS_COARSE_LOCATION`, mai in background). "Scegli una città" → ricerca in un elenco di città incluso nell'app (GeoNames, CC BY 4.0, attribuzione in Info › Licenze).
 - Permesso negato → scelta della città, che si può saltare. Tutto si cambia dalle impostazioni.
 - **Da verificare:** peso dell'elenco delle città e soglia di popolazione.
@@ -125,5 +136,7 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - Un membro che entra in una casa non ancora iniziata ha la data di inizio della casa e non può cambiarla.
 - Le quote predefinite uguali dopo un ingresso valgono dalla data di inizio del nuovo membro.
 - Accesso annullato: nessun messaggio.
+- Il codice d'invito si accetta con e senza lo spazio tra i due gruppi da 4.
+- In A9, arrivando da A8, il tasto "Più tardi" diventa "Continua" dopo una condivisione o una copia.
 - La voce "Saldo iniziale tra i membri" compare solo con almeno due membri e accetta solo cifre con somma zero.
 - "Nessun saldo da riportare" fissa a zero il saldo iniziale di ogni membro e toglie la voce a tutti.
