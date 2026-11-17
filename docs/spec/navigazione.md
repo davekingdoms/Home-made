@@ -87,9 +87,11 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 
 Totale: 31 schermate e 7 fogli.
 
-## 4. Indice delle schermate (sviluppo)
+## 4. Indice delle schermate e catalogo dei componenti (sviluppo)
 
 `/dev/screens`: elenco di tutte le schermate e i fogli con codice e nome, per aprirli durante lo sviluppo; si raggiunge da un link nell'hub. È temporaneo: si toglie quando tutte le schermate sono costruite.
+
+`/dev/components`: catalogo dei componenti della specifica dello stile (sezione 8), con dati inventati; si apre dall'indice delle schermate e l'indietro torna lì. In alto ha la scelta della palette e del tema, che cambiano tutta l'app, e il testo al 100%, 130% e 200%. Sta fuori dall'inventario delle schermate (codice `DEV`) ed è temporaneo come l'indice.
 
 ## 5. Da definire
 

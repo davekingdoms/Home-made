@@ -5,11 +5,13 @@ import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/core/config/config_error_app.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/supabase_auth_repository.dart';
+import 'package:homemade/theme/font_license.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicense();
 
   const config = AppConfig.fromEnvironment;
   final missingKeys = config.missingKeys;

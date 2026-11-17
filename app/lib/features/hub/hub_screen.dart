@@ -2,7 +2,8 @@ import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
 import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/theme/app_colors.dart';
-import 'package:homemade/theme/app_theme.dart';
+import 'package:homemade/theme/dimens.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Hub (B1): the entry screen, with one card per section.
@@ -22,7 +23,7 @@ class HubScreen extends StatelessWidget {
             icon: CircleAvatar(
               backgroundColor: scheme.tertiary,
               foregroundColor: scheme.onTertiary,
-              child: const Icon(Icons.person_rounded),
+              child: const Icon(Symbols.person_rounded),
             ),
           ),
           const SizedBox(width: 8),
@@ -33,16 +34,16 @@ class HubScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             _SectionCard(
-              icon: Icons.account_balance_wallet_rounded,
+              icon: Symbols.account_balance_wallet_rounded,
               name: 'Finanze',
               onTap: () => context.go(screenByCode('C1').location!),
             ),
             const SizedBox(height: 12),
-            const _SectionCard(icon: Icons.kitchen_rounded, name: 'Dispensa'),
+            const _SectionCard(icon: Symbols.kitchen_rounded, name: 'Dispensa'),
             const SizedBox(height: 12),
-            const _SectionCard(icon: Icons.folder_rounded, name: 'Documenti'),
+            const _SectionCard(icon: Symbols.folder_rounded, name: 'Documenti'),
             const SizedBox(height: 12),
-            const _SectionCard(icon: Icons.pets_rounded, name: 'Animali'),
+            const _SectionCard(icon: Symbols.pets_rounded, name: 'Animali'),
             const SizedBox(height: 24),
             Center(
               child: TextButton(
@@ -118,7 +119,7 @@ class _SectionCard extends StatelessWidget {
               ),
               if (active)
                 Icon(
-                  Icons.chevron_right_rounded,
+                  Symbols.chevron_right_rounded,
                   color: scheme.onSurfaceVariant,
                 ),
             ],

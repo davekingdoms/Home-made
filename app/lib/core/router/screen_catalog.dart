@@ -15,7 +15,11 @@ enum ScreenLevel {
   detail('Livello 2 · dettagli'),
 
   /// Level 3: modal bottom sheet, not a route.
-  sheet('Livello 3 · fogli dal basso');
+  sheet('Livello 3 · fogli dal basso'),
+
+  /// Development screens (section 4 of the specification), outside the
+  /// inventory: they are built, not placeholders.
+  development('Sviluppo');
 
   new(this.title);
 
@@ -24,6 +28,9 @@ enum ScreenLevel {
 
 /// Identifier used in place of route parameters: never readable data.
 const exampleId = 'example';
+
+/// Code of the component catalog, a development screen.
+const componentCatalogCode = 'DEV';
 
 /// Values of `:kind` in the New entry route (F2), with their Italian names.
 const newEntryKinds = <String, String>{
@@ -42,7 +49,7 @@ class ScreenEntry {
     this.opensOnTop = false,
   });
 
-  /// Inventory code (A1–I10).
+  /// Inventory code (A1–I10), or the code of a development screen.
   final String code;
 
   /// Italian title shown in the interface.
@@ -277,6 +284,15 @@ const screenCatalog = <ScreenEntry>[
   ScreenEntry('E5', 'Tipo di movimento', ScreenLevel.sheet),
   ScreenEntry('F1', 'Menu "+"', ScreenLevel.sheet, opens: ['F2']),
   ScreenEntry('H3', 'Riconciliazione contanti', ScreenLevel.sheet),
+
+  // Development: opened from the screen index, back returns there.
+  ScreenEntry(
+    componentCatalogCode,
+    'Catalogo dei componenti',
+    ScreenLevel.development,
+    path: '/dev/components',
+    opensOnTop: true,
+  ),
 ];
 
 /// The catalog entry with the given inventory [code].

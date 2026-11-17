@@ -13,8 +13,12 @@ Finder inSheet(Finder finder) =>
     find.descendant(of: find.byType(BottomSheet), matching: finder);
 
 void main() {
-  final screens = screenCatalog.where((entry) => !entry.isSheet).toList();
-  final sheets = screenCatalog.where((entry) => entry.isSheet).toList();
+  // The inventory of the specification; the development screens are apart.
+  final inventory = screenCatalog
+      .where((entry) => entry.level != ScreenLevel.development)
+      .toList();
+  final screens = inventory.where((entry) => !entry.isSheet).toList();
+  final sheets = inventory.where((entry) => entry.isSheet).toList();
 
   group('catalog', () {
     test('has the 31 screens and 7 sheets of the specification', () {
@@ -22,11 +26,20 @@ void main() {
       expect(sheets, hasLength(7));
     });
 
+    test('has the component catalog as its only development screen', () {
+      final development = screenCatalog
+          .where((entry) => entry.level == ScreenLevel.development)
+          .toList();
+      expect(development.map((entry) => entry.code), [componentCatalogCode]);
+      expect(development.single.path, '/dev/components');
+    });
+
     test('has unique codes and paths', () {
+      final routes = screenCatalog.where((entry) => !entry.isSheet).toList();
       final codes = screenCatalog.map((entry) => entry.code).toSet();
-      final paths = screens.map((entry) => entry.path).toSet();
+      final paths = routes.map((entry) => entry.path).toSet();
       expect(codes, hasLength(screenCatalog.length));
-      expect(paths, hasLength(screens.length));
+      expect(paths, hasLength(routes.length));
     });
 
     test('links only to codes that exist', () {

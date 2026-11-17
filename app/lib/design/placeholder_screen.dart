@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
+import 'package:homemade/theme/app_button_styles.dart';
+import 'package:homemade/theme/dimens.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Stand-in for a screen that is not specified and built yet: its code and
@@ -20,14 +22,14 @@ class PlaceholderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final body = ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.screenMargin),
       children: [
         if (embedded) ...[
           Text(entry.label, style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
         ],
         const PlaceholderMark(),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.sectionGap),
         PlaceholderLinks(entry: entry),
       ],
     );
@@ -68,12 +70,13 @@ class PlaceholderLinks extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 8,
+      spacing: AppSpacing.xs,
       children: [
         for (final target in entry.opens.map(screenByCode))
           if (target.isSheet)
             FilledButton.tonal(
               key: ValueKey('open-${target.code}'),
+              style: context.buttonStyles.tonal,
               onPressed: () => _open(context, target),
               child: Text(target.label),
             )
@@ -81,6 +84,7 @@ class PlaceholderLinks extends StatelessWidget {
             for (final example in target.exampleLocations.entries)
               FilledButton.tonal(
                 key: ValueKey('open-${target.code}-${example.key}'),
+                style: context.buttonStyles.tonal,
                 onPressed: () => _open(context, target, example.key),
                 child: Text(example.value),
               ),
@@ -124,15 +128,20 @@ Future<void> showPlaceholderSheet(BuildContext context, ScreenEntry entry) {
     showDragHandle: true,
     builder: (context) => SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenMargin,
+          0,
+          AppSpacing.screenMargin,
+          AppSpacing.xl,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(entry.label, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             const PlaceholderMark(),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.sectionGap),
             PlaceholderLinks(entry: entry, closeBeforeOpening: true),
           ],
         ),
