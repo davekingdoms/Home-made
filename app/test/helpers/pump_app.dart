@@ -3,14 +3,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:homemade/app.dart';
 import 'package:homemade/core/router/app_router.dart';
+import 'package:homemade/features/auth/auth_repository.dart';
+
+import 'fake_auth_repository.dart';
 
 /// Pumps the whole app, started at [location], and returns its router.
-Future<GoRouter> pumpApp(WidgetTester tester, {String location = '/'}) async {
-  final router = buildAppRouter(initialLocation: location);
+///
+/// [auth] defaults to a fake repository with an open session.
+Future<GoRouter> pumpApp(
+  WidgetTester tester, {
+  String location = '/',
+  AuthRepository? auth,
+}) async {
+  final repository = auth ?? FakeAuthRepository();
+  final router = buildAppRouter(auth: repository, initialLocation: location);
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [appRouterProvider.overrideWithValue(router)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repository),
+        appRouterProvider.overrideWithValue(router),
+      ],
       child: const HomemadeApp(),
     ),
   );

@@ -14,7 +14,7 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 ## 2. Regole
 
 - **Ingresso:** l'hub (B1) è sempre la schermata d'ingresso.
-- **Sessione:** all'avvio il router controlla la sessione: senza sessione porta ad Accesso (A2), con sessione all'hub. Sblocco (A1) e primo avvio (A3, A7–A10) si collegano al router con la specifica dell'accesso.
+- **Sessione:** il router controlla la sessione all'avvio e a ogni suo cambio: senza sessione ogni percorso porta ad Accesso (A2); con sessione `/sign-in` porta all'hub. Sblocco (A1) e primo avvio (A3, A7–A10) restano da collegare: arrivano con la specifica dell'accesso e fino ad allora si aprono solo dall'indice delle schermate, con la sessione attiva.
 - **Finanze:** barra Riepilogo · Movimenti · Analisi · Conti, con etichette sempre visibili (badge su Movimenti in arrivo). Ogni scheda ricorda il proprio stato (filtri, scorrimento): una pila di navigazione per scheda (`StatefulShellRoute.indexedStack`).
 - **Tasto "+":** specifico per sezione; in Finanze apre il menu F1, da cui si apre F2.
 - **Tasto indietro di Android:** chiude il foglio → chiude il dettaglio → dalla seconda, terza o quarta scheda torna alla prima (Riepilogo) → dalla prima torna all'hub → dall'hub esce dall'app. Indietro predittivo attivo.

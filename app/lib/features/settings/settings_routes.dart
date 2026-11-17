@@ -1,12 +1,16 @@
 import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/placeholder_route.dart';
+import 'package:homemade/features/settings/account_screen.dart';
 
 /// Settings (I1–I10), opened from the avatar of the hub.
 RouteBase settingsRoute() => placeholderRoute(
   'I1',
   path: 'settings',
   routes: [
-    placeholderRoute('I2', path: 'account'),
+    GoRoute(
+      path: 'account',
+      builder: (context, state) => const AccountScreen(),
+    ),
     placeholderRoute('I3', path: 'appearance'),
     placeholderRoute('I4', path: 'household'),
     placeholderRoute(

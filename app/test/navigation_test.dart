@@ -4,6 +4,7 @@ import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'helpers/fake_auth_repository.dart';
 import 'helpers/pump_app.dart';
 
 /// Narrows [finder] to the open bottom sheet: the screen under it stays
@@ -54,7 +55,12 @@ void main() {
     for (final entry in screens) {
       for (final location in entry.exampleLocations.keys) {
         testWidgets('${entry.code} at $location', (tester) async {
-          final router = await pumpApp(tester, location: location);
+          final router = await pumpApp(
+            tester,
+            location: location,
+            // With a session, sign-in (A2) leads to the hub.
+            auth: FakeAuthRepository(signedIn: entry.code != 'A2'),
+          );
 
           expect(router.location, location);
           if (entry.code == 'B1') {
@@ -211,6 +217,10 @@ void main() {
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
       expect(inSheet(find.text('F1 · Menu "+"')), findsOneWidget);
+      expect(
+        inSheet(find.text('F2 · Nuovo movimento · Giroconto o prelievo')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('F2 · Nuovo movimento · Entrata'));
       await tester.pumpAndSettle();

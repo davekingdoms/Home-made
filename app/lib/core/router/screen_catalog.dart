@@ -36,7 +36,7 @@ const componentCatalogCode = 'DEV';
 const newEntryKinds = <String, String>{
   'cash-expense': 'Spesa in contanti',
   'income': 'Entrata',
-  'transfer': 'Trasferimento',
+  'transfer': 'Giroconto o prelievo',
 };
 
 class ScreenEntry {
