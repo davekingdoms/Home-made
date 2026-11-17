@@ -74,7 +74,7 @@ Ogni commit segue [Conventional Commits](https://www.conventionalcommits.org/) e
 | `app/lib/features/dev/` | Indice delle schermate e catalogo dei componenti (`/dev/components`), temporanei |
 | `app/test/` | Test dell'app; in `test/golden/` i golden test dei componenti (tag `golden`), con le immagini in `test/golden/goldens/` |
 | `supabase/` | Configurazione locale di Supabase; migrazioni, test pgTAP ed Edge Functions in arrivo |
-| `.github/` | Workflow (`ci.yml` per le pull request, `goldens.yml` per le immagini dei golden test), azione comune `actions/flutter-setup`, template della pull request, Dependabot |
+| `.github/` | Workflow (`ci.yml` per le pull request, `goldens.yml` per le immagini dei golden test, `distribute.yml` per le build di prova), azione comune `actions/flutter-setup`, template della pull request, Dependabot |
 
 Rotte, livelli e tasto indietro: `docs/spec/navigazione.md`. Ogni schermata nuova si aggiunge prima al catalogo (`app/lib/core/router/screen_catalog.dart`).
 
@@ -112,6 +112,8 @@ La build release richiede `private/key.properties` e il keystore; le build debug
 | `database` | Migrazioni e test pgTAP su Supabase avviato nel runner (salta se non ce ne sono) |
 
 **Golden test:** le immagini di riferimento si generano **solo su Linux**, nella CI, perché Windows disegna i caratteri in modo diverso. Per aggiornarle: etichetta `update-goldens` sulla pull request, oppure workflow "Update goldens" avviato a mano sul branch (mai su `main`). Il workflow rigenera le immagini, le committa sul branch a nome di `github-actions[bot]` e fa ripartire la CI; poi `git pull` sul branch. Sul PC i golden non si lanciano.
+
+**Build di prova:** il workflow "Distribute test build" (`distribute.yml`), avviato a mano su un branch, compila l'APK di release configurato per `dev`, firmato con la chiave di caricamento, e lo manda ai tester con Firebase App Distribution. Usa i secrets dell'environment `dev`; l'APK non diventa mai un artifact.
 
 Nei workflow: niente `pull_request_target`, niente segreti nei job delle pull request, nessun artifact, nei log solo esiti.
 
