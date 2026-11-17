@@ -112,20 +112,25 @@ class _ComponentCatalogScreenState
                 onSelectionChanged: (selection) =>
                     setState(() => _textScale = selection.single),
               ),
-              for (final component in componentCatalog) ...[
-                heading(component.title),
-                MediaQuery(
+              // One section per component: its heading, then the component.
+              for (final component in componentCatalog)
+                Column(
                   key: ValueKey('component-${component.id}'),
-                  data: MediaQuery.of(context)
-                      .copyWith(textScaler: TextScaler.linear(_textScale)),
-                  // The component chooses its own size, up to the width.
-                  child: Align(
-                    alignment: AlignmentDirectional.topStart,
-                    heightFactor: 1,
-                    child: Builder(builder: component.builder),
-                  ),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    heading(component.title),
+                    MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(textScaler: TextScaler.linear(_textScale)),
+                      // The component chooses its own size, up to the width.
+                      child: Align(
+                        alignment: AlignmentDirectional.topStart,
+                        heightFactor: 1,
+                        child: Builder(builder: component.builder),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
             ],
           ),
         ),

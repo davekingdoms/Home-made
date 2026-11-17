@@ -23,10 +23,20 @@ Finder _component(CatalogEntry entry) =>
 ThemeData _themeOf(WidgetTester tester) =>
     Theme.of(tester.element(find.byType(ComponentCatalogScreen)));
 
+/// Scrolls the catalog until [entry] is on screen.
+///
+/// `scrollUntilVisible` jumps without drawing a frame: the pump lays out the
+/// list at the new offset, so that the search of the next component does
+/// not start from a stale layout and drag past it.
+Future<void> _scrollTo(WidgetTester tester, CatalogEntry entry) async {
+  await tester.scrollUntilVisible(_component(entry), 300, scrollable: _list);
+  await tester.pump();
+}
+
 /// Scrolls through the whole catalog, building every component.
 Future<void> _scrollThrough(WidgetTester tester) async {
   for (final entry in componentCatalog) {
-    await tester.scrollUntilVisible(_component(entry), 300, scrollable: _list);
+    await _scrollTo(tester, entry);
     expect(tester.takeException(), isNull, reason: entry.id);
   }
 }
@@ -59,11 +69,7 @@ void main() {
     expect(router.location, _path);
     expect(find.byType(ComponentCatalogScreen), findsOneWidget);
     for (final entry in componentCatalog) {
-      await tester.scrollUntilVisible(
-        _component(entry),
-        300,
-        scrollable: _list,
-      );
+      await _scrollTo(tester, entry);
       expect(find.text(entry.title), findsWidgets);
     }
   });
