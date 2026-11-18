@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(21);
+select plan(23);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -231,6 +231,16 @@ select throws_ok(
 
 set local role authenticated;
 select pg_temp.login('00000000-0000-4000-8000-00000000000b');
+select throws_ok(
+  $$update public.settlements set amount_cents = 1700 where id = '00000000-0000-4000-8000-000000000501'$$,
+  'P0001', 'settlement_linked',
+  'with a side linked the app does not change the amount'
+);
+select throws_ok(
+  $$update public.settlements set settled_on = current_date where id = '00000000-0000-4000-8000-000000000501'$$,
+  'P0001', 'settlement_linked',
+  'nor the date'
+);
 select lives_ok(
   $$update public.settlements set deleted_at = now() where id = '00000000-0000-4000-8000-000000000501'$$,
   'the payer deletes the settlement with deleted_at'

@@ -1,10 +1,12 @@
--- PayPal emails: lower case, one person for each email, only the owner.
--- Invented users: Anna (a) and Bruno (b); invented addresses on example.com.
+-- PayPal emails: lower case, one person for each email, only the owner,
+-- also within the household. Invented users: Anna (a) and Bruno (b) in
+-- "Casa di prova", Carla (c) without a household; invented addresses on
+-- example.com.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -22,7 +24,20 @@ $$;
 
 insert into auth.users (id, aud, role) values
   ('00000000-0000-4000-8000-00000000000a', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-00000000000b', 'authenticated', 'authenticated');
+  ('00000000-0000-4000-8000-00000000000b', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-00000000000c', 'authenticated', 'authenticated');
+insert into public.profiles (id, display_name) values
+  ('00000000-0000-4000-8000-00000000000a', 'Anna'),
+  ('00000000-0000-4000-8000-00000000000b', 'Bruno'),
+  ('00000000-0000-4000-8000-00000000000c', 'Carla');
+insert into public.households (id, name, start_date) values
+  ('00000000-0000-4000-8000-0000000000f1', 'Casa di prova', current_date - 30);
+insert into public.members (id, household_id, user_id, start_date) values
+  ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000f1',
+   '00000000-0000-4000-8000-00000000000a', current_date - 30);
+insert into public.members (id, household_id, user_id, start_date) values
+  ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000f1',
+   '00000000-0000-4000-8000-00000000000b', current_date - 30);
 
 select has_table('public', 'paypal_emails', 'paypal_emails exists');
 
@@ -47,13 +62,20 @@ select throws_ok(
 );
 
 select pg_temp.login('00000000-0000-4000-8000-00000000000b');
-select is_empty('select 1 from public.paypal_emails', 'another user does not see them');
+select isnt_empty(
+  $$select 1 from public.profiles where id = '00000000-0000-4000-8000-00000000000a'$$,
+  'Bruno sees the profile of Anna: they are in the same household'
+);
+select is_empty('select 1 from public.paypal_emails', 'but not her PayPal emails');
 select throws_ok(
   $$insert into public.paypal_emails (user_id, email, source)
     values ('00000000-0000-4000-8000-00000000000b', 'ANNA.PROVA@example.com', 'linked_account')$$,
   '23505', null,
   'one person for each email'
 );
+
+select pg_temp.login('00000000-0000-4000-8000-00000000000c');
+select is_empty('select 1 from public.paypal_emails', 'nor does a user outside the household');
 
 select pg_temp.login('00000000-0000-4000-8000-00000000000a');
 select lives_ok(

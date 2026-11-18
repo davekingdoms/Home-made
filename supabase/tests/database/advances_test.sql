@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(19);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -179,6 +179,38 @@ select throws_ok(
   'not to a member who left'
 );
 
+-- A second advance of Carla, shared with Bruno, who then leaves the
+-- household before the refund arrives.
+insert into public.transactions (
+  id, household_id, account_id, source, paid_by_member_id, entered_by_member_id, movement_date, amount_cents, currency
+) values
+  ('00000000-0000-4000-8000-000000000107', '00000000-0000-4000-8000-0000000000f1',
+   pg_temp.cash_of('00000000-0000-4000-8000-0000000000c1'), 'manual',
+   '00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000c1', current_date - 2, -2000, 'EUR'),
+  ('00000000-0000-4000-8000-000000000108', '00000000-0000-4000-8000-0000000000f1',
+   pg_temp.cash_of('00000000-0000-4000-8000-0000000000c1'), 'manual',
+   '00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000c1', current_date - 1, 1000, 'EUR');
+set local role authenticated;
+select pg_temp.login('00000000-0000-4000-8000-00000000000c');
+select public.set_line_shares(pg_temp.line('00000000-0000-4000-8000-000000000107'),
+  '[{"member_id": "00000000-0000-4000-8000-0000000000b1", "weight": 1},
+    {"member_id": "00000000-0000-4000-8000-0000000000c1", "weight": 1}]');
+insert into public.advances (id, line_id, contact_id, expected_cents)
+values ('00000000-0000-4000-8000-000000000603', pg_temp.line('00000000-0000-4000-8000-000000000107'),
+        '00000000-0000-4000-8000-000000000601', 2000);
+select pg_temp.check_deferred();
+reset role;
+update public.members set left_at = now() where id = '00000000-0000-4000-8000-0000000000b1';
+set local role authenticated;
+select pg_temp.login('00000000-0000-4000-8000-00000000000c');
+select throws_ok(
+  $$insert into public.advance_repayments (advance_id, line_id, amount_cents)
+    values ('00000000-0000-4000-8000-000000000603', pg_temp.line('00000000-0000-4000-8000-000000000108'), 1000)$$,
+  'P0001', 'member_not_eligible',
+  'a refund does not inherit the share of a member who left'
+);
+
+reset role;
 set local role anon;
 select throws_ok(
   'select id from public.contacts',

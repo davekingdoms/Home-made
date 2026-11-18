@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(18);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -92,6 +92,17 @@ select throws_ok(
       pg_temp.balances(1000, null, '00000000-0000-4000-8000-0000000000e9', -1000))$$,
   'P0001', 'member_not_eligible',
   'a member who left has no initial balance'
+);
+select throws_ok(
+  $$select public.set_initial_balances(
+      pg_temp.balances(1000, null, '00000000-0000-4000-8000-0000000000a1', -1000))$$,
+  'P0001', 'invalid_balances',
+  'a member appears once in the list'
+);
+select throws_ok(
+  $$select public.set_initial_balances('{"member_id": "00000000-0000-4000-8000-0000000000a1"}')$$,
+  'P0001', 'invalid_balances',
+  'the balances are a list'
 );
 select lives_ok(
   $$select public.set_initial_balances(pg_temp.balances(1000, -1000, null, null))$$,
