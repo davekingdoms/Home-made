@@ -272,6 +272,8 @@ Vincoli (trigger differiti a fine transazione):
 
 Il flag 730: quando l'app cambia la categoria di una riga, la riga prende `deductible_730_default` della nuova categoria, salvo che la stessa modifica imposti il flag; `split_line` e `merge_categories` lasciano i flag come sono.
 
+Collegamenti della riga, controllati anche per il server (`line_link_not_valid`): `settlement_id` è un conguaglio della stessa casa di cui chi ha pagato la riga è il pagatore o il ricevente; `transfer_id` è un giroconto della stessa casa e il conto della transazione è `from_account_id` o `to_account_id`; `installment_plan_id` è un piano della stessa casa con `account_id` uguale al conto della transazione.
+
 RLS:
 - **select** con `can_see_line`;
 - **insert** ed eliminazione solo con `can_see_transaction` (dividere in righe richiede il totale);
@@ -415,12 +417,12 @@ RLS: tutto con `is_account_owner(from_account_id)`.
 | comuni | | |
 
 Il primo lato che arriva crea il conguaglio; il secondo (stessa coppia, stesso importo e valuta, data entro ±3 giorni, lato libero) **si collega** a quello. L'abbinamento lo fa il server.
-Pagatore, ricevente e chi lo crea sono membri attivi della casa, con la data di inizio non successiva a `settled_on`, anche dal server (`member_not_eligible`); ogni lato è un movimento del suo membro.
+Pagatore, ricevente e chi lo crea sono membri attivi della casa, con la data di inizio non successiva a `settled_on`, anche dal server (`member_not_eligible`); ogni lato è un movimento del suo membro. Quando il server ha collegato almeno un lato, dall'app importo e data non cambiano più (`settlement_linked`); l'eliminazione resta possibile.
 RLS: **select**, insert e update solo il pagatore e il ricevente. Dall'app solo conguagli `manual`, creati da uno dei due; cambiano solo importo, data ed eliminazione; i lati li collega il server.
 
 ### `initial_balances` — saldo iniziale tra i membri
 `household_id`, `member_id`, `amount_cents` (con segno: positivo = credito), `set_by_member_id`, comuni; PK (`household_id`, `member_id`).
-- Funzione `set_initial_balances(balances)`: riguarda solo i membri attivi con la data di inizio uguale a quella della casa (gli altri: `member_not_eligible`); i mancanti valgono zero; **somma zero** obbligatoria (`initial_balance_not_zero_sum`); chi chiama è un membro attivo (`not_member`). Ogni chiamata riscrive le righe di tutti quei membri, così la versione di ciascuna sale di uno: l'app ci applica la regola dei conflitti.
+- Funzione `set_initial_balances(balances)`: riguarda solo i membri attivi con la data di inizio uguale a quella della casa (gli altri: `member_not_eligible`); `balances` è un elenco con ogni membro al massimo una volta (altrimenti `invalid_balances`); i mancanti valgono zero; **somma zero** obbligatoria (`initial_balance_not_zero_sum`); chi chiama è un membro attivo (`not_member`). Ogni chiamata riscrive le righe di tutti quei membri, così la versione di ciascuna sale di uno: l'app ci applica la regola dei conflitti.
 - **"Nessun saldo da riportare"** = la stessa funzione con tutti gli importi a zero. La voce "Per iniziare" è fatta quando esistono le righe.
 - La usano qualunque membro e le correzioni da Saldi (regola dei conflitti).
 - RLS: **select** i membri attivi; scrittura solo con la funzione.
@@ -457,7 +459,7 @@ RLS: tutto solo il proprietario; il riconoscimento dei conguagli la legge solo l
 - **`contacts`:** `id`, `household_id`, `owner_member_id`, `name`, `archived_at`, comuni. Rubrica **personale**: solo il proprietario, membro attivo della casa (`member_not_eligible`).
 - **`advances`:** `id`, `line_id` (unico: la riga rimborsabile da terzi), `contact_id`, `contact_name` (copiato, così lo vedono gli altri coinvolti), `expected_cents`, `written_off_at` (diventata spesa normale), comuni.
 - **`advance_repayments`:** `advance_id`, `line_id` (riga del rimborso), `amount_cents`.
-- Il rimborso eredita le quote della riga originale quando si collega all'anticipo. Aperto, parziale o chiuso si ricava dai rimborsi. RLS: come la riga dell'anticipo; collega anticipi e rimborsi chi può modificare le righe coinvolte, con un contatto della propria rubrica.
+- Il rimborso eredita le quote della riga originale quando si collega all'anticipo; ogni membro di quelle quote è un membro attivo della casa (`member_not_eligible`). Aperto, parziale o chiuso si ricava dai rimborsi. RLS: come la riga dell'anticipo; collega anticipi e rimborsi chi può modificare le righe coinvolte, con un contatto della propria rubrica.
 
 ## 12. Fuori da questo schema
 
