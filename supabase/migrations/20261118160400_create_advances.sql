@@ -107,7 +107,8 @@ create trigger advances_prepare
   for each row execute function public.prepare_advance();
 
 -- The refund inherits the shares of the line of the advance: same weights,
--- cents computed on the refund.
+-- cents computed on the refund. Every member of those weights is an active
+-- member of the household.
 create function public.copy_advance_shares()
 returns trigger
 language plpgsql
@@ -117,6 +118,7 @@ as $$
 declare
   v_refund public.transaction_lines%rowtype;
   v_weights jsonb;
+  v_member_id uuid;
 begin
   select l.* into v_refund from public.transaction_lines l where l.id = new.line_id;
 
@@ -135,6 +137,12 @@ begin
     raise exception 'the refund is of the household of the advance'
       using errcode = 'check_violation';
   end if;
+
+  for v_member_id in
+    select (w ->> 'member_id')::uuid from jsonb_array_elements(v_weights) as w
+  loop
+    perform public.check_active_member(v_member_id, v_refund.household_id);
+  end loop;
 
   delete from public.line_shares s where s.line_id = v_refund.id;
 

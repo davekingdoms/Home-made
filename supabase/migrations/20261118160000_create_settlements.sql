@@ -123,6 +123,31 @@ create trigger settlements_check
   before insert or update on public.settlements
   for each row execute function public.check_settlement();
 
+-- Once the server linked a side, the app no longer changes amount and date
+-- (it can still delete). Not security definer, unlike check_settlement:
+-- here current_user is the role of the caller.
+create function public.restrict_settlement_update()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if current_user = 'authenticated'
+    and (old.payer_transaction_id is not null or old.payee_transaction_id is not null)
+    and (new.amount_cents, new.settled_on) is distinct from (old.amount_cents, old.settled_on)
+  then
+    raise exception 'settlement_linked';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.restrict_settlement_update() from public, anon, authenticated;
+
+create trigger settlements_restrict_update
+  before update on public.settlements
+  for each row execute function public.restrict_settlement_update();
+
 -- RLS: everything only for the payer and the payee. From the app only manual
 -- settlements; the sides are linked by the server.
 

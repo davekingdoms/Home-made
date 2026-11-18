@@ -70,8 +70,15 @@ begin
   from public.households h
   where h.id = public.current_household_id();
 
+  -- A list, with each member once.
   if jsonb_typeof(v_balances) <> 'array' then
-    raise exception 'balances is a list' using errcode = 'check_violation';
+    raise exception 'invalid_balances';
+  end if;
+  if (
+    select count(*) <> count(distinct e ->> 'member_id')
+    from jsonb_array_elements(v_balances) as e
+  ) then
+    raise exception 'invalid_balances';
   end if;
 
   if exists (
@@ -111,7 +118,7 @@ end;
 $$;
 
 comment on function public.set_initial_balances(jsonb) is
-  'Saves the initial balance [{member_id, amount_cents}] of the members who start with the household. Errors: not_member, member_not_eligible, initial_balance_not_zero_sum.';
+  'Saves the initial balance [{member_id, amount_cents}] of the members who start with the household. Errors: not_member, invalid_balances, member_not_eligible, initial_balance_not_zero_sum.';
 
 -- Net balance of every member of the household of the caller. Positive is
 -- credit. Lines and transactions not deleted, in EUR; settlements not
