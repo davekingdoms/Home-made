@@ -16,6 +16,7 @@ Le migrazioni stanno in `supabase/migrations/`, i test pgTAP in `supabase/tests/
 - **Eliminazione logica** (`deleted_at`) per movimenti manuali, righe, giroconti, conguagli, piani a rate e voci dei salvadanai. Le righe con `deleted_at` restano visibili a chi le vedeva, così la cache dei dispositivi le toglie; non contano in nessun calcolo.
 - **RLS** attiva su ogni tabella; `anon` non ha nessun permesso. Le funzioni di supporto e quelle che toccano più righe sono `security definer` con `set search_path = ''` e nomi completi (`public.…`). Nelle policy `auth.uid()` si scrive `(select auth.uid())`.
 - **Operazioni su più righe** passano da funzioni (RPC), perché ogni chiamata REST è una transazione a sé e i vincoli sulle somme verrebbero violati a metà.
+- **Insert dall'app su `accounts`, `transactions` e `transaction_lines`:** senza chiedere indietro la riga (niente `RETURNING`, cioè `return=minimal`) e senza `upsert`, perché la policy di select cerca la riga per id e una riga nuova non c'è ancora. L'id è già sul dispositivo; un secondo insert con lo stesso id dà `23505`, cioè la riga è già salvata.
 - **Errori delle funzioni:** `raise exception` con codice `P0001` e un messaggio-chiave in inglese (`invite_expired`, `household_full`…), che l'app traduce nei testi delle schermate. **Eccezione:** `invite_preview` e `redeem_invite` non sollevano i propri errori ma restituiscono la chiave nella colonna `error` (null se è andata bene): un errore sollevato annullerebbe anche la riga di `invite_attempts`, e i tentativi falliti, quelli da limitare, non conterebbero mai.
 
 ## 2. Funzioni di supporto
@@ -94,7 +95,7 @@ RLS: **select** i membri attivi della stessa casa (compresi i membri usciti, per
 | `revoked_at` | timestamptz null | |
 | `created_at` | timestamptz | |
 
-RLS: **select** i membri attivi della casa (senza `token_hash`: permesso sulle colonne); **update** di `revoked_at` i membri attivi; insert e uso solo con le funzioni.
+RLS: **select** i membri attivi della casa (senza `token_hash`: permesso sulle colonne); **update** di `revoked_at` i membri attivi; insert e uso solo con le funzioni. `revoked_at` si imposta una volta sola: da null a una data, poi non cambia né torna null, nemmeno dal server (`invite_revoked`).
 
 ### `invite_attempts`
 `user_id`, `attempted_at`. Nessun accesso dall'app. Lo usano `invite_preview` e `redeem_invite`: al massimo **10 tentativi all'ora** per account (`too_many_attempts`).
@@ -236,10 +237,11 @@ PK (`account_id`, `currency`, `balance_type`): si tiene l'ultimo valore. Il sald
 
 Vincoli e trigger:
 - con un conto, `paid_by_member_id` = proprietario del conto;
-- `movement_date` ≥ data di inizio di chi ha pagato: **nessun movimento prima della data di inizio**, anche cambiando la data;
+- `movement_date` ≥ data di inizio di chi ha pagato: **nessun movimento prima della data di inizio**, anche cambiando la data (`movement_before_start_date`);
 - per `source = 'bank'`, `amount_cents`, `currency`, `description`, `account_id` e `raw_id` non cambiano dall'app;
-- alla creazione nasce **una riga** con tutto l'importo e una quota del 100% a chi ha pagato (movimento in inbox);
-- se cambiano `movement_date`, `counterparty` o `paid_by_member_id`, il trigger aggiorna le copie sulle righe.
+- alla creazione nasce **una riga** con tutto l'importo e una quota del 100% a chi ha pagato (movimento in inbox); una rata prende la categoria del suo piano;
+- se cambiano `movement_date`, `counterparty` o `paid_by_member_id`, il trigger aggiorna le copie sulle righe;
+- se cambia l'importo di una transazione con **una sola riga** non eliminata, la riga lo segue e le quote si ricalcolano con gli stessi pesi; con più righe la modifica è rifiutata (`lines_sum_mismatch`) finché arriva la funzione con l'inserimento manuale.
 
 RLS: tutto con `can_see_transaction`. Chi è solo coinvolto in una riga **non legge mai la transazione**, quindi non vede mai il totale né l'email della controparte. Insert dall'app solo con `source = 'manual'`.
 
@@ -264,9 +266,11 @@ RLS: tutto con `can_see_transaction`. Chi è solo coinvolto in una riga **non le
 
 Il **tipo di movimento sta sulla riga**: una transazione può essere in parte giroconto e in parte commissioni. Nel **bilancio** entrano solo le righe `expense` e `income` con `excluded_from_budget = false`.
 Vincoli (trigger differiti a fine transazione):
-- la somma delle righe non eliminate è uguale a `transactions.amount_cents`;
-- una riga con una quota di un membro diverso da chi ha pagato ha una **categoria condivisa** e solo tag condivisi;
-- una categoria personale si usa solo dal suo proprietario.
+- la somma delle righe non eliminate è uguale a `transactions.amount_cents` (`lines_sum_mismatch`);
+- una riga con una quota di un membro diverso da chi ha pagato ha una **categoria condivisa** e solo tag condivisi (`shared_line_personal_category`, `shared_line_personal_tag`);
+- una categoria personale si usa solo dal suo proprietario, cioè sulle righe che ha pagato lui (`personal_category_not_owned`); lo stesso per i tag (`personal_tag_not_owned`).
+
+Il flag 730: quando l'app cambia la categoria di una riga, la riga prende `deductible_730_default` della nuova categoria, salvo che la stessa modifica imposti il flag; `split_line` e `merge_categories` lasciano i flag come sono.
 
 RLS:
 - **select** con `can_see_line`;
@@ -282,7 +286,7 @@ RLS:
 | `weight` | numeric(12,4) | > 0 |
 | `amount_cents` | bigint | calcolato dal server |
 
-PK (`line_id`, `member_id`). Ogni riga ha **almeno una quota**; la somma di `amount_cents` è uguale all'importo della riga (trigger differito). Un membro non ha quote su righe con data precedente alla sua data di inizio, né se è uscito dalla casa.
+PK (`line_id`, `member_id`). Ogni riga ha **almeno una quota**; la somma di `amount_cents` è uguale all'importo della riga (trigger differito, `line_shares_mismatch`). Un membro non ha quote su righe con data precedente alla sua data di inizio, anche cambiando la data della riga, né quote nuove se è uscito dalla casa (`member_not_eligible`).
 **Mia, Condivisa, Per un altro membro non si salvano**: si ricavano dalle quote (Mia = una quota sola, di chi ha pagato; Per… = chi ha pagato non ha quota; altrimenti Condivisa).
 RLS: **select** con `can_see_line`; nessuna scrittura diretta: solo `set_line_shares`.
 
@@ -299,16 +303,16 @@ Esempio: 10,00 € tra Anna, Bruno e Carla a pesi 1:1:1 pagati da Bruno → Brun
 | Funzione | Cosa fa |
 |---|---|
 | `set_line_shares(line_id, shares)` | `shares` = elenco di `{member_id, weight}`. Sostituisce le quote della riga e calcola i centesimi. Possono chiamarla chi vede la transazione e chi è coinvolto nella riga. Errori: `no_members`, `member_not_eligible` (uscito o con la data di inizio successiva alla riga). |
-| `split_line(line_id, parts)` | `parts` = elenco di `{id, amount_cents}` con gli id generati sul dispositivo. Divide una riga in più righe; **ogni riga nuova eredita** tipo, categoria, flag e pesi della riga da cui nasce. Solo chi vede la transazione. |
-| `default_shares_at(date)` | Pesi predefiniti della casa validi a quella data (data della spesa). |
-| `set_default_shares(valid_from, weights)` | Nuova versione delle quote predefinite da quella data. |
+| `split_line(line_id, parts)` | `parts` = elenco di `{id, amount_cents}` con gli id generati sul dispositivo. Divide una riga in più righe: ogni parte è una **riga nuova che eredita** tipo, categoria, flag e pesi della riga da cui nasce, e la riga di partenza **tiene il resto** del suo importo (le parti hanno il segno della riga e non ne prendono tutto l'importo). Una seconda chiamata con gli stessi id non fa niente. Solo chi vede la transazione. Errore: `invalid_parts`. |
+| `default_shares_at(date)` | Pesi predefiniti della casa validi a quella data (data della spesa), senza i membri usciti e quelli con la data di inizio successiva. |
+| `set_default_shares(valid_from, weights)` | Nuova versione delle quote predefinite da quella data. Errori: `not_member`, `no_members`, `member_not_eligible`. |
 
 Se cambia l'importo di una riga, i centesimi si ricalcolano con gli stessi pesi.
 
 ### `default_share_sets` e `default_share_weights`
 - `default_share_sets`: `id`, `household_id`, `valid_from` (date), `reason` (`household_created`, `member_joined`, `manual`), `member_id` null (per `member_joined`), `created_by_member_id`, comuni. Unico (`household_id`, `valid_from`): una seconda modifica nello stesso giorno sostituisce la prima.
 - `default_share_weights`: `set_id`, `member_id`, `weight` > 0.
-- **Trigger:** alla creazione della casa una versione con il solo creatore; all'ingresso di un membro una versione con **pesi uguali per tutti i membri attivi, valida dalla data di inizio del nuovo membro**. Se il membro sposta la propria data di inizio, la versione si sposta con lei.
+- **Trigger:** alla creazione della casa una versione con il solo creatore; all'ingresso di un membro una versione con **pesi uguali per tutti i membri attivi, valida dalla data di inizio del nuovo membro**. Se il membro sposta la propria data di inizio, la versione si sposta con lei (e sostituisce una versione già in quella data); il membro entra con peso 1 anche nelle versioni successive create prima del suo ingresso, che non potevano comprenderlo.
 - RLS: **select** i membri attivi; scrittura con le funzioni e i trigger.
 
 ## 7. Visibilità (riassunto delle regole RLS)
@@ -347,10 +351,11 @@ Nessuna tabella espone il totale di una transazione a chi non ne è il proprieta
 | `merged_into_id` | uuid null | |
 | comuni | | |
 
-Vincoli: una macro è sempre condivisa; una personale è sempre una sottocategoria (anche sotto una macro condivisa); nome unico tra le condivise non archiviate con lo stesso padre (senza maiuscole e minuscole); le categorie di sistema non si archiviano, non si uniscono e non diventano personali. Mai cancellate.
+Vincoli: una macro è sempre condivisa; una personale è sempre una sottocategoria (anche sotto una macro condivisa); nome unico tra le condivise non archiviate con lo stesso padre e lo stesso tipo (senza maiuscole e minuscole: spese ed entrate hanno entrambe una Varie); le categorie di sistema non si archiviano, non si uniscono e non diventano personali. Mai cancellate.
 Seed: alla creazione della casa un trigger copia l'elenco iniziale di [`categorie.md`](categorie.md) (spese ed entrate, con il flag 730 e le due Differenza di cassa).
-RLS: condivise → **select**, insert e update i membri attivi; personali → solo il proprietario. **Promozione** a condivisa: update di `scope` dal proprietario (con il controllo del nome).
-Funzione `merge_categories(from_id, into_id)`: sposta tutte le righe (anche quelle che chi chiama non vede) e archivia la categoria unita.
+**Differenza di cassa:** due categorie di sistema condivise (spesa ed entrata, sotto Varie). Il contante è personale: una riga che le usa ha solo la quota di chi ha pagato (`shared_line_cash_difference`).
+RLS: condivise → **select**, insert e update i membri attivi; personali → solo il proprietario. **Promozione** a condivisa: update di `scope` dal proprietario (con il controllo del nome); una condivisa non torna personale.
+Funzione `merge_categories(from_id, into_id)`: sposta tutte le righe (anche quelle che chi chiama non vede) e i piani a rate, e archivia la categoria unita. Errori: `not_member`, `category_not_mergeable` (stessa categoria, tipi diversi, di sistema, archiviata, macro con sottocategorie, non visibile a chi chiama).
 
 ### `tags` e `line_tags`
 - `tags`: `id`, `household_id`, `name`, `scope` (`shared`, `personal`), `owner_member_id` null, `archived_at`, comuni. Stesso modello delle categorie: condivisi o personali, mai cancellati, solo archiviati.

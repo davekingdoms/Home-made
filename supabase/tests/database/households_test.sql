@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(42);
+select plan(45);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -90,6 +90,22 @@ select ok(
   public.is_household_member('00000000-0000-4000-8000-0000000000f1'),
   'is_household_member is true for the own household'
 );
+select results_eq(
+  'select kind, display_name, currency, opening_balance_cents from public.accounts',
+  $$values ('cash'::text, 'Contanti'::text, 'EUR'::char(3), null::bigint)$$,
+  'the first member gets the cash account; no opening balance for a past start date'
+);
+select results_eq(
+  $$select s.reason, s.valid_from, w.member_id = public.current_member_id(), w.weight
+    from public.default_share_sets s join public.default_share_weights w on w.set_id = s.id$$,
+  $$values ('household_created'::text, current_date - 30, true, 1::numeric)$$,
+  'the household gets a version of the default shares with its creator only'
+);
+select is(
+  (select count(*)::int from public.categories),
+  72,
+  'the household gets the initial categories'
+);
 select is(
   public.create_household('00000000-0000-4000-8000-0000000000f1', 'Casa di prova', current_date - 30),
   '00000000-0000-4000-8000-0000000000f1'::uuid,
@@ -147,8 +163,8 @@ select lives_ok(
 );
 
 reset role;
-delete from public.members where household_id = '00000000-0000-4000-8000-0000000000f3';
-delete from public.households where id = '00000000-0000-4000-8000-0000000000f3';
+update public.members set left_at = now()
+  where household_id = '00000000-0000-4000-8000-0000000000f3';
 
 -- Bruno and Carla join "Casa di prova" (invites have their own test).
 insert into public.profiles (id, display_name) values
@@ -249,7 +265,7 @@ select throws_ok(
 -- Carla leaves "Casa di prova".
 reset role;
 update public.members set left_at = now()
-  where user_id = '00000000-0000-4000-8000-00000000000c';
+  where user_id = '00000000-0000-4000-8000-00000000000c' and left_at is null;
 
 set local role authenticated;
 select pg_temp.login('00000000-0000-4000-8000-00000000000c');

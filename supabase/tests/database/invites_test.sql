@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(55);
+select plan(58);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -251,6 +251,28 @@ select lives_ok(
     where code = (select code from invite_codes where who = 'revoked')$$,
   'any member revokes an invite'
 );
+select throws_ok(
+  $$update public.invites set revoked_at = null
+    where code = (select code from invite_codes where who = 'revoked')$$,
+  'P0001', 'invite_revoked',
+  'a revoked invite does not come back'
+);
+select throws_ok(
+  $$update public.invites set revoked_at = now() - interval '1 day'
+    where code = (select code from invite_codes where who = 'revoked')$$,
+  'P0001', 'invite_revoked',
+  'the date of a revocation does not change'
+);
+
+reset role;
+select throws_ok(
+  $$update public.invites set revoked_at = null
+    where code = (select code from invite_codes where who = 'revoked')$$,
+  'P0001', 'invite_revoked',
+  'not even the server brings a revoked invite back'
+);
+set local role authenticated;
+select pg_temp.login('00000000-0000-4000-8000-00000000000b');
 select throws_ok(
   $$update public.invites set label = 'altro'
     where code = (select code from invite_codes where who = 'dario')$$,

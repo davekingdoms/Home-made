@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(9);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -44,9 +44,15 @@ insert into invite_codes select 'carla', code, token from public.create_invite('
 select pg_temp.login('00000000-0000-4000-8000-00000000000b');
 select results_eq(
   $$select error, household_id
-    from public.redeem_invite(code => (select code from invite_codes where who = 'bruno'))$$,
+    from public.redeem_invite(code => (select code from invite_codes where who = 'bruno'),
+                              cash_opening_cents => 2000)$$,
   $$values (null::text, '00000000-0000-4000-8000-0000000000f1'::uuid)$$,
   'Bruno joins before the household starts'
+);
+select results_eq(
+  'select kind, opening_balance_cents from public.accounts',
+  $$values ('cash'::text, null::bigint)$$,
+  'his cash waits for his start date: no opening balance yet'
 );
 select results_eq(
   $$select start_date from public.members where user_id = '00000000-0000-4000-8000-00000000000b'$$,
