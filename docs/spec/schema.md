@@ -16,7 +16,7 @@ Le migrazioni stanno in `supabase/migrations/`, i test pgTAP in `supabase/tests/
 - **Eliminazione logica** (`deleted_at`) per movimenti manuali, righe, giroconti, conguagli, piani a rate e voci dei salvadanai. Le righe con `deleted_at` restano visibili a chi le vedeva, così la cache dei dispositivi le toglie; non contano in nessun calcolo.
 - **RLS** attiva su ogni tabella; `anon` non ha nessun permesso. Le funzioni di supporto e quelle che toccano più righe sono `security definer` con `set search_path = ''` e nomi completi (`public.…`). Nelle policy `auth.uid()` si scrive `(select auth.uid())`.
 - **Operazioni su più righe** passano da funzioni (RPC), perché ogni chiamata REST è una transazione a sé e i vincoli sulle somme verrebbero violati a metà.
-- **Errori delle funzioni:** `raise exception` con codice `P0001` e un messaggio-chiave in inglese (`invite_expired`, `household_full`…), che l'app traduce nei testi delle schermate.
+- **Errori delle funzioni:** `raise exception` con codice `P0001` e un messaggio-chiave in inglese (`invite_expired`, `household_full`…), che l'app traduce nei testi delle schermate. **Eccezione:** `invite_preview` e `redeem_invite` non sollevano i propri errori ma restituiscono la chiave nella colonna `error` (null se è andata bene): un errore sollevato annullerebbe anche la riga di `invite_attempts`, e i tentativi falliti, quelli da limitare, non conterebbero mai.
 
 ## 2. Funzioni di supporto
 
@@ -117,12 +117,12 @@ RLS: tutto solo il proprietario. La posizione per il meteo **non** si salva qui 
 | Funzione | Cosa fa | Errori |
 |---|---|---|
 | `create_household(id, name, start_date, cash_opening_cents)` | Crea la casa, il creatore come primo membro con la data di inizio della casa, poi (dai trigger) il conto Contanti, le quote predefinite e le categorie iniziali. Se `start_date` è oggi, `cash_opening_cents` (facoltativo) diventa il saldo iniziale dei contanti. | `no_profile`, `already_member`, `start_date_out_of_range` (da 90 giorni prima a 12 mesi dopo, con un giorno di tolleranza per i fusi orari) |
-| `create_invite(label)` | Crea un invito; restituisce token e codice (unica volta in cui il token esiste in chiaro). | `household_full` |
-| `invite_preview(code \| token)` | Prima di entrare: nome della casa, chi invita, nomi dei membri attivi. | `invite_invalid`, `invite_expired`, `invite_used`, `invite_revoked`, `too_many_attempts` |
-| `redeem_invite(code \| token, cash_opening_cents)` | Crea il membro con `start_date = max(data di inizio della casa, oggi)` e segna l'invito come usato. | come sopra, più `already_member`, `household_full` |
-| `set_my_start_date(date)` | Sposta la data di inizio del membro **all'indietro**, fino a quella della casa. Non è ammessa se la casa non è ancora iniziata (la data resta quella della casa). Sposta anche la versione delle quote predefinite nata con il suo ingresso. | `start_date_out_of_range`, `household_not_started` |
+| `create_invite(label)` | Crea un invito; restituisce token e codice (unica volta in cui il token esiste in chiaro). | `not_member`, `household_full` |
+| `invite_preview(code \| token)` | Prima di entrare: nome della casa, chi invita, nomi dei membri attivi. | nella colonna `error`: `invite_invalid`, `invite_expired`, `invite_used`, `invite_revoked`, `too_many_attempts` |
+| `redeem_invite(code \| token, cash_opening_cents)` | Crea il membro con `start_date = max(data di inizio della casa, oggi)` e segna l'invito come usato. Una seconda chiamata con lo stesso invito, dallo stesso account, restituisce lo stesso membro. | nella colonna `error`: come sopra, più `no_profile`, `already_member`, `household_full` |
+| `set_my_start_date(date)` | Sposta la data di inizio del membro **all'indietro**, fino a quella della casa. Non è ammessa se la casa non è ancora iniziata (la data resta quella della casa). Sposta anche la versione delle quote predefinite nata con il suo ingresso. | `not_member`, `start_date_out_of_range`, `household_not_started` |
 
-Il codice si accetta con o senza spazio e senza distinzione tra maiuscole e minuscole. **Lasciare la casa, rimuovere un membro ed eliminare l'account** arrivano con le impostazioni: lo schema ha già `left_at` e `user_id` nullable. Un membro uscito perde ogni accesso (`current_member_id()` è null).
+Il codice si accetta con o senza spazio e senza distinzione tra maiuscole e minuscole. `invite_preview` e `redeem_invite` ricevono il codice nel parametro `code` oppure il token del link nel parametro `token`; ogni chiamata conta come tentativo, tranne quelle rifiutate per `too_many_attempts`. **Lasciare la casa, rimuovere un membro ed eliminare l'account** arrivano con le impostazioni: lo schema ha già `left_at` e `user_id` nullable. Un membro uscito perde ogni accesso (`current_member_id()` è null).
 
 ## 4. Conti e dati delle banche
 
