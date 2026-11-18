@@ -39,7 +39,10 @@ select set_eq(
   array[
     'current_member_id', 'current_household_id', 'is_household_member',
     'max_household_members', 'create_household', 'create_invite',
-    'invite_preview', 'redeem_invite', 'set_my_start_date'
+    'invite_preview', 'redeem_invite', 'set_my_start_date',
+    'is_account_owner', 'can_see_transaction', 'can_see_line', 'can_edit_line',
+    'can_see_installment_plan', 'set_line_shares', 'split_line',
+    'default_shares_at', 'set_default_shares', 'merge_categories'
   ],
   'the app calls only the support and RPC functions'
 );
