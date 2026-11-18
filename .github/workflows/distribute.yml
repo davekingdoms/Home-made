@@ -29,7 +29,11 @@ jobs:
       - name: Mask the project identifiers
         env:
           FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
         run: |
+          # The app ID (1:<project number>:android:<id>) is masked as a whole;
+          # the project number also appears alone in the Firebase URLs.
+          echo "::add-mask::$(echo "$FIREBASE_APP_ID" | cut -d: -f2)"
           account_file="$RUNNER_TEMP/firebase-service-account.json"
           echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 --decode > "$account_file"
           echo "::add-mask::$(jq -r .project_id "$account_file")"
