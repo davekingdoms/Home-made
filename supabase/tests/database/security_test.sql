@@ -42,7 +42,8 @@ select set_eq(
     'invite_preview', 'redeem_invite', 'set_my_start_date',
     'is_account_owner', 'can_see_transaction', 'can_see_line', 'can_edit_line',
     'can_see_installment_plan', 'set_line_shares', 'split_line',
-    'default_shares_at', 'set_default_shares', 'merge_categories'
+    'default_shares_at', 'set_default_shares', 'merge_categories',
+    'set_initial_balances', 'member_balances', 'is_piggy_bank_member'
   ],
   'the app calls only the support and RPC functions'
 );

@@ -16,7 +16,7 @@ Le migrazioni stanno in `supabase/migrations/`, i test pgTAP in `supabase/tests/
 - **Eliminazione logica** (`deleted_at`) per movimenti manuali, righe, giroconti, conguagli, piani a rate e voci dei salvadanai. Le righe con `deleted_at` restano visibili a chi le vedeva, così la cache dei dispositivi le toglie; non contano in nessun calcolo.
 - **RLS** attiva su ogni tabella; `anon` non ha nessun permesso. Le funzioni di supporto e quelle che toccano più righe sono `security definer` con `set search_path = ''` e nomi completi (`public.…`). Nelle policy `auth.uid()` si scrive `(select auth.uid())`.
 - **Operazioni su più righe** passano da funzioni (RPC), perché ogni chiamata REST è una transazione a sé e i vincoli sulle somme verrebbero violati a metà.
-- **Insert dall'app su `accounts`, `transactions` e `transaction_lines`:** senza chiedere indietro la riga (niente `RETURNING`, cioè `return=minimal`) e senza `upsert`, perché la policy di select cerca la riga per id e una riga nuova non c'è ancora. L'id è già sul dispositivo; un secondo insert con lo stesso id dà `23505`, cioè la riga è già salvata.
+- **Insert dall'app su `accounts`, `transactions`, `transaction_lines` e `piggy_banks`:** senza chiedere indietro la riga (niente `RETURNING`, cioè `return=minimal`) e senza `upsert`, perché la policy di select cerca la riga per id e una riga nuova non c'è ancora. L'id è già sul dispositivo; un secondo insert con lo stesso id dà `23505`, cioè la riga è già salvata.
 - **Errori delle funzioni:** `raise exception` con codice `P0001` e un messaggio-chiave in inglese (`invite_expired`, `household_full`…), che l'app traduce nei testi delle schermate. **Eccezione:** `invite_preview` e `redeem_invite` non sollevano i propri errori ma restituiscono la chiave nella colonna `error` (null se è andata bene): un errore sollevato annullerebbe anche la riga di `invite_attempts`, e i tentativi falliti, quelli da limitare, non conterebbero mai.
 
 ## 2. Funzioni di supporto
@@ -272,6 +272,8 @@ Vincoli (trigger differiti a fine transazione):
 
 Il flag 730: quando l'app cambia la categoria di una riga, la riga prende `deductible_730_default` della nuova categoria, salvo che la stessa modifica imposti il flag; `split_line` e `merge_categories` lasciano i flag come sono.
 
+Collegamenti della riga, controllati anche per il server (`line_link_not_valid`): `settlement_id` è un conguaglio della stessa casa di cui chi ha pagato la riga è il pagatore o il ricevente; `transfer_id` è un giroconto della stessa casa e il conto della transazione è `from_account_id` o `to_account_id`; `installment_plan_id` è un piano della stessa casa con `account_id` uguale al conto della transazione.
+
 RLS:
 - **select** con `can_see_line`;
 - **insert** ed eliminazione solo con `can_see_transaction` (dividere in righe richiede il totale);
@@ -415,11 +417,12 @@ RLS: tutto con `is_account_owner(from_account_id)`.
 | comuni | | |
 
 Il primo lato che arriva crea il conguaglio; il secondo (stessa coppia, stesso importo e valuta, data entro ±3 giorni, lato libero) **si collega** a quello. L'abbinamento lo fa il server.
-RLS: **select**, insert e update solo il pagatore e il ricevente.
+Pagatore, ricevente e chi lo crea sono membri attivi della casa, con la data di inizio non successiva a `settled_on`, anche dal server (`member_not_eligible`); ogni lato è un movimento del suo membro. Quando il server ha collegato almeno un lato, dall'app importo e data non cambiano più (`settlement_linked`); l'eliminazione resta possibile.
+RLS: **select**, insert e update solo il pagatore e il ricevente. Dall'app solo conguagli `manual`, creati da uno dei due; cambiano solo importo, data ed eliminazione; i lati li collega il server.
 
 ### `initial_balances` — saldo iniziale tra i membri
 `household_id`, `member_id`, `amount_cents` (con segno: positivo = credito), `set_by_member_id`, comuni; PK (`household_id`, `member_id`).
-- Funzione `set_initial_balances(balances)`: riguarda solo i membri con la data di inizio uguale a quella della casa; i mancanti valgono zero; **somma zero** obbligatoria (`initial_balance_not_zero_sum`).
+- Funzione `set_initial_balances(balances)`: riguarda solo i membri attivi con la data di inizio uguale a quella della casa (gli altri: `member_not_eligible`); `balances` è un elenco con ogni membro al massimo una volta (altrimenti `invalid_balances`); i mancanti valgono zero; **somma zero** obbligatoria (`initial_balance_not_zero_sum`); chi chiama è un membro attivo (`not_member`). Ogni chiamata riscrive le righe di tutti quei membri, così la versione di ciascuna sale di uno: l'app ci applica la regola dei conflitti.
 - **"Nessun saldo da riportare"** = la stessa funzione con tutti gli importi a zero. La voce "Per iniziare" è fatta quando esistono le righe.
 - La usano qualunque membro e le correzioni da Saldi (regola dei conflitti).
 - RLS: **select** i membri attivi; scrittura solo con la funzione.
@@ -434,7 +437,8 @@ net = Σ righe pagate da lui (−amount_cents)
     + saldo iniziale
 ```
 
-- Solo righe e transazioni non eliminate, in EUR (le altre valute restano fuori finché sono rimandate), e conguagli non eliminati.
+- Solo righe e transazioni non eliminate, in EUR (le altre valute restano fuori finché sono rimandate), e conguagli non eliminati, in EUR.
+- Restituisce tutti i membri della casa, anche quelli usciti, così la somma resta zero.
 - Positivo = credito. Le righe "Mia" si annullano da sole, quindi inbox, giroconti e righe di tipo Conguaglio non spostano il saldo; anticipi e rimborsi seguono le loro quote.
 - La somma dei saldi netti di una casa è sempre zero (test).
 - Il **piano dei pagamenti** (chi deve di più paga chi deve ricevere di più) si calcola nell'app dai saldi.
@@ -449,12 +453,13 @@ RLS: tutto solo il proprietario; il riconoscimento dei conguagli la legge solo l
 - **`piggy_bank_members`:** (`piggy_bank_id`, `member_id`).
 - **`piggy_bank_entries`:** `id`, `piggy_bank_id`, `member_id`, `account_id` null, `kind` (`virtual` = quota accantonata sullo stesso conto; `real` = movimento di tipo Risparmio, con `transaction_id`), `amount_cents` (negativo = prelievo dal salvadanaio), `entry_date`, `deleted_at`, comuni.
 - RLS: i membri del salvadanaio vedono salvadanaio, membri e versamenti (l'id del conto non dà accesso al conto). Un versamento lo crea solo il membro stesso, sui propri conti.
+- Chi crea un salvadanaio ne diventa il primo membro; ogni membro del salvadanaio lo rinomina o lo archivia e aggiunge o toglie membri (nessun ruolo). Creatore, membri e autori dei versamenti sono membri attivi della casa, e un versamento è di un membro del salvadanaio, anche dal server (`member_not_eligible`).
 
 **Persone esterne e anticipi:**
-- **`contacts`:** `id`, `household_id`, `owner_member_id`, `name`, `archived_at`, comuni. Rubrica **personale**: solo il proprietario.
+- **`contacts`:** `id`, `household_id`, `owner_member_id`, `name`, `archived_at`, comuni. Rubrica **personale**: solo il proprietario, membro attivo della casa (`member_not_eligible`).
 - **`advances`:** `id`, `line_id` (unico: la riga rimborsabile da terzi), `contact_id`, `contact_name` (copiato, così lo vedono gli altri coinvolti), `expected_cents`, `written_off_at` (diventata spesa normale), comuni.
 - **`advance_repayments`:** `advance_id`, `line_id` (riga del rimborso), `amount_cents`.
-- Il rimborso eredita le quote della riga originale. Aperto, parziale o chiuso si ricava dai rimborsi. RLS: come la riga dell'anticipo.
+- Il rimborso eredita le quote della riga originale quando si collega all'anticipo; ogni membro di quelle quote è un membro attivo della casa (`member_not_eligible`). Aperto, parziale o chiuso si ricava dai rimborsi. RLS: come la riga dell'anticipo; collega anticipi e rimborsi chi può modificare le righe coinvolte, con un contatto della propria rubrica.
 
 ## 12. Fuori da questo schema
 
