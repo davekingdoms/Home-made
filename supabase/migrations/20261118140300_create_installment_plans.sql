@@ -54,6 +54,35 @@ comment on table public.installment_plan_shares is
 
 create index installment_plan_shares_member_id on public.installment_plan_shares (member_id);
 
+-- A weight only for an active member of the household of the plan, from
+-- the app and from the server.
+create function public.check_installment_plan_share()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1
+    from public.installment_plans p
+    join public.members m on m.household_id = p.household_id
+    where p.id = new.plan_id
+      and m.id = new.member_id
+      and m.left_at is null
+  ) then
+    raise exception 'member_not_eligible';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.check_installment_plan_share() from public, anon, authenticated;
+
+create trigger installment_plan_shares_check_member
+  before insert or update on public.installment_plan_shares
+  for each row execute function public.check_installment_plan_share();
+
 -- The owner of the account and the members with a weight. Security definer:
 -- plans and weights read each other without their policies.
 create function public.can_see_installment_plan(plan_id uuid)

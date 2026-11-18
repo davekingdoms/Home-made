@@ -243,8 +243,8 @@ select lives_ok(
 select throws_ok(
   $$update public.transactions set deleted_at = now()
     where id = '00000000-0000-4000-8000-000000000101'$$,
-  '23514', null,
-  'a movement of the bank is not deleted'
+  '42501', null,
+  'Anna cannot delete her imported movement'
 );
 
 reset role;

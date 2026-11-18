@@ -325,8 +325,8 @@ comment on function public.split_cents(bigint, jsonb, uuid) is
 -- Triggers of the transactions
 
 -- From the app: source and household never change; for a movement of the
--- bank also amount, currency, description, account and raw row stay. Not
--- security definer: current_user is the role of the caller.
+-- bank also amount, currency, description, account, raw row and deleted_at
+-- stay. Not security definer: current_user is the role of the caller.
 create function public.restrict_transaction_update()
 returns trigger
 language plpgsql
@@ -341,8 +341,9 @@ begin
         using errcode = 'insufficient_privilege';
     end if;
     if old.source = 'bank'
-      and (new.amount_cents, new.currency, new.description, new.account_id, new.raw_id)
-        is distinct from (old.amount_cents, old.currency, old.description, old.account_id, old.raw_id)
+      and (new.amount_cents, new.currency, new.description, new.account_id, new.raw_id, new.deleted_at)
+        is distinct from
+          (old.amount_cents, old.currency, old.description, old.account_id, old.raw_id, old.deleted_at)
     then
       raise exception 'the bank data of a movement do not change from the app'
         using errcode = 'insufficient_privilege';

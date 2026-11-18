@@ -1,11 +1,12 @@
 -- Transfers and installment plans (docs/spec/schema.md, 9). Invented users:
 -- Anna (a1) with a bank account and her cash; Bruno (b1) and Carla (c1) in
--- the same household.
+-- the same household, with a former member whose account was deleted (e9);
+-- Dario (d1) alone in his household.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(25);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -56,13 +57,19 @@ $$;
 insert into auth.users (id, aud, role) values
   ('00000000-0000-4000-8000-00000000000a', 'authenticated', 'authenticated'),
   ('00000000-0000-4000-8000-00000000000b', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-00000000000c', 'authenticated', 'authenticated');
+  ('00000000-0000-4000-8000-00000000000c', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-00000000000d', 'authenticated', 'authenticated');
 insert into public.profiles (id, display_name) values
   ('00000000-0000-4000-8000-00000000000a', 'Anna'),
   ('00000000-0000-4000-8000-00000000000b', 'Bruno'),
-  ('00000000-0000-4000-8000-00000000000c', 'Carla');
+  ('00000000-0000-4000-8000-00000000000c', 'Carla'),
+  ('00000000-0000-4000-8000-00000000000d', 'Dario');
 insert into public.households (id, name, start_date) values
-  ('00000000-0000-4000-8000-0000000000f1', 'Casa di prova', current_date - 60);
+  ('00000000-0000-4000-8000-0000000000f1', 'Casa di prova', current_date - 60),
+  ('00000000-0000-4000-8000-0000000000f2', 'Casa di Dario', current_date - 60);
+insert into public.members (id, household_id, user_id, start_date) values
+  ('00000000-0000-4000-8000-0000000000d1', '00000000-0000-4000-8000-0000000000f2',
+   '00000000-0000-4000-8000-00000000000d', current_date - 60);
 insert into public.members (id, household_id, user_id, start_date) values
   ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000f1',
    '00000000-0000-4000-8000-00000000000a', current_date - 60);
@@ -72,6 +79,9 @@ insert into public.members (id, household_id, user_id, start_date) values
 insert into public.members (id, household_id, user_id, start_date) values
   ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000f1',
    '00000000-0000-4000-8000-00000000000c', current_date - 60);
+insert into public.members (id, household_id, user_id, start_date, left_at) values
+  ('00000000-0000-4000-8000-0000000000e9', '00000000-0000-4000-8000-0000000000f1',
+   null, current_date - 60, now());
 
 insert into public.bank_connections (id, member_id, aspsp_name, aspsp_country, uses_global_app, status) values
   ('00000000-0000-4000-8000-0000000000e1', '00000000-0000-4000-8000-0000000000a1',
@@ -248,6 +258,36 @@ select lives_ok(
   $$insert into public.installment_plan_shares (plan_id, member_id, weight)
     values ('00000000-0000-4000-8000-000000000401', '00000000-0000-4000-8000-0000000000c1', 1)$$,
   'the owner adds a weight to the plan'
+);
+select throws_ok(
+  $$insert into public.installment_plan_shares (plan_id, member_id, weight)
+    values ('00000000-0000-4000-8000-000000000401', '00000000-0000-4000-8000-0000000000d1', 1)$$,
+  'P0001', 'member_not_eligible',
+  'no weight for a member of another household'
+);
+select throws_ok(
+  $$insert into public.installment_plan_shares (plan_id, member_id, weight)
+    values ('00000000-0000-4000-8000-000000000401', '00000000-0000-4000-8000-0000000000e9', 1)$$,
+  'P0001', 'member_not_eligible',
+  'no weight for a member who left'
+);
+select throws_ok(
+  $$update public.installment_plan_shares set member_id = '00000000-0000-4000-8000-0000000000d1'
+    where plan_id = '00000000-0000-4000-8000-000000000401'
+      and member_id = '00000000-0000-4000-8000-0000000000b1'$$,
+  'P0001', 'member_not_eligible',
+  'not even changing a weight to another member'
+);
+
+select pg_temp.login('00000000-0000-4000-8000-00000000000d');
+select is_empty('select 1 from public.installment_plans', 'Dario does not see the plan');
+
+reset role;
+select throws_ok(
+  $$insert into public.installment_plan_shares (plan_id, member_id, weight)
+    values ('00000000-0000-4000-8000-000000000401', '00000000-0000-4000-8000-0000000000d1', 1)$$,
+  'P0001', 'member_not_eligible',
+  'the server neither'
 );
 
 select * from finish();
