@@ -1,0 +1,33 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000002",
+  "accounts": [
+    {
+      "uid": "00000000-0000-4000-8000-0000000000a1",
+      "account_id": { "iban": "IT60 X054 2811 1010 0000 0123 456" },
+      "name": "Anna Esempio   ",
+      "cash_account_type": "CACC",
+      "currency": "EUR",
+      "identification_hash": "hash-di-prova-a1"
+    },
+    {
+      "uid": "00000000-0000-4000-8000-0000000000a2",
+      "account_id": {
+        "other": { "identification": "000000******0000", "scheme_name": "CPAN" }
+      },
+      "name": "Anna Esempio",
+      "product": "Carta di Prova Oro",
+      "cash_account_type": "CARD",
+      "currency": "EUR",
+      "identification_hash": "hash-di-prova-a2"
+    },
+    {
+      "account_id": { "iban": "IT00A0000000000000000000003" },
+      "cash_account_type": "SVGS",
+      "currency": "EUR",
+      "identification_hash": "hash-di-prova-a3"
+    }
+  ],
+  "aspsp": { "name": "Banca di Prova", "country": "IT" },
+  "psu_type": "personal",
+  "access": { "valid_until": "2031-08-28T10:00:00.000000+00:00" }
+}
