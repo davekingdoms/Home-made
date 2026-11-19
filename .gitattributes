@@ -4,3 +4,7 @@ supabase/functions/**/*.ts text eol=lf
 supabase/functions/**/*.json text eol=lf
 supabase/functions/deno.lock text eol=lf
 supabase/scripts/**/*.ts text eol=lf
+
+# Static pages: Cloudflare Pages serves them as committed (LF); keep the
+# working tree the same, so the local preview serves the same bytes.
+infra/pages/** text eol=lf

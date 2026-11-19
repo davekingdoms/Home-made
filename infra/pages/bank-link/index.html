@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title>Home-made</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <p class="brand">Home-made</p>
+
+      <section id="result" class="card" aria-labelledby="title" hidden>
+        <div class="badge" aria-hidden="true">
+          <svg class="icon icon-ok" viewBox="0 0 24 24" focusable="false">
+            <path d="M5.5 12.5l4.25 4.25L18.5 8"/>
+          </svg>
+          <svg class="icon icon-cancelled" viewBox="0 0 24 24" focusable="false">
+            <path d="M7.5 7.5l9 9M16.5 7.5l-9 9"/>
+          </svg>
+          <svg class="icon icon-error" viewBox="0 0 24 24" focusable="false">
+            <path d="M12 6.5v7M12 17.5h.01"/>
+          </svg>
+          <svg class="icon icon-unknown" viewBox="0 0 24 24" focusable="false">
+            <path d="M9.25 9.5a2.75 2.75 0 1 1 3.85 2.52c-.66.3-1.1.9-1.1 1.6v.38M12 17.5h.01"/>
+          </svg>
+        </div>
+        <h1 id="title" class="title"></h1>
+        <p id="text" class="text"></p>
+        <p id="code-line" class="code" hidden>Codice: <code id="code"></code></p>
+      </section>
+
+      <noscript>
+        <section class="card" data-icon="unknown" aria-labelledby="title-noscript">
+          <div class="badge" aria-hidden="true">
+            <svg class="icon icon-unknown" viewBox="0 0 24 24" focusable="false">
+              <path d="M9.25 9.5a2.75 2.75 0 1 1 3.85 2.52c-.66.3-1.1.9-1.1 1.6v.38M12 17.5h.01"/>
+            </svg>
+          </div>
+          <h1 id="title-noscript" class="title">Esito non disponibile</h1>
+          <p class="text">Torna a Home-made per vedere lo stato dei conti.</p>
+        </section>
+      </noscript>
+    </main>
+  </body>
+</html>
