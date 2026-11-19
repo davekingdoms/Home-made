@@ -1,0 +1,73 @@
+{
+  "transactions": [
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "2.5" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-06",
+      "value_date": "2031-03-06",
+      "bank_transaction_code": { "code": "pos" },
+      "remittance_information": ["CAFFE ESEMPIO CITTAPROVA ZZ"]
+    },
+    {
+      "entry_reference": "HY00000000000001",
+      "transaction_amount": { "currency": "EUR", "amount": "50.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-15",
+      "value_date": "2031-03-15",
+      "debtor": { "name": "ANNA ESEMPIO" },
+      "bank_transaction_code": { "code": "boi" },
+      "remittance_information": ["RICARICA DA BONIFICO"]
+    },
+    {
+      "entry_reference": "HY00000000000002",
+      "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-20",
+      "value_date": "2031-03-20",
+      "debtor": { "name": "ANNA ESEMPIO" },
+      "bank_transaction_code": { "code": "boi" },
+      "remittance_information": ["RICARICA DA BONIFICO"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "15.00" },
+      "credit_debit_indicator": "DBIT",
+      "status": "CNCL",
+      "value_date": "2031-03-21",
+      "bank_transaction_code": { "code": "pos" },
+      "remittance_information": ["NEGOZIO PROVA CITTAPROVA ZZ"]
+    },
+    {
+      "entry_reference": "HY00000000000003",
+      "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-21",
+      "value_date": "2031-03-21",
+      "debtor": { "name": "ANNA ESEMPIO" },
+      "bank_transaction_code": { "code": "boi" },
+      "remittance_information": ["RICARICA DA BONIFICO"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "3.80" },
+      "credit_debit_indicator": "DBIT",
+      "status": "PDNG",
+      "value_date": "2031-03-22",
+      "bank_transaction_code": { "code": "pos" },
+      "remittance_information": ["PANETTERIA PROVA CITTAPROVA ZZ"]
+    },
+    {
+      "entry_reference": "HY00000000000004",
+      "transaction_amount": { "currency": "EUR", "amount": "20.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "PDNG",
+      "value_date": "2031-03-22",
+      "debtor": { "name": "BRUNO ESEMPIO" },
+      "bank_transaction_code": { "code": "boi" },
+      "remittance_information": ["RICARICA DA BONIFICO"]
+    }
+  ],
+  "continuation_key": null
+}

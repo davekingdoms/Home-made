@@ -1,0 +1,9 @@
+{
+  "uid": "00000000-0000-4000-8000-00000000d001",
+  "account_id": { "iban": "IT00A0000000000000000005678" },
+  "name": "",
+  "cash_account_type": "CACC",
+  "currency": "EUR",
+  "identification_hash": "hash-di-prova-d1",
+  "identification_hashes": ["hash-di-prova-d1"]
+}

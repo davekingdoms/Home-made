@@ -1,0 +1,63 @@
+{
+  "transactions": [
+    {
+      "entry_reference": "0000000000-20310312-0000108-001",
+      "transaction_amount": { "currency": "EUR", "amount": "15.00" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-12",
+      "value_date": "2031-03-12",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "SEPA DD CORE DA PAYPAL (EUROPE) S.A R.L. ET CIE S.C.A. MANDATO XX000001"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310314-0000109-001",
+      "transaction_amount": { "currency": "EUR", "amount": "9.99" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-14",
+      "value_date": "2031-03-14",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "SEPA DD CORE DA PAYPAL (EUROPE) S.A R.L. ET CIE S.C.A. MANDATO XX000001"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310315-0000110-001",
+      "transaction_amount": { "currency": "EUR", "amount": "50.00" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-15",
+      "value_date": "2031-03-15",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "BON. ISTANTANEO A DEBITO ANNA ESEMPIO IT00A0000000000000000005678 RICARICA"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310316-0000111-001",
+      "transaction_amount": { "currency": "EUR", "amount": "120.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-16",
+      "value_date": "2031-03-16",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": ["ADDEBITO MESE CARTA EGO"]
+    },
+    {
+      "entry_reference": "0000000000-20310320-0000112-001",
+      "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-20",
+      "value_date": "2031-03-20",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "BON. ISTANTANEO A DEBITO ANNA ESEMPIO IT00A0000000000000000005678 RICARICA"
+      ]
+    }
+  ],
+  "continuation_key": null
+}

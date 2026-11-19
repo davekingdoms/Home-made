@@ -1,0 +1,237 @@
+{
+  "transactions": [
+    {
+      "entry_reference": "PP0000000000000001",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "90.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-02-10",
+      "creditor": {
+        "name": "Negozio Esempio",
+        "contact_details": {
+          "email_address": "negozio@example.com"
+        }
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      },
+      "remittance_information": [
+        "Ordine Negozio Esempio"
+      ]
+    },
+    {
+      "entry_reference": "PP0000000000000002",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "30.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-02-10",
+      "creditor": {
+        "name": "PayPal"
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "LOAN"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000010",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "60.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-05",
+      "creditor": {
+        "name": "Elettronica Esempio",
+        "contact_details": {
+          "email_address": "elettronica@example.com"
+        }
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000011",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "20.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-05",
+      "creditor": {
+        "name": "PayPal"
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "LOAN"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000005",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "20.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-06",
+      "creditor": {
+        "name": "Bruno Esempio",
+        "contact_details": {
+          "email_address": "Bruno.Paypal@Example.com"
+        }
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      },
+      "remittance_information": [
+        "Cena di prova"
+      ]
+    },
+    {
+      "entry_reference": "PP0000000000000006",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "25.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-08",
+      "remittance_information": [
+        "Trasferimento sul conto bancario"
+      ]
+    },
+    {
+      "entry_reference": "PP0000000000000007",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "15.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-10",
+      "creditor": {
+        "name": "Libreria Esempio",
+        "contact_details": {
+          "email_address": "libreria@example.com"
+        }
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000008",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "12.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "RJCT",
+      "transaction_date": "2031-03-11",
+      "creditor": {
+        "name": "Negozio Prova",
+        "contact_details": {
+          "email_address": "negozio.prova@example.com"
+        }
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000003",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "30.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-12",
+      "creditor": {
+        "name": "PayPal"
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "LOAN"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000009",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "9.20"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-13",
+      "creditor": {
+        "name": "App Esempio",
+        "contact_details": {
+          "email_address": "app@example.com"
+        }
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      },
+      "exchange_rate": {
+        "unit_currency": "USD",
+        "exchange_rate": "1.0870",
+        "instructed_amount": {
+          "currency": "USD",
+          "amount": "10.00"
+        }
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000012",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "20.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-04-04",
+      "creditor": {
+        "name": "PayPal"
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "LOAN"
+      }
+    },
+    {
+      "entry_reference": "PP0000000000000004",
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "30.00"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-04-11",
+      "creditor": {
+        "name": "PayPal"
+      },
+      "bank_transaction_code": {
+        "code": "PAYMENT",
+        "sub_code": "LOAN"
+      }
+    }
+  ],
+  "continuation_key": null
+}

@@ -1,0 +1,18 @@
+{
+  "transactions": [
+    {
+      "entry_reference": "PP0000000000000101",
+      "transaction_amount": { "currency": "EUR", "amount": "20.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-07",
+      "debtor": {
+        "name": "Anna Esempio",
+        "contact_details": { "email_address": "anna.paypal@example.com" }
+      },
+      "bank_transaction_code": { "code": "PAYMENT", "sub_code": "PAYMENT" },
+      "remittance_information": ["Cena di prova"]
+    }
+  ],
+  "continuation_key": null
+}

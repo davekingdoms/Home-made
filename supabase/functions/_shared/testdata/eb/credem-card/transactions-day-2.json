@@ -1,0 +1,61 @@
+{
+  "transactions": [
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-05",
+      "remittance_information": ["FERRAMENTA PROVA CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "4.4" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-05",
+      "remittance_information": ["EDICOLA PROVA CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "1" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-06",
+      "remittance_information": ["PARCHEGGIO PROVA CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "7.125" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-06",
+      "remittance_information": ["LIBRERIA ESEMPIO CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "1.20" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-07",
+      "remittance_information": ["CAFFE PROVA CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "1.20" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-07",
+      "remittance_information": ["CAFFE PROVA CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "1.20" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-07",
+      "remittance_information": ["CAFFE PROVA CITTAPROVA IT"]
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "120.5" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "transaction_date": "2031-03-18",
+      "remittance_information": ["PAGAMENTO SALDO CARTA"]
+    }
+  ],
+  "continuation_key": null
+}

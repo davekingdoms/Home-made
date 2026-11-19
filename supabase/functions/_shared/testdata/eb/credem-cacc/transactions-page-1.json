@@ -1,0 +1,85 @@
+{
+  "transactions": [
+    {
+      "entry_reference": "0000000000-20310302-0000101-001",
+      "transaction_amount": { "currency": "EUR", "amount": "23.90" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-02",
+      "value_date": "2031-02-27",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "BANCOMAT 27/02/31,ORE 19:45,TESS.00000000 PIZZERIA ESEMPIO"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310303-0000102-001",
+      "transaction_amount": { "currency": "EUR", "amount": "80.00" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-03",
+      "value_date": "2031-03-03",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": ["PAGAMENTO CBILL ESEMPIO SERVIZI"]
+    },
+    {
+      "entry_reference": "0000000000-20310303-0000102-002",
+      "transaction_amount": { "currency": "EUR", "amount": "1.5" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-03",
+      "value_date": "2031-03-03",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": ["COMM. PAG. CBILL"]
+    },
+    {
+      "entry_reference": "0000000000-20310304-0000104-001",
+      "transaction_amount": { "currency": "EUR", "amount": "3.5" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-04",
+      "value_date": "2031-03-03",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "BANCOMAT 03/03/31,ORE 12:34,TESS.00000000 BAR ESEMPIO"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310305-0000105-001",
+      "transaction_amount": { "currency": "EUR", "amount": "1850.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-05",
+      "value_date": "2031-03-05",
+      "creditor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "EMOLUMENTI DITTA ESEMPIO SRL",
+        "STIPENDIO MARZO"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310309-0000106-001",
+      "transaction_amount": { "currency": "EUR", "amount": "25.00" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-09",
+      "value_date": "2031-03-09",
+      "debtor": { "name": "PAYPAL EUROPE S.A R.L. ET CIE S.C.A." },
+      "creditor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": ["BONIFICO A VOSTRO FAVORE"]
+    },
+    {
+      "entry_reference": "0000000000-20310310-0000107-001",
+      "transaction_amount": { "currency": "EUR", "amount": "64.30" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-10",
+      "value_date": "2031-03-10",
+      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "remittance_information": [
+        "SEPA DD CORE DA ESEMPIO ENERGIA SPA MANDATO XX000000"
+      ]
+    }
+  ],
+  "continuation_key": "pagina-2"
+}

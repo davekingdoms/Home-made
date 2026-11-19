@@ -1,0 +1,30 @@
+{
+  "session_id": "00000000-0000-4000-8000-0000000000c0",
+  "accounts": [
+    {
+      "uid": "00000000-0000-4000-8000-00000000c001",
+      "account_id": { "iban": "IT00A0000000000000000001234" },
+      "name": "Anna Esempio   ",
+      "product": "Conto di Prova",
+      "cash_account_type": "CACC",
+      "currency": "EUR",
+      "identification_hash": "hash-di-prova-c1",
+      "identification_hashes": ["hash-di-prova-c1"]
+    },
+    {
+      "uid": "00000000-0000-4000-8000-00000000c002",
+      "account_id": {
+        "other": { "identification": "000000******0001", "scheme_name": "CPAN" }
+      },
+      "name": "Anna Esempio",
+      "product": "Carta di Prova",
+      "cash_account_type": "CARD",
+      "currency": "EUR",
+      "identification_hash": "hash-di-prova-c2",
+      "identification_hashes": ["hash-di-prova-c2"]
+    }
+  ],
+  "aspsp": { "name": "Credito Emiliano", "country": "IT" },
+  "psu_type": "personal",
+  "access": { "valid_until": "2031-08-28T10:00:00.000000+00:00" }
+}
