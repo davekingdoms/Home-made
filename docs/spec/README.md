@@ -9,5 +9,6 @@ Una specifica per modulo, da leggere prima di scrivere codice. Descrivono compor
 | [`accesso.md`](accesso.md) | Accesso con Google, sblocco, primo accesso, casa, inviti, posizione, primo avvio di Finanze | Pronta |
 | [`categorie.md`](categorie.md) | Categorie iniziali, gestione delle categorie condivise e personali, righe e quote, flag 730, Differenza di cassa, salvadanai | Pronta |
 | [`schema.md`](schema.md) | Tabelle, colonne, vincoli, policy RLS e funzioni del database | Pronta |
+| [`sincronizzazione.md`](sincronizzazione.md) | Sincronizzazione bancaria lato server con Enable Banking: credenziali, collegamento, grezzo e deduplicazione, normalizzazione, abbinamenti, programmazione, test | Pronta |
 
-In arrivo: collegamento bancario e sincronizzazione, hub, riepilogo e saldi, movimenti, dettaglio della transazione, inserimento manuale, analisi, conti, impostazioni.
+In arrivo: hub, riepilogo e saldi, movimenti, dettaglio della transazione, inserimento manuale, analisi, conti, impostazioni.

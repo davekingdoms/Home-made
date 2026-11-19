@@ -1,0 +1,28 @@
+{
+  "transactions": [
+    {
+      "entry_reference": "0000000000-20310302-0000001-001",
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-02",
+      "value_date": "2031-03-02",
+      "remittance_information": [
+        "BANCOMAT 02/03/31,ORE 12:34,TESS.00000000 BAR ESEMPIO"
+      ]
+    },
+    {
+      "entry_reference": "0000000000-20310303-0000002-001",
+      "transaction_amount": { "currency": "EUR", "amount": "4.4" },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-03",
+      "value_date": "2031-03-03",
+      "debtor": { "name": "DITTA ESEMPIO SRL" },
+      "remittance_information": [
+        "EMOLUMENTI DITTA ESEMPIO SRL STIPENDIO MARZO"
+      ]
+    }
+  ],
+  "continuation_key": "pagina-2"
+}

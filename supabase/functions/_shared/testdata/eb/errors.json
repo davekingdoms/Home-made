@@ -1,0 +1,38 @@
+{
+  "wrong_period_consent_expired": {
+    "code": 422,
+    "error": "WRONG_TRANSACTIONS_PERIOD",
+    "message": "Consent expired for the requested period of transactions",
+    "detail": "Synthetic bank text: the consent has expired"
+  },
+  "rate_limited": {
+    "code": 429,
+    "error": "ASPSP_RATE_LIMIT_EXCEEDED",
+    "message": "ASPSP Rate limit exceeded"
+  },
+  "unauthorized": {
+    "code": 401,
+    "error": "UNAUTHORIZED_ACCESS",
+    "message": "Unauthorized access"
+  },
+  "expired_session": {
+    "code": 422,
+    "error": "EXPIRED_SESSION",
+    "message": "Session is expired"
+  },
+  "revoked_session": {
+    "code": 422,
+    "error": "REVOKED_SESSION",
+    "message": "Session is revoked"
+  },
+  "aspsp_error": {
+    "code": 500,
+    "error": "ASPSP_ERROR",
+    "message": "Error interacting with ASPSP"
+  },
+  "wrong_parameters": {
+    "code": 400,
+    "error": "WRONG_REQUEST_PARAMETERS",
+    "message": "Wrong request parameters provided"
+  }
+}

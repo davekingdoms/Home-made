@@ -194,7 +194,7 @@ PK (`account_id`, `currency`, `balance_type`): si tiene l'ultimo valore. Il sald
 | `id` | uuid PK | |
 | `account_id` | uuid | |
 | `entry_reference` | text null | |
-| `dedup_hash` | text | hash dei campi della riga (data contabile, data valuta, data della transazione, importo, segno, descrizione) |
+| `dedup_hash` | text | hash dei campi della riga (data contabile, data valuta, data della transazione, stato, importo, segno, descrizione: [`sincronizzazione.md`](sincronizzazione.md), sezione 5) |
 | `dedup_ordinal` | int | posizione della riga nel gruppo di righe identiche (1, 2, 3…) |
 | `status` | text | `BOOK`, `PDNG`, `RJCT`, `CNCL` |
 | `booking_date`, `value_date`, `transaction_date` | date null | |
@@ -206,7 +206,7 @@ PK (`account_id`, `currency`, `balance_type`): si tiene l'ultimo valore. Il sald
 | `fetched_at` | timestamptz | |
 
 **Deduplicazione** come vincolo: unico (`account_id`, `entry_reference`) dove `entry_reference` c'è; altrimenti unico (`account_id`, `dedup_hash`, `dedup_ordinal`). A ogni sincronizzazione, per ogni gruppo di righe identiche nella finestra scaricata, si inseriscono solo gli ordinali oltre quelli già salvati: **una riga uguale a un'altra non si scarta mai**.
-**Diventano movimenti** solo le righe `BOOK` (e `PDNG`, quando compariranno) con `movement_date` ≥ data di inizio del membro proprietario del conto. Le righe precedenti, `RJCT` e `CNCL` restano solo qui. Per PayPal il grezzo parte da circa 90 giorni prima della data di inizio, per trovare gli acquisti a rate precedenti.
+**Diventano movimenti** solo le righe `BOOK` con `movement_date` ≥ data di inizio del membro proprietario del conto. Le righe precedenti, `PDNG`, `RJCT` e `CNCL` restano solo qui. Per PayPal il grezzo parte da circa 90 giorni prima della data di inizio, per trovare gli acquisti a rate precedenti.
 **Nessun accesso dall'app**: solo il server.
 
 ## 5. Transazioni e righe
@@ -465,7 +465,7 @@ RLS: tutto solo il proprietario; il riconoscimento dei conguagli la legge solo l
 
 - **Notifiche:** tabella e funzioni con le notifiche push.
 - **Sincronizzazione della cache:** come l'app scopre le righe che non può più vedere (per esempio un membro tolto da una spesa), con la coda offline.
-- **Funzioni di sincronizzazione bancaria** (importazione, abbinamenti, giroconti automatici, conguagli PayPal, piani a rate): Edge Functions con la service role; qui solo le tabelle e i vincoli.
+- **Funzioni di sincronizzazione bancaria** (importazione, abbinamenti, giroconti automatici, conguagli PayPal, piani a rate): Edge Functions con la service role; qui solo le tabelle e i vincoli. Regole in [`sincronizzazione.md`](sincronizzazione.md).
 - **Lasciare la casa, rimozione di un membro, eliminazione dell'account; modifica della data di inizio della casa:** funzioni con le impostazioni.
 - **Valute estere:** le colonne ci sono, i calcoli escludono le valute diverse da EUR.
 
