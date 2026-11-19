@@ -2,6 +2,7 @@
 # the Deno sources also on Windows, where core.autocrlf would bring CRLF.
 supabase/functions/**/*.ts text eol=lf
 supabase/functions/**/*.json text eol=lf
+supabase/functions/**/*.md text eol=lf
 supabase/functions/deno.lock text eol=lf
 supabase/scripts/**/*.ts text eol=lf
 

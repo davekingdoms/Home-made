@@ -1,0 +1,16 @@
+{
+  "balances": [
+    {
+      "name": "Saldo EUR",
+      "balance_amount": { "currency": "EUR", "amount": "42.10" },
+      "balance_type": "XPCD",
+      "reference_date": "2031-03-25"
+    },
+    {
+      "name": "Saldo USD",
+      "balance_amount": { "currency": "USD", "amount": "7.5" },
+      "balance_type": "XPCD",
+      "reference_date": "2031-03-25"
+    }
+  ]
+}

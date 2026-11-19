@@ -1,0 +1,51 @@
+{
+  "transactions": [
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12,50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-02"
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "-12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-02"
+    },
+    {
+      "transaction_amount": { "currency": "eur", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-02"
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "status": "BOOK",
+      "booking_date": "2031-03-02"
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "HOLD",
+      "booking_date": "2031-03-02"
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-02-30"
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "value_date": "02/03/2031"
+    },
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK"
+    }
+  ],
+  "continuation_key": null
+}

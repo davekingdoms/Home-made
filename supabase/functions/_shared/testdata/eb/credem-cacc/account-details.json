@@ -1,0 +1,33 @@
+{
+  "account_id": {
+    "iban": "IT00A0000000000000000001234",
+    "other": null
+  },
+  "all_account_ids": [
+    {
+      "identification": "IT00A0000000000000000001234",
+      "scheme_name": "IBAN",
+      "issuer": null
+    }
+  ],
+  "account_servicer": {
+    "bic_fi": "PROVITZZXXX",
+    "clearing_system_member_id": null,
+    "name": null
+  },
+  "name": "Anna Esempio   ",
+  "details": "CONTO DI PROVA",
+  "usage": "PRIV",
+  "cash_account_type": "CACC",
+  "product": "Conto di Prova",
+  "currency": "EUR",
+  "psu_status": null,
+  "credit_limit": null,
+  "legal_age": null,
+  "postal_address": null,
+  "uid": "00000000-0000-4000-8000-00000000c001",
+  "identification_hash": "hash-di-prova-c1",
+  "identification_hashes": [
+    "hash-di-prova-c1"
+  ]
+}

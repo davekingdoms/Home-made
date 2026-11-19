@@ -1,0 +1,33 @@
+{
+  "account_id": {
+    "iban": null,
+    "other": {
+      "identification": "anna.paypal@example.com",
+      "scheme_name": "OTHR",
+      "issuer": null
+    }
+  },
+  "all_account_ids": [
+    {
+      "identification": "anna.paypal@example.com",
+      "scheme_name": "OTHR",
+      "issuer": null
+    }
+  ],
+  "account_servicer": null,
+  "name": "Anna Esempio",
+  "details": null,
+  "usage": null,
+  "cash_account_type": "OTHR",
+  "product": null,
+  "currency": "XXX",
+  "psu_status": null,
+  "credit_limit": null,
+  "legal_age": null,
+  "postal_address": null,
+  "uid": "00000000-0000-4000-8000-00000000e001",
+  "identification_hash": "hash-di-prova-e1",
+  "identification_hashes": [
+    "hash-di-prova-e1"
+  ]
+}

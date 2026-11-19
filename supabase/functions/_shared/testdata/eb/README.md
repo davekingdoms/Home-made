@@ -1,0 +1,51 @@
+# Dati di prova di Enable Banking
+
+Risposte **sintetiche** di Enable Banking, con la stessa struttura di quelle
+vere (sessione, conti, dettaglio del conto, saldi, pagine di transazioni,
+errori) e **valori inventati**: membri Anna e Bruno, IBAN `IT00A…`, carte
+`000000******0001`, email `@example.com`, esercenti "… Esempio" e "… Prova",
+città "Cittaprova", sigla "ZZ", mandati `XX0000…`, date intorno al 1° marzo 2031
+(data di inizio dei membri). Nessun file viene da una risposta vera.
+
+Come le risposte vere, nelle sottocartelle ogni transazione ha tutti i campi di
+Enable Banking (`null` quando la banca non manda niente) e le sessioni e i
+dettagli dei conti hanno tutti i campi del conto e dell'accesso.
+
+Regole e casi:
+[`docs/spec/sincronizzazione.md`](../../../../../docs/spec/sincronizzazione.md),
+sezioni 8 e 12. La forma delle risposte vere si confronta con questi file con
+`supabase/scripts/eb-shape.ts`.
+
+## Cartelle
+
+| Cartella       | Contenuto                                                                                                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| radice         | risposte generiche ("Mock ASPSP", "Banca di Prova") dei test del client e delle funzioni; `errors.json` con gli errori; `transactions-invalid.json` con righe costruite apposta per l'errore `invalid_row` |
+| `credem-cacc/` | formato Credito Emiliano, conto (`CACC`): sessione con il conto e la carta, dettaglio, saldi, due pagine di transazioni                                                                                    |
+| `credem-card/` | formato Credito Emiliano, carta (`CARD`): dettaglio, saldi, le transazioni scaricate in due giorni di fila                                                                                                 |
+| `hype/`        | formato HYPE: sessione, dettaglio, saldi, le transazioni di due sincronizzazioni                                                                                                                           |
+| `paypal/`      | formato PayPal: sessione, dettaglio, saldi, le transazioni di Anna in due sincronizzazioni e quelle di Bruno                                                                                               |
+
+## Casi della sezione 12
+
+| Caso                                                           | File                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Righe identiche senza riferimento                           | `credem-card/transactions-day-1.json` (due `CAFFE PROVA` uguali del 2031-03-07; scaricato due volte non aggiunge niente), `credem-card/transactions-day-2.json` (la terza uguale)                                                                                                       |
+| 2. Bollettino e commissione                                    | `credem-cacc/transactions-page-1.json`, riferimenti `…-0000102-001` e `…-0000102-002`                                                                                                                                                                                                   |
+| 3. Valuta prima della data di inizio, contabile dopo           | `credem-cacc/transactions-page-1.json`, riferimento `…-0000101-001`                                                                                                                                                                                                                     |
+| 4. "Paga in 3 rate" a cavallo della data di inizio             | `paypal/transactions-anna-sync-1.json` (acquisto `PP…01` e prima rata `PP…02` prima dell'inizio, seconda rata `PP…03`), `paypal/transactions-anna-sync-2.json` (terza rata `PP…04`). Variante: acquisto `PP…10` nella prima sincronizzazione, rate `PP…11` e `PP…12` solo nella seconda |
+| 5. Conguaglio PayPal dai due lati                              | `paypal/transactions-anna-sync-1.json` (`PP…05`, Anna paga Bruno), `paypal/transactions-bruno.json` (`PP…101`, il giorno dopo)                                                                                                                                                          |
+| 6. Trasferimento del saldo PayPal alla banca                   | `paypal/transactions-anna-sync-1.json` (`PP…06`), `credem-cacc/transactions-page-1.json` (`…-0000106-001`, debitore PayPal)                                                                                                                                                             |
+| 7. Addebiti verso PayPal                                       | `paypal/transactions-anna-sync-1.json` (pagamento `PP…07`), `credem-cacc/transactions-page-2.json` (`…-0000108-001` due giorni dopo, `…-0000109-001` senza pagamento). Senza un conto PayPal collegato: le stesse righe del conto, con un membro senza PayPal nel test                  |
+| 8. Ricarica di un conto prepagato                              | `credem-cacc/transactions-page-2.json` (`…-0000110-001`), `hype/transactions-sync-1.json` (`HY…01`)                                                                                                                                                                                     |
+| 9. Addebito mensile della carta                                | `credem-cacc/transactions-page-2.json` (`…-0000111-001`), `credem-card/transactions-day-1.json` (accredito del 2031-03-18)                                                                                                                                                              |
+| 10. Righe `RJCT` e `CNCL`                                      | `paypal/transactions-anna-sync-1.json` (`PP…08`), `hype/transactions-sync-1.json` (`NEGOZIO PROVA`)                                                                                                                                                                                     |
+| 11. Importi `4.4`, `1`, `12.50`                                | `credem-card/transactions-day-1.json` (e `7.125`, arrotondato)                                                                                                                                                                                                                          |
+| 12. Nome con spazi in coda; conto senza nome                   | `credem-cacc/session.json` e `account-details.json`; `hype/session.json` e `account-details.json` (nome vuoto)                                                                                                                                                                          |
+| 13. `422 WRONG_TRANSACTIONS_PERIOD` con messaggio sul consenso | `errors.json`, `wrong_period_consent_expired`                                                                                                                                                                                                                                           |
+| 14. Più pagine; pagina fallita                                 | `credem-cacc/transactions-page-1.json` (`continuation_key`) e `transactions-page-2.json`; la pagina fallita è `errors.json`, `aspsp_error`                                                                                                                                              |
+| 15. Saldi                                                      | `credem-cacc/balances.json` (`CLBD`), `credem-card/balances.json` (`CLBD` negativo, `OTHR`), `paypal/balances.json` (`XPCD` in EUR e USD), `hype/balances.json` (`ITBD`, `ITAV`)                                                                                                        |
+| 16. `PDNG` che torna `BOOK`                                    | `hype/transactions-sync-1.json` (con riferimento `HY…04`, senza `PANETTERIA PROVA`), `hype/transactions-sync-2.json` (le stesse contabilizzate)                                                                                                                                         |
+| 17. Stipendio con controparte                                  | `credem-cacc/transactions-page-1.json`, `…-0000105-001`                                                                                                                                                                                                                                 |
+| 18. Giroconto automatico annullato                             | le righe del caso 8; l'annullamento lo fa il test                                                                                                                                                                                                                                       |
+| 19. Due candidati alla pari                                    | `credem-cacc/transactions-page-2.json` (`…-0000112-001`), `hype/transactions-sync-1.json` (`HY…02` e `HY…03`, a un giorno di distanza)                                                                                                                                                  |

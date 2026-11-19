@@ -1,0 +1,280 @@
+{
+  "transactions": [
+    {
+      "entry_reference": "0000000000-20310302-0000101-001",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "23.90"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-02",
+      "value_date": "2031-02-27",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "BANCOMAT 27/02/31,ORE 19:45,TESS.00000000 PIZZERIA ESEMPIO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "0000000000-20310303-0000102-001",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "80.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-03",
+      "value_date": "2031-03-03",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "PAGAMENTO CBILL ESEMPIO SERVIZI"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "0000000000-20310303-0000102-002",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "1.5"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-03",
+      "value_date": "2031-03-03",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "COMM. PAG. CBILL"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "0000000000-20310304-0000104-001",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "3.5"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-04",
+      "value_date": "2031-03-03",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "BANCOMAT 03/03/31,ORE 12:34,TESS.00000000 BAR ESEMPIO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "0000000000-20310305-0000105-001",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "1850.00"
+      },
+      "creditor": null,
+      "creditor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-05",
+      "value_date": "2031-03-05",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "EMOLUMENTI DITTA ESEMPIO SRL",
+        "STIPENDIO MARZO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "0000000000-20310309-0000106-001",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "25.00"
+      },
+      "creditor": null,
+      "creditor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "creditor_agent": null,
+      "debtor": {
+        "name": "PAYPAL EUROPE S.A R.L. ET CIE S.C.A.",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": "2031-03-09",
+      "value_date": "2031-03-09",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "BONIFICO A VOSTRO FAVORE"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "0000000000-20310310-0000107-001",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "64.30"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": "2031-03-10",
+      "value_date": "2031-03-10",
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "SEPA DD CORE DA ESEMPIO ENERGIA SPA MANDATO XX000000"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    }
+  ],
+  "continuation_key": "pagina-2"
+}

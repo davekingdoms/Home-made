@@ -1,0 +1,36 @@
+{
+  "account_id": {
+    "iban": null,
+    "other": {
+      "identification": "000000******0001",
+      "scheme_name": "CPAN",
+      "issuer": null
+    }
+  },
+  "all_account_ids": [
+    {
+      "identification": "000000******0001",
+      "scheme_name": "CPAN",
+      "issuer": null
+    }
+  ],
+  "account_servicer": null,
+  "name": "Anna Esempio",
+  "details": "0001",
+  "usage": "PRIV",
+  "cash_account_type": "CARD",
+  "product": "Carta di Prova",
+  "currency": "EUR",
+  "psu_status": null,
+  "credit_limit": {
+    "currency": "EUR",
+    "amount": "1500.00"
+  },
+  "legal_age": null,
+  "postal_address": null,
+  "uid": "00000000-0000-4000-8000-00000000c002",
+  "identification_hash": "hash-di-prova-c2",
+  "identification_hashes": [
+    "hash-di-prova-c2"
+  ]
+}

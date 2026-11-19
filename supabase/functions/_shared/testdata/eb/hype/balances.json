@@ -1,0 +1,16 @@
+{
+  "balances": [
+    {
+      "name": "Saldo contabile",
+      "balance_amount": { "currency": "EUR", "amount": "84.20" },
+      "balance_type": "ITBD",
+      "reference_date": "2031-03-23"
+    },
+    {
+      "name": "Saldo disponibile",
+      "balance_amount": { "currency": "EUR", "amount": "80.4" },
+      "balance_type": "ITAV",
+      "reference_date": "2031-03-23"
+    }
+  ]
+}
