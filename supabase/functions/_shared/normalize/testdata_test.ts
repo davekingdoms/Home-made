@@ -377,9 +377,10 @@ Deno.test("formats on the test data: counterparties and signals", async () => {
     [-920, -1000, "USD", "1.0870"],
   );
   const bruno = await page("paypal/transactions-bruno.json");
-  assertEquals(counterparties(bruno), ["Anna Esempio"]);
-  assertEquals(
-    bruno[0]!.movement.counterparty_email,
+  // The debtor of an inflow; a creditor with an email and no name.
+  assertEquals(counterparties(bruno), ["Anna Esempio", null]);
+  assertEquals(bruno.map((row) => row.movement.counterparty_email), [
     "anna.paypal@example.com",
-  );
+    "negozio.anonimo@example.com",
+  ]);
 });

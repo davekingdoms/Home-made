@@ -2,16 +2,89 @@
   "transactions": [
     {
       "entry_reference": "PP0000000000000101",
-      "transaction_amount": { "currency": "EUR", "amount": "20.00" },
-      "credit_debit_indicator": "CRDT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-07",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "20.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
       "debtor": {
         "name": "Anna Esempio",
-        "contact_details": { "email_address": "anna.paypal@example.com" }
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": {
+          "email_address": "anna.paypal@example.com",
+          "phone_number": null
+        }
       },
-      "bank_transaction_code": { "code": "PAYMENT", "sub_code": "PAYMENT" },
-      "remittance_information": ["Cena di prova"]
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      },
+      "credit_debit_indicator": "CRDT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-07",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "Cena di prova"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
+    },
+    {
+      "entry_reference": "PP0000000000000102",
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "8.00"
+      },
+      "creditor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": {
+          "email_address": "NEGOZIO.ANONIMO@EXAMPLE.COM",
+          "phone_number": null
+        }
+      },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "PAYMENT",
+        "sub_code": "PAYMENT"
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-09",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     }
   ],
   "continuation_key": null

@@ -2,29 +2,85 @@
   "session_id": "00000000-0000-4000-8000-0000000000c0",
   "accounts": [
     {
-      "uid": "00000000-0000-4000-8000-00000000c001",
-      "account_id": { "iban": "IT00A0000000000000000001234" },
+      "account_id": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "all_account_ids": [
+        {
+          "identification": "IT00A0000000000000000001234",
+          "scheme_name": "IBAN",
+          "issuer": null
+        }
+      ],
+      "account_servicer": {
+        "bic_fi": "PROVITZZXXX",
+        "clearing_system_member_id": null,
+        "name": null
+      },
       "name": "Anna Esempio   ",
-      "product": "Conto di Prova",
+      "details": "CONTO DI PROVA",
+      "usage": "PRIV",
       "cash_account_type": "CACC",
+      "product": "Conto di Prova",
       "currency": "EUR",
+      "psu_status": null,
+      "credit_limit": null,
+      "legal_age": null,
+      "postal_address": null,
+      "uid": "00000000-0000-4000-8000-00000000c001",
       "identification_hash": "hash-di-prova-c1",
-      "identification_hashes": ["hash-di-prova-c1"]
+      "identification_hashes": [
+        "hash-di-prova-c1"
+      ]
     },
     {
-      "uid": "00000000-0000-4000-8000-00000000c002",
       "account_id": {
-        "other": { "identification": "000000******0001", "scheme_name": "CPAN" }
+        "iban": null,
+        "other": {
+          "identification": "000000******0001",
+          "scheme_name": "CPAN",
+          "issuer": null
+        }
       },
+      "all_account_ids": [
+        {
+          "identification": "000000******0001",
+          "scheme_name": "CPAN",
+          "issuer": null
+        }
+      ],
+      "account_servicer": null,
       "name": "Anna Esempio",
-      "product": "Carta di Prova",
+      "details": "0001",
+      "usage": "PRIV",
       "cash_account_type": "CARD",
+      "product": "Carta di Prova",
       "currency": "EUR",
+      "psu_status": null,
+      "credit_limit": {
+        "currency": "EUR",
+        "amount": "1500.00"
+      },
+      "legal_age": null,
+      "postal_address": null,
+      "uid": "00000000-0000-4000-8000-00000000c002",
       "identification_hash": "hash-di-prova-c2",
-      "identification_hashes": ["hash-di-prova-c2"]
+      "identification_hashes": [
+        "hash-di-prova-c2"
+      ]
     }
   ],
-  "aspsp": { "name": "Credito Emiliano", "country": "IT" },
+  "aspsp": {
+    "name": "Credito Emiliano",
+    "country": "IT"
+  },
   "psu_type": "personal",
-  "access": { "valid_until": "2031-08-28T10:00:00.000000+00:00" }
+  "access": {
+    "accounts": null,
+    "balances": true,
+    "transactions": true,
+    "valid_until": "2031-08-28T10:00:00.000000+00:00",
+    "transactions_extended_history": true
+  }
 }

@@ -2,193 +2,404 @@
   "transactions": [
     {
       "entry_reference": "PP0000000000000001",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "90.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-02-10",
       "creditor": {
         "name": "Negozio Esempio",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
         "contact_details": {
-          "email_address": "negozio@example.com"
+          "email_address": "negozio@example.com",
+          "phone_number": null
         }
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "PAYMENT"
       },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-02-10",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "Ordine Negozio Esempio"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000002",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "30.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-02-10",
       "creditor": {
-        "name": "PayPal"
+        "name": "PayPal",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "LOAN"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-02-10",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000010",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "60.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-05",
       "creditor": {
         "name": "Elettronica Esempio",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
         "contact_details": {
-          "email_address": "elettronica@example.com"
+          "email_address": "elettronica@example.com",
+          "phone_number": null
         }
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "PAYMENT"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-05",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000011",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "20.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-05",
       "creditor": {
-        "name": "PayPal"
+        "name": "PayPal",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "LOAN"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-05",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000005",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "20.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-06",
       "creditor": {
         "name": "Bruno Esempio",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
         "contact_details": {
-          "email_address": "Bruno.Paypal@Example.com"
+          "email_address": "Bruno.Paypal@Example.com",
+          "phone_number": null
         }
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "PAYMENT"
       },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-06",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "Cena di prova"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000006",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "25.00"
       },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-08",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "Trasferimento sul conto bancario"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000007",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "15.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-10",
       "creditor": {
         "name": "Libreria Esempio",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
         "contact_details": {
-          "email_address": "libreria@example.com"
+          "email_address": "libreria@example.com",
+          "phone_number": null
         }
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "PAYMENT"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-10",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000008",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "12.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "RJCT",
-      "transaction_date": "2031-03-11",
       "creditor": {
         "name": "Negozio Prova",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
         "contact_details": {
-          "email_address": "negozio.prova@example.com"
+          "email_address": "negozio.prova@example.com",
+          "phone_number": null
         }
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "PAYMENT"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "RJCT",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-11",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000003",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "30.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-12",
       "creditor": {
-        "name": "PayPal"
+        "name": "PayPal",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "LOAN"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-12",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000009",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "9.20"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-03-13",
       "creditor": {
         "name": "App Esempio",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
         "contact_details": {
-          "email_address": "app@example.com"
+          "email_address": "app@example.com",
+          "phone_number": null
         }
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "PAYMENT"
       },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-03-13",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
       "exchange_rate": {
         "unit_currency": "USD",
         "exchange_rate": "1.0870",
@@ -196,41 +407,87 @@
           "currency": "USD",
           "amount": "10.00"
         }
-      }
+      },
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000012",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "20.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-04-04",
       "creditor": {
-        "name": "PayPal"
+        "name": "PayPal",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "LOAN"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-04-04",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "PP0000000000000004",
+      "merchant_category_code": null,
       "transaction_amount": {
         "currency": "EUR",
         "amount": "30.00"
       },
-      "credit_debit_indicator": "DBIT",
-      "status": "BOOK",
-      "transaction_date": "2031-04-11",
       "creditor": {
-        "name": "PayPal"
+        "name": "PayPal",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
       },
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
       "bank_transaction_code": {
+        "description": null,
         "code": "PAYMENT",
         "sub_code": "LOAN"
-      }
+      },
+      "credit_debit_indicator": "DBIT",
+      "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
+      "transaction_date": "2031-04-11",
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     }
   ],
   "continuation_key": null

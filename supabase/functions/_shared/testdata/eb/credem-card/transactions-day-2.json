@@ -1,60 +1,252 @@
 {
   "transactions": [
     {
-      "transaction_amount": { "currency": "EUR", "amount": "12.50" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "12.50"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-05",
-      "remittance_information": ["FERRAMENTA PROVA CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "FERRAMENTA PROVA CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "4.4" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "4.4"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-05",
-      "remittance_information": ["EDICOLA PROVA CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "EDICOLA PROVA CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "1" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "1"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-06",
-      "remittance_information": ["PARCHEGGIO PROVA CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "PARCHEGGIO PROVA CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "7.125" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "7.125"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-06",
-      "remittance_information": ["LIBRERIA ESEMPIO CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "LIBRERIA ESEMPIO CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "1.20" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "1.20"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-07",
-      "remittance_information": ["CAFFE PROVA CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "CAFFE PROVA CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "1.20" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "1.20"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-07",
-      "remittance_information": ["CAFFE PROVA CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "CAFFE PROVA CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "1.20" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "1.20"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-07",
-      "remittance_information": ["CAFFE PROVA CITTAPROVA IT"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "CAFFE PROVA CITTAPROVA IT"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "120.5" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "120.5"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "CRDT",
       "status": "BOOK",
+      "booking_date": null,
+      "value_date": null,
       "transaction_date": "2031-03-18",
-      "remittance_information": ["PAGAMENTO SALDO CARTA"]
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "PAGAMENTO SALDO CARTA"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     }
   ],
   "continuation_key": null

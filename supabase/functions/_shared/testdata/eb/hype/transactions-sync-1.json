@@ -1,72 +1,273 @@
 {
   "transactions": [
     {
-      "transaction_amount": { "currency": "EUR", "amount": "2.5" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "2.5"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "pos",
+        "sub_code": null
+      },
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
       "booking_date": "2031-03-06",
       "value_date": "2031-03-06",
-      "bank_transaction_code": { "code": "pos" },
-      "remittance_information": ["CAFFE ESEMPIO CITTAPROVA ZZ"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "CAFFE ESEMPIO CITTAPROVA ZZ"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "HY00000000000001",
-      "transaction_amount": { "currency": "EUR", "amount": "50.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "50.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": "ANNA ESEMPIO",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "boi",
+        "sub_code": null
+      },
       "credit_debit_indicator": "CRDT",
       "status": "BOOK",
       "booking_date": "2031-03-15",
       "value_date": "2031-03-15",
-      "debtor": { "name": "ANNA ESEMPIO" },
-      "bank_transaction_code": { "code": "boi" },
-      "remittance_information": ["RICARICA DA BONIFICO"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "RICARICA DA BONIFICO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "HY00000000000002",
-      "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "30.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": "ANNA ESEMPIO",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "boi",
+        "sub_code": null
+      },
       "credit_debit_indicator": "CRDT",
       "status": "BOOK",
       "booking_date": "2031-03-20",
       "value_date": "2031-03-20",
-      "debtor": { "name": "ANNA ESEMPIO" },
-      "bank_transaction_code": { "code": "boi" },
-      "remittance_information": ["RICARICA DA BONIFICO"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "RICARICA DA BONIFICO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "15.00" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "15.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "pos",
+        "sub_code": null
+      },
       "credit_debit_indicator": "DBIT",
       "status": "CNCL",
+      "booking_date": null,
       "value_date": "2031-03-21",
-      "bank_transaction_code": { "code": "pos" },
-      "remittance_information": ["NEGOZIO PROVA CITTAPROVA ZZ"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "NEGOZIO PROVA CITTAPROVA ZZ"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "HY00000000000003",
-      "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "30.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": "ANNA ESEMPIO",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "boi",
+        "sub_code": null
+      },
       "credit_debit_indicator": "CRDT",
       "status": "BOOK",
       "booking_date": "2031-03-21",
       "value_date": "2031-03-21",
-      "debtor": { "name": "ANNA ESEMPIO" },
-      "bank_transaction_code": { "code": "boi" },
-      "remittance_information": ["RICARICA DA BONIFICO"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "RICARICA DA BONIFICO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
-      "transaction_amount": { "currency": "EUR", "amount": "3.80" },
+      "entry_reference": null,
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "3.80"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": null,
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "pos",
+        "sub_code": null
+      },
       "credit_debit_indicator": "DBIT",
       "status": "PDNG",
+      "booking_date": null,
       "value_date": "2031-03-22",
-      "bank_transaction_code": { "code": "pos" },
-      "remittance_information": ["PANETTERIA PROVA CITTAPROVA ZZ"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "PANETTERIA PROVA CITTAPROVA ZZ"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "HY00000000000004",
-      "transaction_amount": { "currency": "EUR", "amount": "20.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "20.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": "BRUNO ESEMPIO",
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": null,
+      "debtor_agent": null,
+      "bank_transaction_code": {
+        "description": null,
+        "code": "boi",
+        "sub_code": null
+      },
       "credit_debit_indicator": "CRDT",
       "status": "PDNG",
+      "booking_date": null,
       "value_date": "2031-03-22",
-      "debtor": { "name": "BRUNO ESEMPIO" },
-      "bank_transaction_code": { "code": "boi" },
-      "remittance_information": ["RICARICA DA BONIFICO"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "RICARICA DA BONIFICO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     }
   ],
   "continuation_key": null

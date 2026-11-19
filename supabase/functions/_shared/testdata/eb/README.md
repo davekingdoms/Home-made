@@ -7,6 +7,10 @@ errori) e **valori inventati**: membri Anna e Bruno, IBAN `IT00A…`, carte
 città "Cittaprova", sigla "ZZ", mandati `XX0000…`, date intorno al 1° marzo 2031
 (data di inizio dei membri). Nessun file viene da una risposta vera.
 
+Come le risposte vere, nelle sottocartelle ogni transazione ha tutti i campi di
+Enable Banking (`null` quando la banca non manda niente) e le sessioni e i
+dettagli dei conti hanno tutti i campi del conto e dell'accesso.
+
 Regole e casi:
 [`docs/spec/sincronizzazione.md`](../../../../../docs/spec/sincronizzazione.md),
 sezioni 8 e 12. La forma delle risposte vere si confronta con questi file con

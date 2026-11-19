@@ -2,16 +2,45 @@
   "session_id": "00000000-0000-4000-8000-0000000000d0",
   "accounts": [
     {
-      "uid": "00000000-0000-4000-8000-00000000d001",
-      "account_id": { "iban": "IT00A0000000000000000005678" },
+      "account_id": {
+        "iban": "IT00A0000000000000000005678",
+        "other": null
+      },
+      "all_account_ids": [
+        {
+          "identification": "IT00A0000000000000000005678",
+          "scheme_name": "IBAN",
+          "issuer": null
+        }
+      ],
+      "account_servicer": null,
       "name": "",
+      "details": "Conto di prova",
+      "usage": null,
       "cash_account_type": "CACC",
+      "product": null,
       "currency": "EUR",
+      "psu_status": null,
+      "credit_limit": null,
+      "legal_age": null,
+      "postal_address": null,
+      "uid": "00000000-0000-4000-8000-00000000d001",
       "identification_hash": "hash-di-prova-d1",
-      "identification_hashes": ["hash-di-prova-d1"]
+      "identification_hashes": [
+        "hash-di-prova-d1"
+      ]
     }
   ],
-  "aspsp": { "name": "HYPE", "country": "IT" },
+  "aspsp": {
+    "name": "HYPE",
+    "country": "IT"
+  },
   "psu_type": "personal",
-  "access": { "valid_until": "2031-08-28T10:00:00.000000+00:00" }
+  "access": {
+    "accounts": null,
+    "balances": true,
+    "transactions": true,
+    "valid_until": "2031-08-28T10:00:00.000000+00:00",
+    "transactions_extended_history": true
+  }
 }

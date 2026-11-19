@@ -2,61 +2,203 @@
   "transactions": [
     {
       "entry_reference": "0000000000-20310312-0000108-001",
-      "transaction_amount": { "currency": "EUR", "amount": "15.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "15.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
       "booking_date": "2031-03-12",
       "value_date": "2031-03-12",
-      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "SEPA DD CORE DA PAYPAL (EUROPE) S.A R.L. ET CIE S.C.A. MANDATO XX000001"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "0000000000-20310314-0000109-001",
-      "transaction_amount": { "currency": "EUR", "amount": "9.99" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "9.99"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
       "booking_date": "2031-03-14",
       "value_date": "2031-03-14",
-      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "SEPA DD CORE DA PAYPAL (EUROPE) S.A R.L. ET CIE S.C.A. MANDATO XX000001"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "0000000000-20310315-0000110-001",
-      "transaction_amount": { "currency": "EUR", "amount": "50.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "50.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
       "booking_date": "2031-03-15",
       "value_date": "2031-03-15",
-      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "BON. ISTANTANEO A DEBITO ANNA ESEMPIO IT00A0000000000000000005678 RICARICA"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "0000000000-20310316-0000111-001",
-      "transaction_amount": { "currency": "EUR", "amount": "120.50" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "120.50"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
       "booking_date": "2031-03-16",
       "value_date": "2031-03-16",
-      "debtor_account": { "iban": "IT00A0000000000000000001234" },
-      "remittance_information": ["ADDEBITO MESE CARTA EGO"]
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
+      "remittance_information": [
+        "ADDEBITO MESE CARTA EGO"
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     },
     {
       "entry_reference": "0000000000-20310320-0000112-001",
-      "transaction_amount": { "currency": "EUR", "amount": "30.00" },
+      "merchant_category_code": null,
+      "transaction_amount": {
+        "currency": "EUR",
+        "amount": "30.00"
+      },
+      "creditor": null,
+      "creditor_account": null,
+      "creditor_agent": null,
+      "debtor": {
+        "name": null,
+        "postal_address": null,
+        "organisation_id": null,
+        "private_id": null,
+        "contact_details": null
+      },
+      "debtor_account": {
+        "iban": "IT00A0000000000000000001234",
+        "other": null
+      },
+      "debtor_agent": null,
+      "bank_transaction_code": null,
       "credit_debit_indicator": "DBIT",
       "status": "BOOK",
       "booking_date": "2031-03-20",
       "value_date": "2031-03-20",
-      "debtor_account": { "iban": "IT00A0000000000000000001234" },
+      "transaction_date": null,
+      "balance_after_transaction": null,
+      "reference_number": null,
+      "reference_number_schema": null,
       "remittance_information": [
         "BON. ISTANTANEO A DEBITO ANNA ESEMPIO IT00A0000000000000000005678 RICARICA"
-      ]
+      ],
+      "debtor_account_additional_identification": null,
+      "creditor_account_additional_identification": null,
+      "exchange_rate": null,
+      "note": null,
+      "transaction_id": null
     }
   ],
   "continuation_key": null
