@@ -2,7 +2,7 @@
 
 Specifica della sincronizzazione con le banche tramite Enable Banking: collegamento, credenziali, importazione dal grezzo, deduplicazione, normalizzazione, giroconti automatici, conguagli PayPal, piani a rate, programmazione. Tabelle e vincoli di partenza in [`schema.md`](schema.md); qui le tabelle nuove e le regole delle funzioni lato server. Esempi inventati (Anna, Bruno, Carla, "Casa di prova", date del 2031, email `@example.com`).
 
-Tutto avviene **lato server**: Edge Functions (Deno, TypeScript) con la service role e funzioni SQL `security definer` eseguibili solo dalla service role. L'app non legge mai il grezzo né le credenziali e non chiama mai Enable Banking.
+Tutto avviene **lato server**: Edge Functions (Deno, TypeScript) con una chiave segreta (ruolo `service_role` del database) e funzioni SQL `security definer` eseguibili solo dal ruolo `service_role`. L'app non legge mai il grezzo né le credenziali e non chiama mai Enable Banking.
 
 ## 1. Componenti
 
@@ -18,7 +18,7 @@ Tutto avviene **lato server**: Edge Functions (Deno, TypeScript) con la service 
 | Funzioni SQL di servizio | migrazioni | Vault, richieste di collegamento, importazione atomica, richiesta di sincronizzazione |
 | Job programmati | `pg_cron` + `pg_net` | sincronizzazioni automatiche, consensi scaduti, pulizia |
 | Pagina di ritorno | `infra/pages/bank-link/` (Cloudflare Pages, percorso `/bank-link/`) | mostra l'esito del collegamento dai parametri `esito` e `codice` |
-| Script di servizio | `supabase/scripts/eb-admin.ts` | uso da riga di comando per lo sviluppo, con la chiave service role dell'ambiente |
+| Script di servizio | `supabase/scripts/eb-admin.ts` | uso da riga di comando per lo sviluppo, con una chiave segreta dell'ambiente letta da un file in `private/` |
 
 Configurazione delle Edge Functions (secrets di Supabase, mai nel repository):
 
@@ -28,11 +28,11 @@ Configurazione delle Edge Functions (secrets di Supabase, mai nel repository):
 | `APP_RETURN_URL` | URL della pagina di ritorno su Pages, percorso `/bank-link/` con lo slash finale |
 | `EB_GLOBAL_APP_ID`, `EB_GLOBAL_PRIVATE_KEY` | facoltativi: applicazione globale di ripiego, usata solo se la persona non ha credenziali proprie |
 
-`SUPABASE_URL` e la chiave service role arrivano dall'ambiente delle Edge Functions. In `supabase/config.toml`: `verify_jwt = false` per `eb-callback` ed `eb-sync`, che fanno i propri controlli.
+`SUPABASE_URL`, `SUPABASE_SECRET_KEYS` e `SUPABASE_PUBLISHABLE_KEYS` (oggetti JSON con una chiave per nome) arrivano dall'ambiente delle Edge Functions. In `supabase/config.toml`: `verify_jwt = false` per **tutte** le funzioni (`eb-credentials`, `eb-link-start`, `eb-callback`, `eb-sync`), che fanno i propri controlli: il controllo della piattaforma riconosce solo le chiavi vecchie.
 
 ### Autenticazione delle Edge Functions
-- **Utente** (app, più avanti): JWT di Supabase; il membro è `current_member_id()` dell'utente.
-- **Servizio** (script di servizio, job): chiave service role nell'header `Authorization`; il membro o la connessione arrivano nel corpo della richiesta.
+- **Utente** (app, più avanti): JWT di Supabase nell'header `Authorization: Bearer …`, verificato nel codice: la funzione chiama `current_member_id()` su PostgREST con quel JWT (e la chiave publishable come `apikey`), che rifiuta un JWT non valido. Il membro è il risultato; `null` → `403` con codice `member_not_eligible`.
+- **Servizio** (script di servizio, job): una **chiave segreta** di Supabase (`sb_secret_…`) nell'header **`apikey`**, confrontata nel codice in tempo costante con tutti i valori di `SUPABASE_SECRET_KEYS`; mai nell'header `Authorization`. Il membro o la connessione arrivano nel corpo della richiesta.
 - `eb-sync` accetta anche l'header `x-sync-secret`, confrontato in SQL con il segreto in Vault (`sync_secret_matches`): è la strada dei job e della prima sincronizzazione.
 - Ogni altra chiamata: `401` con codice `unauthorized`.
 
@@ -56,14 +56,25 @@ Configurazione delle Edge Functions (secrets di Supabase, mai nel repository):
 7. `eb-callback`:
    - controlla lo `state` con `claim_link_request` (sezione 9): sconosciuto, scaduto o già usato → esito `errore`, codice `link_expired`;
    - `error` presente → esito `annullato` (codice `link_cancelled`) o `errore` (`link_rejected`), la richiesta resta usata;
-   - `POST /sessions` con il `code` → sessione, conti, `access.valid_until`;
-   - crea o aggiorna `bank_connections` (`status = 'active'`, `session_id`, `valid_until`, `uses_global_app`);
-   - crea o aggiorna i conti (sezione 6.4) e i saldi (sezione 6.5); per PayPal aggiunge l'email del conto a `paypal_emails` con `source = 'linked_account'` (se l'email è già di un'altra persona: niente riga, codice `paypal_email_taken` in `sync_runs`);
-   - chiede la **prima sincronizzazione** con `request_bank_sync(connection_id, 'link')`, che parte subito, entro l'ora concessa dalle banche per lo storico lungo;
+   - `POST /sessions` con il `code` → sessione, conti, `access.valid_until`; poi `GET /accounts/{uid}/balances` per ogni conto (un saldo che non si legge non ferma il collegamento: quel conto resta senza saldi);
+   - con `complete_bank_link` (sezione 9), **in una sola transazione**: crea o aggiorna `bank_connections` (`status = 'active'`, `session_id`, `valid_until`, `uses_global_app` della richiesta, `last_error` null), i conti (sezione 6.4) e i saldi (sezione 6.5); per PayPal aggiunge l'email del conto a `paypal_emails` con `source = 'linked_account'` (se l'email è già di un'altra persona: niente riga, codice `paypal_email_taken` in `sync_runs`); scrive `result = 'ok'` sulla richiesta. **Una connessione si riusa** se è dello stesso membro, della stessa banca e dello stesso paese (`aspsp_name`, `aspsp_country`): una nuova autorizzazione aggiorna quella invece di crearne un'altra;
+   - chiede la **prima sincronizzazione** con `request_bank_sync(connection_id, 'link')`, che parte subito, entro l'ora concessa dalle banche per lo storico lungo. Arriva con la PR della sincronizzazione (`request_bank_sync`, sezione 4): fino ad allora il collegamento crea solo connessione, conti e saldi;
    - risponde `302` verso `APP_RETURN_URL?esito=ok` (oppure `esito=annullato|errore&codice=<codice>`). **Nell'URL di ritorno solo l'esito e il codice**: mai id, nomi o importi.
 8. Un conto già noto (stesso proprietario, stesso tipo, stesso `identifier`) si aggiorna invece di crearne uno nuovo, così una nuova autorizzazione della stessa banca non duplica i conti.
 
-Errori di Enable Banking, rete o database durante il ritorno: esito `errore`, codice `link_failed`, connessione con `status = 'error'` e `last_error`.
+Errori di Enable Banking, rete o database durante il ritorno: esito `errore`, codice `link_failed`; nessuna scrittura parziale: una connessione già esistente resta com'era; la richiesta prende il codice in `result` (`finish_link_request`, sezione 9).
+
+### Risposte delle funzioni
+- `eb-credentials` ed `eb-link-start` (`POST`): JSON con `Cache-Control: no-store`, `{"ok": true, …}` oppure `{"error": "<codice>"}`. `eb-credentials` risponde `{"ok": true}`; `eb-link-start` `{"ok": true, "url": "…"}`. Codici: `401 unauthorized`, `403 member_not_eligible`, `400 invalid_request` (corpo sbagliato, `psu_type` non ammesso dalla banca), `400 invalid_credentials` (chiave rifiutata, niente salvato), `404 bank_not_found`, `409 no_credentials`, `502` con il codice di Enable Banking (sezione 4), `500 internal` (anche per una variabile d'ambiente mancante, senza il suo nome). Altri metodi: `405`.
+- `eb-callback` (`GET`, pubblica; altri metodi `405`) risponde **sempre** `302` verso `APP_RETURN_URL` con `Cache-Control: no-store` e `Referrer-Policy: no-referrer`:
+
+| Caso | `esito` | `codice` |
+|---|---|---|
+| `state` assente, non uuid, sconosciuto, scaduto o già usato | `errore` | `link_expired` |
+| `error=access_denied` (la persona ha annullato) | `annullato` | `link_cancelled` |
+| ogni altro `error` | `errore` | `link_rejected` |
+| nessun `code`; errore di Enable Banking, rete o database | `errore` | `link_failed` |
+| collegamento completato | `ok` | — |
 
 ## 4. Sincronizzazione di una connessione
 
@@ -259,6 +270,9 @@ RLS: **select** il membro proprietario della connessione (servirà agli avvisi n
 | `eb_get_credentials(user_id)` | `app_id` e chiave privata, da `vault.decrypted_secrets` |
 | `create_link_request(member_id, aspsp_name, aspsp_country, psu_type, uses_global_app)` | nuova riga di `bank_link_requests`; restituisce l'`id` |
 | `claim_link_request(id)` | segna la richiesta come usata se non scaduta né usata, in un'unica istruzione; restituisce la riga o niente |
+| `eb_service_member(member_id)` | `member_id`, `user_id`, `household_id` e `start_date` di un membro attivo (`left_at` null) con un account (`user_id` non null); altrimenti `member_not_eligible` |
+| `complete_bank_link(request_id, link jsonb)` | completa il collegamento (sezione 3) in **una transazione**, con un lock sul membro: richiesta già reclamata e senza `result` (altrimenti `link_not_claimable`); connessione, conti, saldi ed email PayPal; `result = 'ok'`. Restituisce `connection_id` e il numero dei conti. Forma o tipi sbagliati: `invalid_link`, senza i valori nel messaggio |
+| `finish_link_request(request_id, result)` | scrive l'esito `link_cancelled`, `link_rejected` o `link_failed` su una richiesta reclamata senza `result` (altrimenti `link_not_claimable`); nient'altro |
 | `begin_sync_run(connection_id, trigger)` / `finish_sync_run(...)` | apertura e chiusura di `sync_runs`, con il controllo di un'esecuzione già in corso |
 | `ingest_bank_rows(account_id, rows jsonb)` | importazione atomica (sezione 5) |
 | `request_bank_sync(connection_id, trigger)` | `net.http_post` verso `eb-sync` con l'header `x-sync-secret`; URL del progetto e segreto letti da Vault |
