@@ -14,7 +14,9 @@
  *
  * With `--compare <testdata>`: for each class, the keys of the folder that
  * the test data lacks, the types the test data never has, and the paths of
- * the transactions that hold strings looking like emails.
+ * the transactions that hold strings looking like emails. The class "other"
+ * is not compared, nor the keys a saved page adds around `transactions` and
+ * `continuation_key`: they are listed apart.
  *
  * Files that are not JSON are skipped; JSON that does not parse is counted.
  *
@@ -323,14 +325,25 @@ function printComparison(folder: Folder, testdata: Folder, io: ShapeIo) {
   io.print(
     `compare with the test data (JSON files: ${testdata.files}, unreadable: ${testdata.unreadable})`,
   );
-  let missing = 0;
+  let missingKeys = 0;
+  let missingTypes = 0;
   for (const shapeClass of CLASSES) {
     const shape = folder.classes.get(shapeClass);
     if (shape === undefined) continue;
+    if (shapeClass === "other") {
+      io.print("other: not compared (not an Enable Banking response)");
+      continue;
+    }
     const known = testdata.classes.get(shapeClass)?.paths ?? new Map();
-    const absent = [...shape.paths.keys()].filter((path) => !known.has(path))
+    const compared = [...shape.paths.entries()]
+      .filter(([path]) => isResponsePath(shapeClass, path));
+    const outside = [...shape.paths.keys()]
+      .filter((path) => !isResponsePath(shapeClass, path))
       .sort();
-    const types = [...shape.paths.entries()]
+    const absent = compared.map(([path]) => path)
+      .filter((path) => !known.has(path))
+      .sort();
+    const types = compared
       .filter(([path]) => known.has(path))
       .flatMap(([path, stats]) =>
         [...stats.types.keys()]
@@ -338,12 +351,16 @@ function printComparison(folder: Folder, testdata: Folder, io: ShapeIo) {
           .map((type) => `${path}: ${type}`)
       )
       .sort();
-    missing += absent.length;
+    missingKeys += absent.length;
+    missingTypes += types.length;
     io.print(
       `${shapeClass}: ${absent.length} keys missing, ${types.length} types missing in the test data`,
     );
     for (const path of absent) io.print(`  missing key ${path}`);
     for (const type of types) io.print(`  missing type ${type}`);
+    for (const path of outside) {
+      io.print(`  outside the response, not compared: ${path}`);
+    }
   }
 
   io.print("");
@@ -360,7 +377,21 @@ function printComparison(folder: Folder, testdata: Folder, io: ShapeIo) {
   if (emails.length === 0) io.print("  none");
   for (const [path, count] of emails) io.print(`  ${path}: ${count}`);
   io.print("");
-  io.print(`keys missing in the test data: ${missing}`);
+  io.print(
+    `missing in the test data: ${missingKeys} keys, ${missingTypes} types`,
+  );
+}
+
+/** Top-level keys of a page of `GET /accounts/{uid}/transactions`. */
+const PAGE_KEYS = new Set(["transactions", "continuation_key"]);
+
+/**
+ * A path of the Enable Banking response. A saved page may wrap the response
+ * with keys of its own (request parameters, notes): those are not compared.
+ */
+function isResponsePath(shapeClass: ShapeClass, path: string): boolean {
+  if (shapeClass !== "transactions page") return true;
+  return PAGE_KEYS.has(path.split(/[.[]/, 1)[0]!);
 }
 
 if (import.meta.main) {

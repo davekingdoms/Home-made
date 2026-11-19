@@ -81,6 +81,9 @@ const PAGE = {
     },
   ],
   continuation_key: "chiave-di-continuazione-segreta",
+  // Saved around the response by whoever downloaded it.
+  parametri: { date_from: "2031-02-01" },
+  errore: null,
 };
 const FILES: Record<string, string> = {
   "dati-segreti/conto-di-carla/pagina-uno.json": json(PAGE),
@@ -114,7 +117,7 @@ const FILES: Record<string, string> = {
     cash_account_type: "CACC",
     currency: "EUR",
   }),
-  "dati-segreti/errore.json": json({
+  "dati-segreti/risposta-di-errore.json": json({
     code: 422,
     error: "WRONG_TRANSACTIONS_PERIOD",
     message: "Testo segreto della banca",
@@ -250,24 +253,31 @@ Deno.test("compare: keys and types missing in the test data, email paths", async
       "  missing type continuation_key: string",
       "balances: 0 keys missing, 0 types missing in the test data",
       "session: 14 keys missing, 0 types missing in the test data",
+      // The keys a saved page adds around the response, listed apart.
+      "  outside the response, not compared: errore",
+      "  outside the response, not compared: parametri",
+      "  outside the response, not compared: parametri.date_from",
+      "other: not compared (not an Enable Banking response)",
       "  transactions[].creditor.contact_details.email_address: 1",
       "  transactions[].remittance_information[]: 1",
+      "missing in the test data: 34 keys, 2 types",
     ]
   ) {
     assert(comparison.includes(line), line);
   }
   // Keys the test data has are not missing; a hidden key with no email in
-  // its value is not an email path.
+  // its value is not an email path; wrapper keys are not missing keys.
   for (
     const absent of [
       "  missing key transactions[].creditor.name",
       `  transactions[].note_extra.${DATA_KEY}: 1`,
+      "  missing key parametri",
+      "  missing key errore",
+      "  missing key []",
     ]
   ) {
     assertFalse(comparison.includes(absent), absent);
   }
-  assert(comparison.at(-1)!.startsWith("keys missing in the test data: "));
-  assertFalse(comparison.at(-1)!.endsWith(": 0"));
 });
 
 Deno.test("compare: the test data of the repository against itself", async () => {
@@ -298,7 +308,7 @@ Deno.test("compare: the test data of the repository against itself", async () =>
       shapeClass,
     );
   }
-  assertEquals(out.at(-1), "keys missing in the test data: 0");
+  assertEquals(out.at(-1), "missing in the test data: 0 keys, 0 types");
   for (const party of ["creditor", "debtor"]) {
     assert(
       out.some((line) =>
