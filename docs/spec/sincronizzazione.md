@@ -119,9 +119,9 @@ Ogni transazione restituita dalla banca diventa una riga di `bank_raw_transactio
 3. Per le righe nuove (o passate da `PDNG` a `BOOK`) che diventano movimenti (sezione 6.1) si crea la transazione; `bank_raw_transactions.transaction_id` la collega.
 4. Restituisce i conteggi: righe ricevute, nuove, movimenti creati, saltate per data o stato.
 
-**`dedup_hash`** = SHA-256 in esadecimale di
+**`dedup_hash`** = SHA-256 in esadecimale minuscolo di
 `booking_date|value_date|transaction_date|status|segno|importo_in_centesimi|descrizione`
-con le date in ISO (vuote se mancano), segno `D` o `C`, descrizione normalizzata (sezione 6.3). Lo **stato** fa parte dell'hash: una riga `PDNG` che torna `BOOK` è un gruppo diverso, quindi la versione contabilizzata non viene scambiata per un doppione della provvisoria.
+con le date in ISO (vuote se mancano), segno `D` o `C`, importo in centesimi **senza segno** (il segno è il campo prima), descrizione normalizzata (sezione 6.3), vuota se manca. Lo **stato** fa parte dell'hash: una riga `PDNG` che torna `BOOK` è un gruppo diverso, quindi la versione contabilizzata non viene scambiata per un doppione della provvisoria.
 
 ## 6. Dal grezzo al movimento
 
@@ -152,7 +152,7 @@ con le date in ISO (vuote se mancano), segno `D` o `C`, descrizione normalizzata
 Alla creazione il trigger dello schema crea la riga al 100% di chi paga, senza tipo: il movimento è **da classificare**.
 
 ### 6.3 Normalizzazione
-- **Importi:** testo con il punto decimale e un numero variabile di decimali (`4.4`, `1`, `12.50`): si converte in centesimi interi senza passare dai numeri a virgola mobile. Più di due decimali: si arrotonda al centesimo con metà verso l'alto e si conta in `sync_runs`.
+- **Importi:** testo con il punto decimale e un numero variabile di decimali (`4.4`, `1`, `12.50`): si converte in centesimi interi senza passare dai numeri a virgola mobile. Più di due decimali: si arrotonda al centesimo con metà verso l'alto e la normalizzazione segnala la riga; il conteggio in `sync_runs` arriva con la PR dell'importazione (`ingest_bank_rows`, `eb-sync`).
 - **Descrizione:** `remittance_information` unite da uno spazio, spazi ripetuti ridotti a uno, `trim`; vuota → null.
 - **Controparte:** campo dedicato se presente (nome del creditore sulle uscite, del debitore sulle entrate); altrimenti estratta dalla descrizione con il formato della banca (sezione 8); se nessun formato riconosce la descrizione, null. La controparte serve a suggerimenti e regole, non decide niente da sola.
 - **Date:** ISO `YYYY-MM-DD`; una data mancante resta null.
@@ -215,14 +215,14 @@ Il collegamento funziona con qualunque banca di Enable Banking; questi formati m
 | `SEPA DD CORE DA PAYPAL (EUROPE) S.A R.L. ET CIE S.C.A. MANDATO XX000001` | `PAYPAL (EUROPE)…` → caso "verso PayPal" |
 | `EMOLUMENTI DITTA ESEMPIO SRL STIPENDIO MARZO` | `DITTA ESEMPIO SRL` |
 | `PAGAMENTO CBILL ESEMPIO SERVIZI` / `COMM. PAG. CBILL` | `ESEMPIO SERVIZI` / null |
-| `BON. ISTANTANEO A DEBITO ANNA ESEMPIO … RICARICA` | `ANNA ESEMPIO` |
+| `BON. ISTANTANEO A DEBITO ANNA ESEMPIO … RICARICA` | `ANNA ESEMPIO` (il nome finisce alla prima parola con una cifra, es. l'IBAN) |
 | `ADDEBITO MESE CARTA EGO` | null → addebito mensile della carta (7.1) |
 
 Il conto bancario arriva con un secondo conto `CARD` nella stessa sessione. Il campo `debtor_account` sulle uscite è il conto stesso: non è una controparte.
 
 **Credito Emiliano, carta (`CARD`)**: solo `transaction_date`; nessun `entry_reference` né codice (deduplicazione solo per gruppi); descrizione `ESERCENTE CITTÀ PAESE` → si toglie il codice paese di 2 lettere in fondo, poi l'ultima parola (la città): `FERRAMENTA PROVA CITTAPROVA IT` → `FERRAMENTA PROVA`. Importi con decimali variabili. Saldi `CLBD` (debito, negativo) e `OTHR` (disponibilità residua).
 
-**HYPE**: nome del conto vuoto; `entry_reference` solo sulle entrate; codici `pos` (pagamento con carta) e `boi` (entrata, es. ricarica); descrizione `NOME CITTÀ PROV` → si toglie la sigla di 2 lettere in fondo e l'ultima parola: `CAFFE ESEMPIO CITTAPROVA ZZ` → `CAFFE ESEMPIO`. Saldi `ITBD` e `ITAV`.
+**HYPE**: nome del conto vuoto; `entry_reference` solo sulle entrate; codici `pos` (pagamento con carta) e `boi` (entrata, es. ricarica); descrizione dei pagamenti `pos` `NOME CITTÀ PROV` → si toglie la sigla di 2 lettere in fondo e l'ultima parola: `CAFFE ESEMPIO CITTAPROVA ZZ` → `CAFFE ESEMPIO`; sulle altre righe la controparte viene solo dal campo dedicato. Saldi `ITBD` e `ITAV`.
 
 **PayPal**: conto `OTHR`, identificato dall'email, valuta `XXX`, saldi `XPCD` per valuta; solo `transaction_date`; `entry_reference` sempre presente; controparte con nome ed email nel creditore (uscite) o nel debitore (entrate); `PAYMENT/PAYMENT` = pagamento o invio di denaro, `PAYMENT/LOAN` = rata; compaiono righe `RJCT`. I finanziamenti dalla banca non compaiono su PayPal.
 
@@ -306,7 +306,7 @@ Tre sincronizzazioni lasciano margine sotto il limite di circa 4 accessi al gior
 
 **Deno** (`deno test` nel job `functions` della CI, senza secrets né rete): client con risposte finte, normalizzazione, hash, abbinamenti come funzioni pure. **pgTAP**: funzioni SQL, permessi (app e `anon` non vedono grezzo, credenziali né richieste), `ingest_bank_rows`.
 
-**Dati sintetici** in `supabase/functions/_shared/testdata/`: stessa struttura delle risposte di Enable Banking (sessione, conti, dettaglio, saldi, pagine di transazioni, errori), valori inventati; IBAN di esempio pubblici, carte palesemente finte, email `@example.com`; date intorno a una data di inizio inventata (1° marzo 2031). Casi obbligatori:
+**Dati sintetici** in `supabase/functions/_shared/testdata/eb/` (una sottocartella per formato della sezione 8; il `README.md` della cartella collega ogni caso ai suoi file): stessa struttura delle risposte di Enable Banking (sessione, conti, dettaglio, saldi, pagine di transazioni, errori), valori inventati; IBAN di esempio pubblici, carte palesemente finte, email `@example.com`; date intorno a una data di inizio inventata (1° marzo 2031). Casi obbligatori:
 1. due righe identiche senza riferimento lo stesso giorno: si salvano entrambe; scaricate di nuovo, nessuna riga in più; una terza uguale il giorno dopo nella finestra sovrapposta: si aggiunge solo quella;
 2. bollettino e commissione con riferimenti `-001` e `-002`;
 3. spesa con data valuta prima della data di inizio e data contabile dopo: solo grezzo;
@@ -326,6 +326,8 @@ Tre sincronizzazioni lasciano margine sotto il limite di circa 4 accessi al gior
 17. stipendio (entrata) con controparte;
 18. giroconto automatico annullato (`deleted_at`): rilanciando gli abbinamenti non si ricrea;
 19. due candidati alla pari per lo stesso giroconto: nessun abbinamento.
+
+**Forma delle risposte vere:** `supabase/scripts/eb-shape.ts`, lanciato a mano dal PC con il solo permesso di lettura delle due cartelle, legge una cartella di risposte vere (fuori dal repository) e stampa per classe (pagina di transazioni, saldi, sessione, dettaglio del conto, errore, altro) i percorsi delle chiavi, i tipi, i conteggi e i segnali di formato: mai un valore né il nome di un file. Con `--compare <dati sintetici>` elenca le chiavi e i tipi che mancano nei dati sintetici e dove stanno le stringhe simili a un'email nelle transazioni; i dati sintetici si completano finché non manca niente.
 
 Le prove con la banca finta di Enable Banking (Sandbox, Mock ASPSP) si fanno a mano dal PC, mai in CI.
 
