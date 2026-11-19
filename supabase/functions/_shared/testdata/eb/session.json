@@ -1,0 +1,17 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "accounts": [
+    {
+      "uid": "00000000-0000-4000-8000-0000000000a1",
+      "account_id": { "iban": "IT60X0542811101000000123456" },
+      "name": "Anna Esempio   ",
+      "cash_account_type": "CACC",
+      "currency": "EUR",
+      "identification_hash": "hash-di-prova-a1",
+      "identification_hashes": ["hash-di-prova-a1"]
+    }
+  ],
+  "aspsp": { "name": "Mock ASPSP", "country": "IT" },
+  "psu_type": "personal",
+  "access": { "valid_until": "2031-08-28T10:00:00.000000+00:00" }
+}

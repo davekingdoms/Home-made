@@ -1,0 +1,22 @@
+{
+  "aspsps": [
+    {
+      "name": "Mock ASPSP",
+      "country": "IT",
+      "logo": "https://example.com/logo/mock-aspsp.png",
+      "psu_types": ["personal", "business"],
+      "auth_methods": [],
+      "maximum_consent_validity": 15552000,
+      "beta": false
+    },
+    {
+      "name": "Banca di Prova",
+      "country": "IT",
+      "logo": "https://example.com/logo/banca-di-prova.png",
+      "psu_types": ["personal"],
+      "auth_methods": [],
+      "maximum_consent_validity": 7776000,
+      "beta": false
+    }
+  ]
+}

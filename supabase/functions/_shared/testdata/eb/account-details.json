@@ -1,0 +1,8 @@
+{
+  "account_id": { "iban": "IT60X0542811101000000123456" },
+  "name": "Anna Esempio",
+  "cash_account_type": "CACC",
+  "currency": "EUR",
+  "identification_hash": "hash-di-prova-a1",
+  "identification_hashes": ["hash-di-prova-a1"]
+}

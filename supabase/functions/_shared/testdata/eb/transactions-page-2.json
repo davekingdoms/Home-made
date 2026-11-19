@@ -1,0 +1,12 @@
+{
+  "transactions": [
+    {
+      "transaction_amount": { "currency": "EUR", "amount": "1" },
+      "credit_debit_indicator": "DBIT",
+      "status": "PDNG",
+      "transaction_date": "2031-03-04",
+      "remittance_information": ["CAFFE ESEMPIO CITTAPROVA ZZ"]
+    }
+  ],
+  "continuation_key": null
+}
