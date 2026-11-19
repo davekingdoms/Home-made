@@ -1,0 +1,178 @@
+/*
+ * Colors: Teal palette roles of docs/spec/stile.md (section 2.1), light and
+ * dark theme. The rules below use only these roles.
+ */
+:root {
+  color-scheme: light dark;
+
+  --surface: #f4fbfa;
+  --surface-container-low: #e7f1f0;
+  --surface-container-highest: #cbe0de;
+  --on-surface: #161d1d;
+  --on-surface-variant: #3f5052;
+  --testo-terziario: #566a6c;
+  --primary-container: #00666f;
+  --on-primary-container: #ffffff;
+  --secondary-container: #bfe6ea;
+  --on-secondary-container: #161d1d;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --outline-variant: #cbdcdb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #161a1a;
+    --surface-container-low: #1a2526;
+    --surface-container-highest: #24393c;
+    --on-surface: #e3f1f2;
+    --on-surface-variant: #a9c2c5;
+    --testo-terziario: #8ea1a4;
+    --primary-container: #00666f;
+    --on-primary-container: #ffffff;
+    --secondary-container: #1f4e53;
+    --on-secondary-container: #e3f1f2;
+    --error-container: #93000a;
+    --on-error-container: #ffdad6;
+    --outline-variant: #24393c;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1.5rem 1rem;
+}
+
+/* labelLarge: 14/20, 600 */
+.brand {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card {
+  width: 100%;
+  max-width: 28rem;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.75rem;
+  background: var(--surface-container-low);
+  text-align: center;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 50%;
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+}
+
+[data-icon="ok"] .badge {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+[data-icon="cancelled"] .badge {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+[data-icon="error"] .badge {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+.icon {
+  display: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-icon="ok"] .icon-ok,
+[data-icon="cancelled"] .icon-cancelled,
+[data-icon="error"] .icon-error,
+[data-icon="unknown"] .icon-unknown {
+  display: block;
+}
+
+/* titleLarge: 22/28, 500 */
+.title {
+  margin: 0 0 0.75rem;
+  color: var(--on-surface);
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+  font-weight: 500;
+  overflow-wrap: break-word;
+}
+
+/* bodyMedium: 15/22, 400 */
+.text {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  overflow-wrap: break-word;
+}
+
+/* bodySmall: 13/18, 400 */
+.code {
+  margin: 1rem 0 0;
+  color: var(--testo-terziario);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+
+.code code {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  font-size: 1em;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 30rem) {
+  .card {
+    padding: 2.5rem 2rem;
+  }
+}

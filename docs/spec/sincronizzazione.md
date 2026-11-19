@@ -17,7 +17,7 @@ Tutto avviene **lato server**: Edge Functions (Deno, TypeScript) con la service 
 | `eb-sync` | Edge Function, **senza JWT** (segreto proprio) | sincronizza una connessione e lancia gli abbinamenti |
 | Funzioni SQL di servizio | migrazioni | Vault, richieste di collegamento, importazione atomica, richiesta di sincronizzazione |
 | Job programmati | `pg_cron` + `pg_net` | sincronizzazioni automatiche, consensi scaduti, pulizia |
-| Pagina di ritorno | `infra/pages/` (Cloudflare Pages) | mostra l'esito del collegamento |
+| Pagina di ritorno | `infra/pages/bank-link/` (Cloudflare Pages, percorso `/bank-link/`) | mostra l'esito del collegamento dai parametri `esito` e `codice` |
 | Script di servizio | `supabase/scripts/eb-admin.ts` | uso da riga di comando per lo sviluppo, con la chiave service role dell'ambiente |
 
 Configurazione delle Edge Functions (secrets di Supabase, mai nel repository):
@@ -25,7 +25,7 @@ Configurazione delle Edge Functions (secrets di Supabase, mai nel repository):
 | Nome | Contenuto |
 |---|---|
 | `EB_REDIRECT_URL` | URL di `eb-callback` dell'ambiente, registrato nell'applicazione Enable Banking |
-| `APP_RETURN_URL` | URL della pagina di ritorno su Pages |
+| `APP_RETURN_URL` | URL della pagina di ritorno su Pages, percorso `/bank-link/` con lo slash finale |
 | `EB_GLOBAL_APP_ID`, `EB_GLOBAL_PRIVATE_KEY` | facoltativi: applicazione globale di ripiego, usata solo se la persona non ha credenziali proprie |
 
 `SUPABASE_URL` e la chiave service role arrivano dall'ambiente delle Edge Functions. In `supabase/config.toml`: `verify_jwt = false` per `eb-callback` ed `eb-sync`, che fanno i propri controlli.
