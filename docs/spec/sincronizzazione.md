@@ -263,7 +263,7 @@ Nessun accesso dall'app. Pulizia delle righe più vecchie di 7 giorni con un job
 
 RLS: **select** il membro proprietario della connessione (servirà agli avvisi nell'app); scrittura solo lato server. Solo codici e conteggi: nessun importo, descrizione o nome.
 
-### Funzioni (tutte `security definer`, `set search_path = ''`, `execute` solo a `service_role`)
+### Funzioni (tutte `security definer` tranne `check_bank_link`, che non legge tabelle; `set search_path = ''`, `execute` solo a `service_role`)
 | Funzione | Cosa fa |
 |---|---|
 | `eb_set_credentials(user_id, app_id, private_key)` | crea o sostituisce il segreto `eb_private_key:<user_id>` in Vault e la riga di `eb_credentials` |
@@ -271,6 +271,7 @@ RLS: **select** il membro proprietario della connessione (servirà agli avvisi n
 | `create_link_request(member_id, aspsp_name, aspsp_country, psu_type, uses_global_app)` | nuova riga di `bank_link_requests`; restituisce l'`id` |
 | `claim_link_request(id)` | segna la richiesta come usata se non scaduta né usata, in un'unica istruzione; restituisce la riga o niente |
 | `eb_service_member(member_id)` | `member_id`, `user_id`, `household_id` e `start_date` di un membro attivo (`left_at` null) con un account (`user_id` non null); altrimenti `member_not_eligible` |
+| `check_bank_link(link jsonb)` | controlla forma e tipi del collegamento per `complete_bank_link`; se sono sbagliati, `invalid_link` senza i valori nel messaggio |
 | `complete_bank_link(request_id, link jsonb)` | completa il collegamento (sezione 3) in **una transazione**, con un lock sul membro: richiesta già reclamata e senza `result` (altrimenti `link_not_claimable`); connessione, conti, saldi ed email PayPal; `result = 'ok'`. Restituisce `connection_id` e il numero dei conti. Forma o tipi sbagliati: `invalid_link`, senza i valori nel messaggio |
 | `finish_link_request(request_id, result)` | scrive l'esito `link_cancelled`, `link_rejected` o `link_failed` su una richiesta reclamata senza `result` (altrimenti `link_not_claimable`); nient'altro |
 | `begin_sync_run(connection_id, trigger)` / `finish_sync_run(...)` | apertura e chiusura di `sync_runs`, con il controllo di un'esecuzione già in corso |
@@ -330,7 +331,7 @@ Le prove con la banca finta di Enable Banking (Sandbox, Mock ASPSP) si fanno a m
 
 ## 13. Rilascio e backup
 
-- **Rilascio** (`release.yml`): su un tag `v*` o avviato a mano da `main`, environment `prod`: `supabase link`, `supabase db push` **senza seed**, deploy di tutte le Edge Functions. Il ref del progetto è mascherato nel log. Su `dev` migrazioni e funzioni si portano dal PC con la CLI.
+- **Rilascio** (`release.yml`, environment `prod`): su un tag `v*` o avviato a mano da `main`, mai da un altro branch; CLI di Supabase alla versione fissata nel workflow. `supabase link`, poi `supabase db push --dry-run --remote`, che elenca le migrazioni da applicare e fallisce se `prod` ne ha una che il repository non ha. Avviato a mano ha l'opzione **prova** (predefinita sì), che si ferma qui. Altrimenti `supabase db push --remote` **senza seed**, `supabase migration list --remote` (le migrazioni di `prod` devono essere quelle del repository) e deploy di tutte le Edge Functions con la loro configurazione di `config.toml`. Nel log solo l'elenco delle migrazioni (nomi dei file del repository), il confronto locale/remoto e i nomi delle funzioni; ref del progetto, URL e password mascherati; nessun artifact. Su `dev` migrazioni e funzioni si portano dal PC con la CLI, sempre con `--remote`, dalla radice del repository.
 - **Backup** (`backup.yml`, ogni notte, environment `prod`): `pg_dump` dal pooler in modalità sessione, cifrato con `age`, caricato su un bucket R2 con giurisdizione EU in `daily/` (e il primo del mese anche in `monthly/`); la conservazione la fanno le regole del bucket (30 giorni per `daily/`, 365 per `monthly/`). **Prova di ripristino** (`restore-check.yml`, ogni mese e a mano): scarica l'ultimo dump, lo decifra, lo ripristina in un Postgres temporaneo e controlla che sia più recente di 36 ore e che le tabelle principali abbiano gli stessi conteggi del database, con la tolleranza delle righe nate dopo il dump. Nei log solo gli esiti; nessun dump come artifact.
 - I segreti di Vault non si possono decifrare fuori dal progetto: dopo un ripristino su un progetto nuovo le chiavi private si salvano di nuovo con `eb-credentials`.
 

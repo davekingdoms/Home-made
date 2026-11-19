@@ -115,6 +115,8 @@ La build release richiede `private/key.properties` e il keystore; le build debug
 
 **Build di prova:** il workflow "Distribute test build" (`distribute.yml`), avviato a mano su un branch, compila l'APK di release configurato per `dev`, firmato con la chiave di caricamento, e lo manda ai tester con Firebase App Distribution. Usa i secrets dell'environment `dev`; l'APK non diventa mai un artifact.
 
+**Rilascio:** il workflow "Release" (`release.yml`, environment `prod`) porta su `prod` migrazioni ed Edge Functions. Si avvia a mano da `main`, prima con la prova (`dry_run`, predefinita: controlla solo le migrazioni) e poi senza; un tag `v*` rilascia senza prova.
+
 Nei workflow: niente `pull_request_target`, niente segreti nei job delle pull request, nessun artifact, nei log solo esiti.
 
 Dalla radice del repository:
