@@ -1,0 +1,202 @@
+# Releases main to the prod project: database migrations and Edge
+# Functions (the signed APK for prod comes later). Runs on a v* tag, or by
+# hand (Run workflow) from main, never from another branch. Started by hand
+# it is a dry run unless dry_run is unticked: it only checks the migrations.
+#
+# The repository is public: the secrets live in the "prod" environment, the
+# project ref and URL are masked, and the CLI output goes to files, printed
+# (last lines) only when a command fails. The log shows the migration file
+# names, the repository/prod comparison and the function names, nothing
+# else: the CLI's "Target:" line names the project, so it is never printed.
+# No artifacts, no job summary, no calls to the functions.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only check the migrations, no changes
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# One release at a time, and never cancelled halfway through.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    # The prod environment admits main and the v* tags only: this is the
+    # second check.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 30
+    env:
+      # A tag push has no inputs: it never is a dry run.
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Mask the project identifiers
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        # GitHub masks the secrets already; the URL is masked as a whole too.
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$SUPABASE_PROJECT_REF"
+          echo "::add-mask::https://$SUPABASE_PROJECT_REF.supabase.co"
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Pinned, never latest: a release on prod does not change CLI by
+      # itself. The same version as on the PC (supabase --version).
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.1.0
+
+      # The CLI reads the token and the password from the environment.
+      - name: Link the prod project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/release-link.log"
+          if supabase link --project-ref "$SUPABASE_PROJECT_REF" --yes > "$log" 2>&1; then
+            echo "Project linked."
+          else
+            echo "Link failed:"
+            grep -v '^Target:' "$log" | tail -n 20 || true
+            exit 1
+          fi
+
+      # Fails when prod has a migration that the repository does not have.
+      # --skip-vault: Vault on prod is filled by hand and by the migrations,
+      # never from config.toml.
+      - name: Check the migrations (dry run)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release-dry-run.json"
+          log="$RUNNER_TEMP/release-dry-run.log"
+          if ! supabase db push --dry-run --remote --skip-vault --output-format json > "$out" 2> "$log"; then
+            echo "Dry run failed:"
+            jq -r '.error // empty | "\(.code): \(.message)"' "$out" 2> /dev/null || true
+            grep -v '^Target:' "$log" | tail -n 20 || true
+            exit 1
+          fi
+          pending=$(jq -r '(.migrations // [])[]' "$out")
+          if [ -z "$pending" ]; then
+            echo "Migrations to push: none, prod is up to date."
+          else
+            echo "Migrations to push:"
+            echo "$pending" | sed 's/^/  /'
+          fi
+
+      - name: Stop the dry run
+        if: env.DRY_RUN == 'true'
+        run: |
+          set -euo pipefail
+          echo "Dry run: no changes"
+
+      # Never --include-seed: the seed is for the local database only.
+      - name: Push the migrations
+        if: env.DRY_RUN != 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release-push.json"
+          log="$RUNNER_TEMP/release-push.log"
+          if ! supabase db push --remote --skip-vault --yes --output-format json > "$out" 2> "$log"; then
+            echo "Push failed:"
+            jq -r '.error // empty | "\(.code): \(.message)"' "$out" 2> /dev/null || true
+            grep -v '^Target:' "$log" | tail -n 20 || true
+            exit 1
+          fi
+          pushed=$(jq -r '(.migrations // [])[]' "$out")
+          if [ -z "$pushed" ]; then
+            echo "Migrations pushed: none, prod was up to date."
+          else
+            echo "Migrations pushed:"
+            echo "$pushed" | sed 's/^/  /'
+          fi
+
+      # One row per version: "local" from the repository, "remote" from prod,
+      # an empty string on the side that lacks it. Fails unless prod has
+      # exactly the migrations of the repository.
+      - name: Compare the migrations
+        if: env.DRY_RUN != 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/release-list.json"
+          log="$RUNNER_TEMP/release-list.log"
+          if ! supabase migration list --remote --output-format json > "$out" 2> "$log"; then
+            echo "Migration list failed:"
+            jq -r '.error // empty | "\(.code): \(.message)"' "$out" 2> /dev/null || true
+            grep -v '^Target:' "$log" | tail -n 20 || true
+            exit 1
+          fi
+          printf '%-56s %-11s %s\n' Migration Repository prod
+          jq -r '.migrations[] | [(.local | select(. != "") // "-"), (.remote | select(. != "") // "-")] | @tsv' "$out" |
+            while read -r in_repo on_prod; do
+              if [ "$in_repo" = - ]; then version=$on_prod; else version=$in_repo; fi
+              name=$(find supabase/migrations -maxdepth 1 -name "${version}_*.sql" -printf '%f\n' | head -n 1)
+              printf '%-56s %-11s %s\n' "${name:-$version}" \
+                "$([ "$in_repo" = - ] && echo no || echo yes)" \
+                "$([ "$on_prod" = - ] && echo no || echo yes)"
+            done
+          n=$(find supabase/migrations -maxdepth 1 -name '*.sql' | wc -l)
+          m=$(jq '[.migrations[] | select(.remote != "")] | length' "$out")
+          differences=$(jq '[.migrations[] | select(.local != .remote)] | length' "$out")
+          echo "Migrations in the repository: $n, on prod: $m"
+          if [ "$m" -ne "$n" ] || [ "$differences" -ne 0 ]; then
+            echo "prod does not match the repository."
+            exit 1
+          fi
+
+      # Every folder of supabase/functions but the shared code (_shared);
+      # verify_jwt of each function comes from config.toml.
+      - name: Deploy the Edge Functions
+        if: env.DRY_RUN != 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/release-deploy.log"
+          mapfile -t functions < <(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name '_*' -printf '%f\n' | LC_ALL=C sort)
+          # Without names the CLI would deploy everything it finds.
+          if [ "${#functions[@]}" -eq 0 ]; then
+            echo "Functions deployed: none, no function folders."
+            exit 0
+          fi
+          if supabase functions deploy "${functions[@]}" --project-ref "$SUPABASE_PROJECT_REF" --yes > "$log" 2>&1; then
+            printf -v names '%s, ' "${functions[@]}"
+            echo "Functions deployed: ${names%, }"
+          else
+            echo "Deploy failed:"
+            grep -v '^Target:' "$log" | tail -n 20 || true
+            exit 1
+          fi
+
+      - name: Remove the link and the temporary files
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -rf supabase/.temp "$RUNNER_TEMP"/release-*
