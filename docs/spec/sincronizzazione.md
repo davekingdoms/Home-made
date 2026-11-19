@@ -238,6 +238,7 @@ Nessun accesso dall'app. Pulizia delle righe più vecchie di 7 giorni con un job
 | `id` | uuid PK | |
 | `connection_id` | uuid | → `bank_connections` |
 | `account_id` | uuid null | null = riga della connessione; una riga per conto con i suoi conteggi |
+| `run_id` | uuid null | → `sync_runs`; null sulla riga della connessione, l'id di quella riga sulle righe dei conti |
 | `trigger` | text | `link`, `schedule`, `manual`, `admin` |
 | `status` | text | `running`, `ok`, `partial`, `error`, `skipped` |
 | `error_code` | text null | solo codici (sezione 4) |
@@ -262,6 +263,8 @@ RLS: **select** il membro proprietario della connessione (servirà agli avvisi n
 | `ingest_bank_rows(account_id, rows jsonb)` | importazione atomica (sezione 5) |
 | `request_bank_sync(connection_id, trigger)` | `net.http_post` verso `eb-sync` con l'header `x-sync-secret`; URL del progetto e segreto letti da Vault |
 | `sync_secret_matches(secret)` | confronto con il segreto in Vault; non lo restituisce mai |
+
+Alla cancellazione di una riga di `eb_credentials` (anche con l'account) un trigger cancella il suo segreto da Vault: la chiave privata non resta senza proprietario.
 
 Vault contiene anche:
 - `sync_cron_secret`: **generato dalla migrazione** con byte casuali se non esiste; nessuno lo vede né lo copia;
