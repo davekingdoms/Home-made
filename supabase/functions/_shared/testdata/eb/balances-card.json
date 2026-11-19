@@ -1,0 +1,15 @@
+{
+  "balances": [
+    {
+      "name": "Saldo contabile",
+      "balance_amount": { "currency": "EUR", "amount": "-50.00" },
+      "balance_type": "CLBD",
+      "reference_date": "2031-03-04"
+    },
+    {
+      "name": "Disponibilità",
+      "balance_amount": { "currency": "EUR", "amount": "1450" },
+      "balance_type": "OTHR"
+    }
+  ]
+}
