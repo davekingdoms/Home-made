@@ -126,3 +126,6 @@ supabase test db                          # test pgTAP
 supabase stop                             # ferma Supabase
 python tools/contrasti/contrasti.py docs/spec/stile.md   # controllo dei contrasti
 ```
+
+**Edge Functions** in `supabase/functions/` (Deno, versione in `.dvmrc`; codice comune in `_shared/`), script di servizio in `supabase/scripts/`. Dalla radice: `deno task --config supabase/functions/deno.json fmt:check` (e `lint`, `test`; `fmt` corregge la formattazione).
+Le funzioni non leggono mai `private/`: i segreti arrivano dai secrets delle Edge Functions e da Vault.
