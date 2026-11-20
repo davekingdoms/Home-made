@@ -48,7 +48,8 @@ as $$
   select c.id
   from public.categories c
   left join public.categories p on p.id = c.parent_id
-  where c.kind = category.kind
+  where c.household_id = '00000000-0000-4000-8000-0000000000f1'
+    and c.kind = category.kind
     and c.name = category.name
     and p.name is not distinct from category.parent_name
     and c.archived_at is null
