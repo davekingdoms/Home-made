@@ -10,7 +10,11 @@ import { EbError } from "./eb/errors.ts";
 import { HttpError } from "./http.ts";
 import { InvalidBalanceError } from "./normalize/balance.ts";
 
-export type FunctionName = "eb-credentials" | "eb-link-start" | "eb-callback";
+export type FunctionName =
+  | "eb-credentials"
+  | "eb-link-start"
+  | "eb-callback"
+  | "eb-sync";
 
 export interface LogEntry {
   fn: FunctionName;
@@ -38,6 +42,27 @@ export function codeOf(error: unknown): string {
     ? error.code
     : "internal";
   return CODE.test(code) ? code : "internal";
+}
+
+/**
+ * Like `stepper`, and each step leaves a second line with its duration:
+ * step `<name>_ms`, the milliseconds as `count` (for the limits of the
+ * Edge Functions).
+ */
+export function timedStepper(
+  fn: FunctionName,
+  log: Logger,
+  now: () => number = Date.now,
+) {
+  const step = stepper(fn, log);
+  return async function timed<T>(name: string, run: () => Promise<T> | T) {
+    const started = now();
+    try {
+      return await step(name, run);
+    } finally {
+      log({ fn, step: `${name}_ms`, count: Math.max(0, now() - started) });
+    }
+  };
 }
 
 /**

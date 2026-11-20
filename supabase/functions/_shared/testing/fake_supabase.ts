@@ -79,22 +79,36 @@ export interface RpcCall {
   authorization: string | null;
 }
 
+/** A read or write of a table: the URL holds the PostgREST parameters. */
+export type RestHandler = (url: URL, request: Request) => unknown;
+
+export interface RestCall {
+  /** `METHOD table`, e.g. `GET accounts`. */
+  route: string;
+  url: URL;
+  apikey: string | null;
+}
+
 export interface FakeProject {
   fetch: typeof fetch;
   rpcCalls: RpcCall[];
+  restCalls: RestCall[];
   ebRequests: Request[];
 }
 
 /**
  * `rpc` answers the SQL functions by name (a plain value becomes a 200
- * JSON answer); `eb` answers Enable Banking by `METHOD /path`.
+ * JSON answer); `rest` answers the tables by `METHOD table`; `eb` answers
+ * Enable Banking by `METHOD /path`.
  */
 export function fakeProject(handlers: {
   rpc?: Record<string, RpcHandler>;
+  rest?: Record<string, RestHandler>;
   eb?: Record<string, EbHandler>;
 }): FakeProject {
   const rpc = { ...defaultRpc(), ...handlers.rpc };
   const rpcCalls: RpcCall[] = [];
+  const restCalls: RestCall[] = [];
   const ebRequests: Request[] = [];
   const fake = fakeFetch(async (request) => {
     const url = new URL(request.url);
@@ -106,6 +120,18 @@ export function fakeProject(handlers: {
         : await handler(request);
     }
     assertEquals(url.origin, SUPABASE_URL, "unexpected host");
+    if (!url.pathname.startsWith("/rest/v1/rpc/")) {
+      const route = `${request.method} ${
+        url.pathname.replace(/^\/rest\/v1\//, "")
+      }`;
+      restCalls.push({ route, url, apikey: request.headers.get("apikey") });
+      const handler = handlers.rest?.[route];
+      if (handler === undefined) {
+        return pgError(404, "PGRST205", "Could not find the table");
+      }
+      const result = await handler(url, request);
+      return result instanceof Response ? result : json(result);
+    }
     const name = url.pathname.replace(/^\/rest\/v1\/rpc\//, "");
     assertEquals(request.method, "POST");
     const args = await request.json() as Record<string, unknown>;
@@ -122,7 +148,7 @@ export function fakeProject(handlers: {
     const result = await handler(args, request);
     return result instanceof Response ? result : json(result);
   });
-  return { fetch: fake.fetch, rpcCalls, ebRequests };
+  return { fetch: fake.fetch, rpcCalls, restCalls, ebRequests };
 }
 
 /** Members, user JWTs and credentials of Anna and Bruno. */

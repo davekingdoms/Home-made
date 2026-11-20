@@ -98,6 +98,7 @@ function setup(options: {
 } = {}) {
   const finished: Record<string, unknown>[] = [];
   const completed: Record<string, unknown>[] = [];
+  const syncRequests: Record<string, unknown>[] = [];
   const project = fakeProject({
     eb: {
       "POST /sessions": () => json(bankSession),
@@ -124,6 +125,10 @@ function setup(options: {
         finished.push(args);
         return new Response(null, { status: 204 });
       },
+      request_bank_sync: (args) => {
+        syncRequests.push(args);
+        return new Response(null, { status: 204 });
+      },
       ...options.rpc,
     },
   });
@@ -132,7 +137,7 @@ function setup(options: {
     fetch: project.fetch,
     newEbClient: options.newEbClient,
   }));
-  return { handler, project, finished, completed, lines };
+  return { handler, project, finished, completed, syncRequests, lines };
 }
 
 function callback(query: string, method = "GET") {
@@ -292,6 +297,77 @@ Deno.test("a balance that cannot be read leaves only that account without balanc
     [ACCOUNT_UID.card, 0],
   ]);
   assert(lines.some((line) => line.includes('code: "bank_unavailable"')));
+});
+
+Deno.test("a completed link asks for the first sync of its connection", async () => {
+  const { handler, project, syncRequests, lines } = setup();
+  assertRedirect(
+    await handler(callback(`?code=${CODE}&state=${BANK_REQUEST}`)),
+    "ok",
+  );
+  assertEquals(syncRequests, [{
+    connection_id: CONNECTION_ID,
+    trigger: "link",
+  }]);
+  const names = project.rpcCalls.map((call) => call.name);
+  assertEquals(names.slice(-2), ["complete_bank_link", "request_bank_sync"]);
+  assertEquals(project.rpcCalls.at(-1)?.apikey, SECRET_KEY);
+  assert(lines.some((line) => line.includes('step: "sync_request"')));
+  assertCleanLogs(lines, [CONNECTION_ID]);
+});
+
+Deno.test("a sync request that fails leaves the link ok, with only its code in the log", async () => {
+  const cases: RpcHandler[] = [
+    () => pgError(400, "P0001", "project_url_missing"),
+    () => pgError(503, "57P01", "terminating", DETAIL),
+  ];
+  for (const failing of cases) {
+    const { handler, finished, lines } = setup({
+      rpc: { request_bank_sync: failing },
+    });
+    assertRedirect(
+      await handler(callback(`?code=${CODE}&state=${BANK_REQUEST}`)),
+      "ok",
+    );
+    assertEquals(finished, []);
+    assert(
+      lines.some((line) =>
+        line.includes('step: "sync_request"') &&
+        /code: "(project_url_missing|57P01)"/.test(line)
+      ),
+    );
+    assertCleanLogs(lines, [DETAIL, CONNECTION_ID]);
+  }
+
+  // A connection that does not come back: no request, the link stays ok.
+  const { handler, syncRequests } = setup({
+    rpc: { complete_bank_link: () => [{ account_count: 2 }] },
+  });
+  assertRedirect(
+    await handler(callback(`?code=${CODE}&state=${BANK_REQUEST}`)),
+    "ok",
+  );
+  assertEquals(syncRequests, []);
+});
+
+Deno.test("a link that does not complete asks for no sync", async () => {
+  const { handler, syncRequests } = setup({
+    eb: { "POST /sessions": () => json(errors.wrong_parameters, 400) },
+  });
+  assertRedirect(
+    await handler(callback(`?code=${CODE}&state=${BANK_REQUEST}`)),
+    "errore",
+    "link_failed",
+  );
+  const cancelled = setup();
+  assertRedirect(
+    await cancelled.handler(
+      callback(`?error=access_denied&state=${BANK_REQUEST}`),
+    ),
+    "annullato",
+    "link_cancelled",
+  );
+  assertEquals([...syncRequests, ...cancelled.syncRequests], []);
 });
 
 Deno.test("state missing, malformed or repeated: link_expired without the database", async () => {
