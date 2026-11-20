@@ -228,6 +228,8 @@ function setup(options: Setup = {}) {
         finished.push(args);
         return new Response(null, { status: 204 });
       },
+      transfer_candidates: () => ({ accounts: [], movements: [] }),
+      apply_transfers: (args) => (args.transfers as unknown[]).length,
       ...options.rpc,
     },
   });
@@ -273,12 +275,19 @@ function closed(finished: Record<string, unknown>[]) {
   assertEquals(args.run_id, RUN_ID);
   const result = args.result as {
     strategy: string | null;
+    matched_transfers: number;
     accounts: Record<string, unknown>[];
   };
+  assertEquals(Object.keys(result).sort(), [
+    "accounts",
+    "matched_transfers",
+    "strategy",
+  ]);
   return {
     status: args.status,
     errorCode: args.error_code,
     strategy: result.strategy,
+    matchedTransfers: result.matched_transfers,
     accounts: result.accounts,
   };
 }
@@ -935,4 +944,231 @@ Deno.test("finish_sync_run failing: only its code in the log", async () => {
   assertEquals((await call()).status, 202);
   assertEquals(logged(logs, "finish")[0]?.code, "invalid_result");
   assertCleanLogs(logs);
+});
+
+// Step 4: the automatic transfers of the owner (section 7.1).
+
+const HYPE_ID = "00000000-0000-4000-8000-0000000000c3";
+const TOP_UP_OUT = "00000000-0000-4000-8000-000000000110";
+const TOP_UP_IN = "00000000-0000-4000-8000-000000000131";
+
+/** The top-up of case 8, as transfer_candidates returns it. */
+function topUpCandidates(withInflow = true) {
+  const movement = (
+    id: string,
+    accountId: string,
+    amount: number,
+    description: string,
+  ) => ({
+    transaction_id: id,
+    account_id: accountId,
+    amount_cents: amount,
+    currency: "EUR",
+    movement_date: "2031-03-15",
+    counterparty: "ANNA ESEMPIO",
+    description,
+    free: true,
+    in_transfer: false,
+    cancelled: false,
+  });
+  return {
+    accounts: [
+      {
+        id: CACC.id,
+        kind: "bank",
+        connection_id: CONNECTION_ID,
+        aspsp_name: "Credito Emiliano",
+        cash_account_type: "CACC",
+      },
+      {
+        id: HYPE_ID,
+        kind: "bank",
+        connection_id: "00000000-0000-4000-8000-0000000000e2",
+        aspsp_name: "HYPE",
+        cash_account_type: null,
+      },
+    ],
+    movements: [
+      movement(
+        TOP_UP_OUT,
+        CACC.id,
+        -5000,
+        "BON. ISTANTANEO A DEBITO ANNA ESEMPIO RICARICA",
+      ),
+      ...(withInflow
+        ? [movement(TOP_UP_IN, HYPE_ID, 5000, "RICARICA DA BONIFICO")]
+        : []),
+    ],
+  };
+}
+
+const TOP_UP_VALUES = [
+  HYPE_ID,
+  TOP_UP_OUT,
+  TOP_UP_IN,
+  "ANNA ESEMPIO",
+  "RICARICA",
+];
+
+const rpcNames = (project: { rpcCalls: { name: string }[] }) =>
+  project.rpcCalls.map((call) => call.name);
+
+Deno.test("step 4: the transfers of the owner once, after all the accounts, counted on the connection", async () => {
+  const { call, project, finished, logs } = setup({
+    rpc: { transfer_candidates: () => topUpCandidates() },
+  });
+  await call();
+  const names = rpcNames(project);
+  assertEquals(names.slice(names.indexOf("ingest_bank_rows")), [
+    "ingest_bank_rows",
+    "ingest_bank_rows",
+    "transfer_candidates",
+    "apply_transfers",
+    "finish_sync_run",
+  ]);
+  const candidates = project.rpcCalls.find((c) =>
+    c.name === "transfer_candidates"
+  )!;
+  // The window of 45 days before 2031-03-20, and 7 days for the payments.
+  assertEquals(candidates.args, {
+    member_id: ANNA.memberId,
+    since: "2031-01-27",
+  });
+  assertEquals(candidates.apikey, SECRET_KEY);
+  assertEquals(
+    project.rpcCalls.find((c) => c.name === "apply_transfers")!.args,
+    {
+      member_id: ANNA.memberId,
+      transfers: [{
+        from_account_id: CACC.id,
+        to_account_id: HYPE_ID,
+        out_transaction_id: TOP_UP_OUT,
+        in_transaction_id: TOP_UP_IN,
+        funded_transaction_id: null,
+      }],
+    },
+  );
+
+  const run = closed(finished);
+  assertEquals([run.status, run.errorCode, run.matchedTransfers], [
+    "ok",
+    null,
+    1,
+  ]);
+  assertEquals(logged(logs, "match"), [
+    { fn: "eb-sync", step: "match", code: "ok" },
+  ]);
+  assertEquals(logged(logs, "match_ms").length, 1);
+  assert(logged(logs, "match_ms")[0]!.count! >= 0);
+  assertEquals(logged(logs, "matched_transfers"), [
+    { fn: "eb-sync", step: "matched_transfers", count: 1 },
+  ]);
+  assertCleanLogs(logs, TOP_UP_VALUES);
+});
+
+Deno.test("step 4: also with an account not imported; never without an imported account", async () => {
+  const partial = setup({
+    rpc: { transfer_candidates: () => topUpCandidates() },
+    eb: {
+      [`GET /accounts/${CARD.provider_account_id}/transactions`]: () =>
+        json(errors.aspsp_error, 500),
+    },
+  });
+  await partial.call();
+  const run = closed(partial.finished);
+  assertEquals([run.status, run.matchedTransfers], ["partial", 1]);
+  assertEquals(
+    rpcNames(partial.project).filter((n) => n === "transfer_candidates")
+      .length,
+    1,
+  );
+
+  const none = [
+    // The first account hits the rate limit: the other is skipped.
+    setup({
+      eb: {
+        [`GET /accounts/${CACC.provider_account_id}/transactions`]: () =>
+          json(errors.rate_limited, 429),
+      },
+    }),
+    // The consent is over: no account.
+    setup({
+      eb: {
+        [`GET /sessions/${SESSION_ID}`]: () =>
+          json({ ...sessionStatus, status: "EXPIRED" }),
+      },
+    }),
+  ];
+  for (const { call, project, finished, logs } of none) {
+    await call();
+    assertFalse(rpcNames(project).includes("transfer_candidates"));
+    assertFalse(rpcNames(project).includes("apply_transfers"));
+    assertEquals(closed(finished).matchedTransfers, 0);
+    assertEquals(logged(logs, "match"), []);
+  }
+});
+
+Deno.test("step 4 without transfers to make: apply_transfers is not called", async () => {
+  const { call, project, finished, logs } = setup({
+    rpc: { transfer_candidates: () => topUpCandidates(false) },
+  });
+  await call();
+  assert(rpcNames(project).includes("transfer_candidates"));
+  assertFalse(rpcNames(project).includes("apply_transfers"));
+  assertEquals(closed(finished).matchedTransfers, 0);
+  assertEquals(logged(logs, "matched_transfers")[0]?.count, 0);
+});
+
+Deno.test("step 4 failing: the accounts keep their outcome, only the code in the log, 0 transfers", async () => {
+  const detail =
+    `Failing row contains (${TOP_UP_OUT}, ANNA ESEMPIO, RICARICA).`;
+  const cases: [string, Record<string, RpcHandler>][] = [
+    ["member_not_eligible", {
+      transfer_candidates: () =>
+        pgError(400, "P0001", "member_not_eligible", detail),
+    }],
+    ["internal", { transfer_candidates: () => ({ accounts: "conti" }) }],
+    ["internal", {
+      transfer_candidates: () => {
+        const candidates = topUpCandidates();
+        return {
+          ...candidates,
+          movements: [{ ...candidates.movements[0], amount_cents: "-5000" }],
+        };
+      },
+    }],
+    ["invalid_transfers", {
+      transfer_candidates: () => topUpCandidates(),
+      apply_transfers: () => pgError(400, "P0001", "invalid_transfers", detail),
+    }],
+    ["internal", {
+      transfer_candidates: () => topUpCandidates(),
+      apply_transfers: () => 2,
+    }],
+    ["internal", {
+      transfer_candidates: () => topUpCandidates(),
+      apply_transfers: () => "1",
+    }],
+    ["57014", {
+      transfer_candidates: () => topUpCandidates(),
+      apply_transfers: () => pgError(500, "57014", "canceling statement"),
+    }],
+  ];
+  for (const [code, rpc] of cases) {
+    const { call, finished, logs } = setup({ rpc });
+    assertEquals((await call()).status, 202);
+    const run = closed(finished);
+    assertEquals([run.status, run.errorCode, run.matchedTransfers], [
+      "ok",
+      null,
+      0,
+    ]);
+    assertEquals(run.accounts.map((a) => a.status), ["ok", "ok"]);
+    assertEquals(logged(logs, "match"), [
+      { fn: "eb-sync", step: "match", code },
+    ]);
+    assertEquals(logged(logs, "match_ms").length, 1);
+    assertEquals(logged(logs, "matched_transfers")[0]?.count, 0);
+    assertCleanLogs(logs, [...TOP_UP_VALUES, "Failing row", "canceling"]);
+  }
 });

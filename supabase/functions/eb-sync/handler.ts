@@ -23,7 +23,12 @@
  *    after `WRONG_TRANSACTIONS_PERIOD`, the normalization (a row refused as
  *    `invalid_row` is left out and counted in `rows_invalid`), then
  *    `ingest_bank_rows`. A failed page leaves the account as it was;
- * 4. `finish_sync_run`: `ok` when every account is imported, `partial` with
+ * 4. once a run, after all the accounts and when at least one of them was
+ *    imported (also with `partial`), the automatic transfers of the owner
+ *    (`transfers.ts`, section 7.1). Their count goes in `matched_transfers`;
+ *    a failure leaves the outcome of the accounts as it is, only its code
+ *    in the log, and `matched_transfers` at 0;
+ * 5. `finish_sync_run`: `ok` when every account is imported, `partial` with
  *    the code of the first failed account, `error` when the connection
  *    itself fails. A rate limit ends the connection: the accounts left are
  *    skipped, the code is `rate_limited`.
@@ -68,6 +73,7 @@ import {
   type NormalizedTransaction,
   normalizeTransaction,
 } from "../_shared/normalize/transaction.ts";
+import { memberTransfers } from "./transfers.ts";
 import {
   isoDay,
   shorterPeriods,
@@ -113,6 +119,8 @@ interface Outcome {
   status: "ok" | "partial" | "error";
   errorCode: SyncErrorCode | null;
   accounts: AccountResult[];
+  /** Automatic transfers created after the accounts (step 4). */
+  matchedTransfers: number;
 }
 
 interface Connection {
@@ -287,7 +295,12 @@ async function syncConnection(work: Work): Promise<void> {
   try {
     outcome = await runSync(work, step);
   } catch (error) {
-    outcome = { status: "error", errorCode: syncCode(error), accounts: [] };
+    outcome = {
+      status: "error",
+      errorCode: syncCode(error),
+      accounts: [],
+      matchedTransfers: 0,
+    };
   }
   try {
     await step("finish", () =>
@@ -297,6 +310,7 @@ async function syncConnection(work: Work): Promise<void> {
         error_code: outcome.errorCode,
         result: {
           strategy: runStrategy(outcome.accounts),
+          matched_transfers: outcome.matchedTransfers,
           accounts: outcome.accounts,
         },
       }));
@@ -349,7 +363,12 @@ async function runSync(work: Work, step: Step): Promise<Outcome> {
   });
   if (consent !== null) {
     work.log({ fn: "eb-sync", step: "consent", code: consent });
-    return { status: "error", errorCode: consent, accounts: [] };
+    return {
+      status: "error",
+      errorCode: consent,
+      accounts: [],
+      matchedTransfers: 0,
+    };
   }
 
   const accounts = await step(
@@ -378,15 +397,48 @@ async function runSync(work: Work, step: Step): Promise<Outcome> {
     limited = result.error_code === "rate_limited";
   }
 
+  const matchedTransfers = results.some((result) => result.status === "ok")
+    ? await transfers(work, step, member.memberId, today)
+    : 0;
+
   const failed = results.find((result) => result.status === "error");
   if (failed === undefined) {
-    return { status: "ok", errorCode: null, accounts: results };
+    return {
+      status: "ok",
+      errorCode: null,
+      accounts: results,
+      matchedTransfers,
+    };
   }
   return {
     status: "partial",
     errorCode: limited ? "rate_limited" : failed.error_code ?? "internal",
     accounts: results,
+    matchedTransfers,
   };
+}
+
+/**
+ * The automatic transfers of the owner (section 7.1), once a run: a failure
+ * leaves only its code in the log (step `match`) and counts 0.
+ */
+async function transfers(
+  work: Work,
+  step: Step,
+  memberId: string,
+  today: string,
+): Promise<number> {
+  let created = 0;
+  try {
+    created = await step(
+      "match",
+      () => memberTransfers(work.db, memberId, today),
+    );
+  } catch {
+    // The accounts keep their outcome; the next run tries again.
+  }
+  work.log({ fn: "eb-sync", step: "matched_transfers", count: created });
+  return created;
 }
 
 async function syncAccount(
