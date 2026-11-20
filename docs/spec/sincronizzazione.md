@@ -58,7 +58,7 @@ Configurazione delle Edge Functions (secrets di Supabase, mai nel repository):
    - `error` presente → esito `annullato` (codice `link_cancelled`) o `errore` (`link_rejected`), la richiesta resta usata;
    - `POST /sessions` con il `code` → sessione, conti, `access.valid_until`; poi `GET /accounts/{uid}/balances` per ogni conto (un saldo che non si legge non ferma il collegamento: quel conto resta senza saldi);
    - con `complete_bank_link` (sezione 9), **in una sola transazione**: crea o aggiorna `bank_connections` (`status = 'active'`, `session_id`, `valid_until`, `uses_global_app` della richiesta, `last_error` null), i conti (sezione 6.4) e i saldi (sezione 6.5); per PayPal aggiunge l'email del conto a `paypal_emails` con `source = 'linked_account'` (se l'email è già di un'altra persona: niente riga, codice `paypal_email_taken` in `sync_runs`); scrive `result = 'ok'` sulla richiesta. **Una connessione si riusa** se è dello stesso membro, della stessa banca e dello stesso paese (`aspsp_name`, `aspsp_country`): una nuova autorizzazione aggiorna quella invece di crearne un'altra;
-   - chiede la **prima sincronizzazione** con `request_bank_sync(connection_id, 'link')`, che parte subito, entro l'ora concessa dalle banche per lo storico lungo. Arriva con la PR della sincronizzazione (`request_bank_sync`, sezione 4): fino ad allora il collegamento crea solo connessione, conti e saldi;
+   - chiede la **prima sincronizzazione** con `request_bank_sync(connection_id, 'link')`, che parte subito, entro l'ora concessa dalle banche per lo storico lungo. Se la richiesta fallisce, il collegamento resta riuscito (esito `ok`) e nel log resta solo il codice: la prima sincronizzazione arriva con quelle programmate o con lo script di servizio;
    - risponde `302` verso `APP_RETURN_URL?esito=ok` (oppure `esito=annullato|errore&codice=<codice>`). **Nell'URL di ritorno solo l'esito e il codice**: mai id, nomi o importi.
 8. Un conto già noto (stesso proprietario, stesso tipo, stesso `identifier`) si aggiorna invece di crearne uno nuovo, così una nuova autorizzazione della stessa banca non duplica i conti.
 
@@ -78,16 +78,19 @@ Errori di Enable Banking, rete o database durante il ritorno: esito `errore`, co
 
 ## 4. Sincronizzazione di una connessione
 
-`eb-sync` riceve `connection_id` e `trigger` (`link`, `schedule`, `manual`, `admin`). Risponde subito `202` e lavora in `EdgeRuntime.waitUntil`, così la chiamata da `pg_net` non resta appesa.
+`eb-sync` riceve `connection_id` e `trigger` (`link`, `schedule`, `manual`, `admin`); un altro corpo è `400 invalid_request`. Apre l'esecuzione (punto 1) e risponde subito `202` con `{"ok": true, "run_id": …, "status": "running"}` (oppure `"skipped"` se una sincronizzazione della connessione è già in corso; connessione sconosciuta: `404 connection_not_found`), poi lavora in `EdgeRuntime.waitUntil`, così la chiamata da `pg_net` non resta appesa.
 
 1. **Un'esecuzione alla volta:** `begin_sync_run` apre la riga in `sync_runs`; se ce n'è già una `running` da meno di 15 minuti, niente (`already_running`).
 2. **Consenso:** `GET /sessions/{session_id}`. Sessione scaduta o revocata → `status = 'expired'` o `'revoked'`, `last_error = 'consent_expired'` o `'consent_revoked'`, fine. Il consenso **non** si deduce mai dal testo di un errore sulle transazioni.
 3. Per ogni conto della connessione non archiviato:
-   - **saldi:** `GET /accounts/{uid}/balances` (sezione 6.5);
+   - **saldi:** `GET /accounts/{uid}/balances` (sezione 6.5); un saldo che non si legge non ferma il conto: restano i saldi precedenti e nel log resta il codice (salvo il limite della banca, sotto);
    - **transazioni:** `GET /accounts/{uid}/transactions` con `date_from` e `strategy` della tabella sotto, seguendo `continuation_key` fino all'ultima pagina;
-   - **un conto si importa solo con tutte le pagine scaricate**: una pagina fallita lascia il conto com'era (`status = 'partial'` per la connessione).
+   - **un conto si importa solo con tutte le pagine scaricate**: una pagina fallita lascia il conto com'era (`status = 'partial'` per la connessione);
+   - **normalizzazione** di ogni riga (sezione 6): una riga che non si normalizza (`invalid_row`: importo, valuta, data, segno o stato non validi) resta fuori dal grezzo e si conta in `sync_runs.rows_invalid`; le altre righe del conto si importano.
 4. Importazione con `ingest_bank_rows` (sezione 5), poi gli abbinamenti del membro (sezione 7).
-5. Chiusura della riga di `sync_runs`; su `bank_connections` `last_sync_at`, e `last_success_at` se tutti i conti sono riusciti.
+5. Chiusura della riga di `sync_runs`: `ok` se tutti i conti sono importati; `partial` con il codice del primo conto non importato; `error` se la connessione stessa non si sincronizza (consenso, credenziali, sessione). Per `error` e `partial` sempre un codice. Su `bank_connections` `last_sync_at`, e `last_success_at` se tutti i conti sono riusciti.
+
+Lo script di servizio `eb-admin.ts sync <connection_id>` chiama `eb-sync` con la chiave segreta (`trigger = 'admin'`), aspetta la fine dell'esecuzione e stampa da `sync_runs` solo stato, codici, strategia, date richieste e ottenute e conteggi di ogni conto ("account 1", "account 2"…): nessun importo, nome o id.
 
 ### Finestra scaricata
 
@@ -103,7 +106,7 @@ Senza `date_to` (fino a oggi).
 Una risposta `422` con errore `WRONG_TRANSACTIONS_PERIOD` vuol dire **periodo troppo lungo**, anche quando il messaggio della banca parla di consenso scaduto. Si riprova con `date_from` = il più recente tra la data richiesta e oggi − 89, poi − 60, poi − 30 giorni. Se si scarica meno di quanto richiesto, la riga di `sync_runs` registra `history_from` (la data ottenuta) e `history_incomplete = true`: non si ritenta più indietro.
 
 ### Limiti delle banche
-- Le sincronizzazioni senza l'utente presente sono limitate da molte banche a circa **4 al giorno** per conto. Una risposta di limite superato (`429` o il codice equivalente di Enable Banking) ferma la connessione fino al giro successivo, con `last_error = 'rate_limited'`.
+- Le sincronizzazioni senza l'utente presente sono limitate da molte banche a circa **4 al giorno** per conto. Una risposta di limite superato (`429` o il codice equivalente di Enable Banking) ferma la connessione fino al giro successivo, con `last_error = 'rate_limited'`: i conti rimasti si saltano (`skipped`).
 - La prima sincronizzazione avviene con l'utente appena tornato dalla banca.
 - Gli header facoltativi dell'utente presente (`Psu-Ip-Address`, `Psu-User-Agent`) arriveranno con l'aggiornamento manuale dall'app.
 
@@ -128,8 +131,9 @@ con le date in ISO (vuote se mancano), segno `D` o `C`, importo in centesimi **s
 ### 6.1 Quali righe diventano movimenti
 - solo `status = 'BOOK'`;
 - `movement_date` ≥ data di inizio del **membro proprietario del conto**: una spesa precedente contabilizzata dopo la data di inizio resta solo nel grezzo;
+- importo diverso da zero: una riga `BOOK` da zero resta solo nel grezzo e si conta in `sync_runs.skipped_status`;
 - non è l'acquisto di un piano a rate (sezione 7.3);
-- `PDNG`, `RJCT`, `CNCL` restano solo nel grezzo. Una riga già diventata movimento che più avanti arriva `CNCL` non si tocca: si conta in `sync_runs.booked_then_cancelled`.
+- `PDNG`, `RJCT`, `CNCL` restano solo nel grezzo. Una riga già diventata movimento che più avanti arriva `CNCL` (con lo stesso `entry_reference`) non si tocca: si conta in `sync_runs.booked_then_cancelled`.
 
 ### 6.2 Campi della transazione
 
@@ -152,7 +156,7 @@ con le date in ISO (vuote se mancano), segno `D` o `C`, importo in centesimi **s
 Alla creazione il trigger dello schema crea la riga al 100% di chi paga, senza tipo: il movimento è **da classificare**.
 
 ### 6.3 Normalizzazione
-- **Importi:** testo con il punto decimale e un numero variabile di decimali (`4.4`, `1`, `12.50`): si converte in centesimi interi senza passare dai numeri a virgola mobile. Più di due decimali: si arrotonda al centesimo con metà verso l'alto e la normalizzazione segnala la riga; il conteggio in `sync_runs` arriva con la PR dell'importazione (`ingest_bank_rows`, `eb-sync`).
+- **Importi:** testo con il punto decimale e un numero variabile di decimali (`4.4`, `1`, `12.50`): si converte in centesimi interi senza passare dai numeri a virgola mobile. Più di due decimali: si arrotonda al centesimo con metà verso l'alto e la normalizzazione segnala la riga, che si conta in `sync_runs.amounts_rounded`.
 - **Descrizione:** `remittance_information` unite da uno spazio, spazi ripetuti ridotti a uno, `trim`; vuota → null.
 - **Controparte:** campo dedicato se presente (nome del creditore sulle uscite, del debitore sulle entrate); altrimenti estratta dalla descrizione con il formato della banca (sezione 8); se nessun formato riconosce la descrizione, null. La controparte serve a suggerimenti e regole, non decide niente da sola.
 - **Date:** ISO `YYYY-MM-DD`; una data mancante resta null.
@@ -259,6 +263,7 @@ Nessun accesso dall'app. Pulizia delle righe più vecchie di 7 giorni con un job
 | `history_incomplete` | bool | predefinito `false` |
 | `rows_received`, `raw_inserted`, `transactions_created`, `skipped_before_start`, `skipped_status`, `groups_shrunk`, `booked_then_cancelled`, `purchase_already_classified` | int | predefinito 0 |
 | `matched_transfers`, `matched_settlements`, `matched_installments` | int | predefinito 0 |
+| `amounts_rounded`, `rows_invalid` | int | predefinito 0: righe con l'importo arrotondato (6.3) e righe lasciate fuori dalla normalizzazione (`invalid_row`, sezione 4) |
 | `started_at`, `finished_at` | timestamptz | |
 
 RLS: **select** il membro proprietario della connessione (servirà agli avvisi nell'app); scrittura solo lato server. Solo codici e conteggi: nessun importo, descrizione o nome.
@@ -275,8 +280,8 @@ RLS: **select** il membro proprietario della connessione (servirà agli avvisi n
 | `complete_bank_link(request_id, link jsonb)` | completa il collegamento (sezione 3) in **una transazione**, con un lock sul membro: richiesta già reclamata e senza `result` (altrimenti `link_not_claimable`); connessione, conti, saldi ed email PayPal; `result = 'ok'`. Restituisce `connection_id` e il numero dei conti. Forma o tipi sbagliati: `invalid_link`, senza i valori nel messaggio |
 | `finish_link_request(request_id, result)` | scrive l'esito `link_cancelled`, `link_rejected` o `link_failed` su una richiesta reclamata senza `result` (altrimenti `link_not_claimable`); nient'altro |
 | `begin_sync_run(connection_id, trigger)` / `finish_sync_run(...)` | apertura e chiusura di `sync_runs`, con il controllo di un'esecuzione già in corso |
-| `ingest_bank_rows(account_id, rows jsonb)` | importazione atomica (sezione 5) |
-| `request_bank_sync(connection_id, trigger)` | `net.http_post` verso `eb-sync` con l'header `x-sync-secret`; URL del progetto e segreto letti da Vault |
+| `ingest_bank_rows(account_id, rows jsonb)` | importazione atomica (sezione 5), con un lock sul conto; restituisce i conteggi della riga del conto di `sync_runs`. Forma o tipi sbagliati: `invalid_rows`, senza i valori nel messaggio |
+| `request_bank_sync(connection_id, trigger)` | `net.http_post` verso `eb-sync` con l'header `x-sync-secret`; URL del progetto e segreto letti da Vault. Senza l'URL o senza il segreto: errore con codice (`project_url_missing`, `sync_secret_missing`), nessuna chiamata |
 | `sync_secret_matches(secret)` | confronto con il segreto in Vault; non lo restituisce mai |
 
 Alla cancellazione di una riga di `eb_credentials` (anche con l'account) un trigger cancella il suo segreto da Vault: la chiave privata non resta senza proprietario.
@@ -297,7 +302,7 @@ Tre sincronizzazioni lasciano margine sotto il limite di circa 4 accessi al gior
 
 ## 11. Sicurezza e log
 
-- Nei log delle funzioni e della CI solo passaggi, codici e conteggi: mai importi, descrizioni, controparti, email, IBAN, numeri di carta, `session_id`, `code`, `state`, JWT o chiavi.
+- Nei log delle funzioni e della CI solo passaggi, codici e conteggi: mai importi, descrizioni, controparti, email, IBAN, numeri di carta, `session_id`, `code`, `state`, JWT o chiavi. `eb-sync` registra anche la durata di ogni passo in millisecondi (passo `<nome>_ms`), per i limiti delle Edge Functions.
 - `eb-callback` è pubblica: lo `state` è un uuid casuale, vale una volta e per 30 minuti; senza uno `state` valido il `code` non serve a niente.
 - Le risposte delle funzioni all'app non contengono mai il grezzo.
 - Nessun dato reale nei test: solo i dati sintetici della sezione 12.
