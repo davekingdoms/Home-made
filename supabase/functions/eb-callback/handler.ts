@@ -17,6 +17,9 @@
  * 6. `complete_bank_link`: connection, accounts, balances, PayPal email,
  *    all in one transaction.
  * 7. Any failure after the claim: `finish_link_request(…, 'link_failed')`.
+ * 8. The first sync, at once: `request_bank_sync(connection_id, 'link')`.
+ *    The link is complete either way: if the request fails, the outcome
+ *    stays ok and only its code reaches the log.
  */
 
 import { memberCredentials } from "../_shared/credentials.ts";
@@ -158,6 +161,7 @@ async function callback(
     return await finish("link_failed");
   }
 
+  let completed: unknown;
   try {
     const member = await step(
       "member",
@@ -205,7 +209,7 @@ async function callback(
       log({ fn: "eb-callback", step: "accounts_skipped", count: skipped });
     }
 
-    await step("complete", () =>
+    completed = await step("complete", () =>
       db.rpc("complete_bank_link", {
         request_id: state,
         link: {
@@ -214,11 +218,32 @@ async function callback(
           accounts,
         },
       }));
-    // F5: request_bank_sync(connection_id, 'link')
-    return { esito: "ok" };
   } catch {
     return await finish("link_failed");
   }
+
+  try {
+    await step("sync_request", () => requestFirstSync(db, completed));
+  } catch {
+    // Only the code in the log: the link is complete, and the first sync
+    // comes with the scheduled ones or the service script.
+  }
+  return { esito: "ok" };
+}
+
+/** `request_bank_sync` for the connection returned by `complete_bank_link`. */
+async function requestFirstSync(db: Db, completed: unknown): Promise<void> {
+  const row: unknown = Array.isArray(completed) ? completed[0] : undefined;
+  if (
+    !isRecord(row) || typeof row.connection_id !== "string" ||
+    !UUID.test(row.connection_id)
+  ) {
+    throw new HttpError(500, "internal");
+  }
+  await db.rpc("request_bank_sync", {
+    connection_id: row.connection_id,
+    trigger: "link",
+  });
 }
 
 /** The request of the state, claimed once; null if unknown, expired or used. */
