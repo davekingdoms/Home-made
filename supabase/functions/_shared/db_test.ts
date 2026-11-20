@@ -117,3 +117,83 @@ Deno.test("errors: PostgREST codes, unknown bodies, network, timeout", async () 
     "invalid_response",
   );
 });
+
+Deno.test("select: GET of a table with the PostgREST parameters", async () => {
+  const { db, requests } = setup(() => json([{ id: "conto-1" }]));
+  assertEquals(
+    await db.select("accounts", {
+      select: "id,kind",
+      connection_id: "eq.00000000-0000-4000-8000-0000000000e1",
+      archived_at: "is.null",
+      order: "id",
+    }),
+    [{ id: "conto-1" }],
+  );
+  const request = requests[0]!;
+  assertEquals(request.method, "GET");
+  const url = new URL(request.url);
+  assertEquals(
+    `${url.origin}${url.pathname}`,
+    `${SUPABASE_URL}/rest/v1/accounts`,
+  );
+  assertEquals(url.searchParams.get("select"), "id,kind");
+  assertEquals(
+    url.searchParams.get("connection_id"),
+    "eq.00000000-0000-4000-8000-0000000000e1",
+  );
+  assertEquals(url.searchParams.get("archived_at"), "is.null");
+  assertEquals(request.headers.get("apikey"), SECRET_KEY);
+});
+
+Deno.test("select: anything but an array, or an error, is a DbError with a code", async () => {
+  const notArray = setup(() => json({ id: "conto-1" }));
+  const error = await assertRejects(
+    () => notArray.db.select("accounts", { select: "id" }),
+    DbError,
+  );
+  assertEquals(error.code, "invalid_response");
+
+  const failed = setup(() => pgError(400, "22P02", "invalid input", DETAIL));
+  const code = await assertRejects(
+    () => failed.db.select("accounts", { id: "eq.x" }),
+    DbError,
+  );
+  assertEquals(code.code, "22P02");
+  assertNoTexts(code);
+
+  await assertRejects(
+    () => notArray.db.select("accounts; drop", {}),
+    RangeError,
+  );
+});
+
+Deno.test("upsert: one POST with the rows, merging on the conflict columns", async () => {
+  const { db, requests } = setup(() => new Response(null, { status: 201 }));
+  await db.upsert(
+    "account_balances",
+    [{ account_id: "conto-1", currency: "EUR", amount_cents: 100 }],
+    "account_id,currency,balance_type",
+  );
+  const request = requests[0]!;
+  assertEquals(request.method, "POST");
+  const url = new URL(request.url);
+  assertEquals(
+    `${url.origin}${url.pathname}`,
+    `${SUPABASE_URL}/rest/v1/account_balances`,
+  );
+  assertEquals(
+    url.searchParams.get("on_conflict"),
+    "account_id,currency,balance_type",
+  );
+  assertEquals(
+    request.headers.get("Prefer"),
+    "resolution=merge-duplicates,return=minimal",
+  );
+  assertEquals(await request.json(), [
+    { account_id: "conto-1", currency: "EUR", amount_cents: 100 },
+  ]);
+  await assertRejects(
+    () => db.upsert("account_balances", [], "account_id; drop"),
+    RangeError,
+  );
+});

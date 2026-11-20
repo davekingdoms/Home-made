@@ -433,3 +433,6 @@ verify_jwt = false
 
 [functions.eb-callback]
 verify_jwt = false
+
+[functions.eb-sync]
+verify_jwt = false

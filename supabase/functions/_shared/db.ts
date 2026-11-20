@@ -1,6 +1,7 @@
 /**
- * Calls to the SQL functions through PostgREST (`/rest/v1/rpc/<name>`), with
- * `fetch` and a timeout for each call: no client library.
+ * Calls to the SQL functions through PostgREST (`/rest/v1/rpc/<name>`), and
+ * the few reads and upserts of tables the server makes, with `fetch` and a
+ * timeout for each call: no client library.
  *
  * An error keeps only a code: the key of an exception raised by the
  * function (`P0001` with a message such as `link_not_claimable`), otherwise
@@ -18,6 +19,8 @@ const ERROR_KEY = /^[a-z_]{1,40}$/;
 const SQLSTATE = /^[0-9A-Z]{5}$/;
 const POSTGREST_CODE = /^PGRST\d{1,4}$/;
 const FUNCTION_NAME = /^[a-z_]{1,63}$/;
+const TABLE_NAME = /^[a-z_]{1,63}$/;
+const COLUMN_LIST = /^[a-z_]{1,63}(?:,[a-z_]{1,63})*$/;
 
 /** A failed call, with its code only. */
 export class DbError extends Error {
@@ -71,15 +74,56 @@ export class Db {
     args: Record<string, unknown> = {},
   ): Promise<unknown> {
     if (!FUNCTION_NAME.test(name)) throw new RangeError("invalid function");
+    return await this.#send("POST", `rpc/${name}`, JSON.stringify(args));
+  }
+
+  /**
+   * Reads the rows of a table with PostgREST parameters (`select`, filters
+   * such as `id: "eq.<uuid>"`, `order`, `limit`); returns the array.
+   */
+  async select(
+    table: string,
+    query: Record<string, string>,
+  ): Promise<unknown[]> {
+    if (!TABLE_NAME.test(table)) throw new RangeError("invalid table");
+    const params = new URLSearchParams(query).toString();
+    const rows = await this.#send("GET", `${table}?${params}`);
+    if (!Array.isArray(rows)) throw new DbError("invalid_response");
+    return rows;
+  }
+
+  /**
+   * Inserts the rows of a table, or updates them on a conflict of the
+   * columns of `onConflict`: one statement, so all or nothing.
+   */
+  async upsert(
+    table: string,
+    rows: readonly Record<string, unknown>[],
+    onConflict: string,
+  ): Promise<void> {
+    if (!TABLE_NAME.test(table)) throw new RangeError("invalid table");
+    if (!COLUMN_LIST.test(onConflict)) throw new RangeError("invalid columns");
+    const params = new URLSearchParams({ on_conflict: onConflict }).toString();
+    await this.#send("POST", `${table}?${params}`, JSON.stringify(rows), {
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    });
+  }
+
+  async #send(
+    method: "GET" | "POST",
+    path: string,
+    body?: string,
+    headers: Record<string, string> = {},
+  ): Promise<unknown> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
     let status: number;
     let text: string;
     try {
-      const response = await this.#fetch(`${this.#url}/rest/v1/rpc/${name}`, {
-        method: "POST",
-        headers: this.#headers,
-        body: JSON.stringify(args),
+      const response = await this.#fetch(`${this.#url}/rest/v1/${path}`, {
+        method,
+        headers: { ...this.#headers, ...headers },
+        body,
         signal: controller.signal,
       });
       status = response.status;
@@ -90,13 +134,13 @@ export class Db {
       clearTimeout(timer);
     }
 
-    const body = parseJson(text);
+    const parsed = parseJson(text);
     if (status < 200 || status > 299) {
-      throw new DbError(errorCode(body.value, status), status);
+      throw new DbError(errorCode(parsed.value, status), status);
     }
     if (text.trim() === "") return null;
-    if (!body.ok) throw new DbError("invalid_response", status);
-    return body.value;
+    if (!parsed.ok) throw new DbError("invalid_response", status);
+    return parsed.value;
   }
 }
 
