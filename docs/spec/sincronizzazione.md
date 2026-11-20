@@ -87,7 +87,7 @@ Errori di Enable Banking, rete o database durante il ritorno: esito `errore`, co
    - **transazioni:** `GET /accounts/{uid}/transactions` con `date_from` e `strategy` della tabella sotto, seguendo `continuation_key` fino all'ultima pagina;
    - **un conto si importa solo con tutte le pagine scaricate**: una pagina fallita lascia il conto com'era (`status = 'partial'` per la connessione);
    - **normalizzazione** di ogni riga (sezione 6): una riga che non si normalizza (`invalid_row`: importo, valuta, data, segno o stato non validi) resta fuori dal grezzo e si conta in `sync_runs.rows_invalid`; le altre righe del conto si importano.
-4. Importazione con `ingest_bank_rows` (sezione 5), poi gli abbinamenti del membro (sezione 7).
+4. Importazione di ogni conto con `ingest_bank_rows` (sezione 5); dopo tutti i conti, una volta per esecuzione, gli abbinamenti del membro (sezione 7).
 5. Chiusura della riga di `sync_runs`: `ok` se tutti i conti sono importati; `partial` con il codice del primo conto non importato; `error` se la connessione stessa non si sincronizza (consenso, credenziali, sessione). Per `error` e `partial` sempre un codice. Su `bank_connections` `last_sync_at`, e `last_success_at` se tutti i conti sono riusciti.
 
 Lo script di servizio `eb-admin.ts sync <connection_id>` chiama `eb-sync` con la chiave segreta (`trigger = 'admin'`), aspetta la fine dell'esecuzione e stampa da `sync_runs` solo stato, codici, strategia, date richieste e ottenute e conteggi di ogni conto ("account 1", "account 2"…): nessun importo, nome o id.
@@ -117,7 +117,7 @@ Su `bank_connections.last_error` e `sync_runs.error_code` vanno **solo codici**,
 
 Ogni transazione restituita dalla banca diventa una riga di `bank_raw_transactions` (tutte, anche `RJCT`, `CNCL`, `PDNG` e quelle prima della data di inizio). `ingest_bank_rows(account_id, rows)` riceve le righe già normalizzate (sezione 6) e fa tutto in **una transazione** con un `pg_advisory_xact_lock` sul conto:
 
-1. **Con `entry_reference`:** insert con conflitto su (`account_id`, `entry_reference`) ignorato. **Eccezione:** se la riga salvata è `PDNG` e quella nuova è `BOOK`, la riga salvata si aggiorna (stato, date, importo, payload).
+1. **Con `entry_reference`:** insert con conflitto su (`account_id`, `entry_reference`) ignorato. **Eccezione:** se la riga salvata è `PDNG` e quella nuova è `BOOK`, la riga salvata si aggiorna (stato, date, importo, `dedup_hash`, payload).
 2. **Senza `entry_reference`:** si raggruppano le righe scaricate per `dedup_hash`. Per ogni gruppo, `n` = righe scaricate, `m` = righe già salvate con quell'hash sul conto: se `n > m` si inseriscono le righe con ordinali `m + 1 … n`; se `n ≤ m` non si fa niente (`n < m` si conta in `sync_runs.groups_shrunk`). **Una riga uguale a un'altra non si scarta mai.** I gruppi sono completi perché l'hash contiene le date e un conto si importa solo con tutte le pagine (sezione 4).
 3. Per le righe nuove (o passate da `PDNG` a `BOOK`) che diventano movimenti (sezione 6.1) si crea la transazione; `bank_raw_transactions.transaction_id` la collega.
 4. Restituisce i conteggi: righe ricevute, nuove, movimenti creati, saltate per data o stato.
@@ -182,14 +182,29 @@ Dopo ogni sincronizzazione, per il **membro proprietario** della connessione, su
 - con **più candidati alla pari** non si abbina niente: il movimento resta da classificare (meglio una classificazione a mano che un abbinamento sbagliato).
 
 ### 7.1 Giroconti (`transfers.origin = 'auto'`)
-Le righe collegate prendono `kind = 'transfer'` e `transfer_id`.
+Le righe collegate prendono `kind = 'transfer'` e `transfer_id`; categoria e quote della riga restano come sono (senza categoria, 100% di chi paga) e la transazione non cambia: `version` resta quella di prima (`version = 1` è la regola dell'acquisto a rate, 7.3).
+
+**Quando:** una volta per esecuzione di `eb-sync`, dopo tutti i conti, se almeno un conto è stato importato (anche con esito `partial`). Il numero dei giroconti creati va in `matched_transfers` della riga della connessione. Un errore negli abbinamenti lascia l'esito dei conti com'è: nel log solo il codice, `matched_transfers` = 0; il giro successivo riprova (la finestra di 45 giorni lo copre).
+
+**Quali movimenti:** solo quelli importati dalle banche (`source = 'bank'`) sui conti del membro con una connessione e **non archiviati**, con `movement_date` negli ultimi 45 giorni. Movimenti manuali, conti `cash` e `manual` e conti archiviati non entrano mai, nemmeno come "carta nella stessa connessione" o "conto PayPal collegato". Un movimento è **libero** se ha una sola riga non eliminata, senza tipo e senza collegamenti (giroconto, conguaglio, piano), non è una rata e non compare in un giroconto non eliminato. Importi sempre nella stessa valuta.
+
+**Ordine:** prima l'addebito mensile della carta, poi banca o carta → PayPal, poi tra due conti (i primi due hanno un segnale nella descrizione o nella controparte, più sicuro del solo importo). Un movimento usato da una regola non entra nelle successive.
 
 | Caso | Riconoscimento | Giroconto |
 |---|---|---|
-| Tra due conti dello stesso membro (es. ricarica di un conto prepagato) | stesso importo, segno opposto, conti diversi, date a distanza ≤ 3 giorni; se uno dei due conti è PayPal, la controparte del lato bancario contiene "PAYPAL" | da: conto dell'uscita; a: conto dell'entrata; entrambi i lati |
-| Addebito mensile della carta di credito | uscita sul conto con la descrizione dell'addebito della carta (sezione 8), di un membro che ha una carta nella stessa connessione | da: conto; a: carta; lato in entrata = l'accredito sulla carta con lo stesso importo entro 5 giorni, se c'è |
-| Banca o carta → PayPal | uscita la cui controparte è PayPal (addebito diretto o pagamento con carta verso PayPal), **solo se il membro ha un conto PayPal collegato**; senza, resta da classificare | da: conto o carta; a: conto PayPal; `in_transaction_id` vuoto; `funded_transaction_id` = l'uscita PayPal con lo stesso importo e data tra 7 giorni prima e il giorno dell'addebito, non già finanziata, se c'è. **L'abbinamento con il pagamento non decide il tipo**: l'addebito è un giroconto anche senza pagamento corrispondente |
-| PayPal → banca (trasferimento del saldo) | primo caso della tabella | da: PayPal; a: banca. **Mai un'entrata** |
+| Addebito mensile della carta di credito | uscita sul conto con la descrizione dell'addebito della carta (sezione 8), di un membro che ha **una** carta nella stessa connessione; senza carte nella connessione la regola non si applica e l'uscita passa alle successive | da: conto; a: carta; lato in entrata = l'accredito sulla carta con lo stesso importo a distanza ≤ 5 giorni (prima o dopo l'addebito), se c'è |
+| Banca o carta → PayPal | uscita di un conto `bank` o `card` la cui controparte contiene "PAYPAL" (addebito diretto o pagamento con carta verso PayPal), **solo se il membro ha un conto PayPal collegato**; senza, resta da classificare | da: conto o carta; a: conto PayPal; `in_transaction_id` vuoto; `funded_transaction_id` = l'uscita PayPal con lo stesso importo e data tra 7 giorni prima e il giorno dell'addebito, non già finanziata, se c'è. **L'abbinamento con il pagamento non decide il tipo**: l'addebito è un giroconto anche senza pagamento corrispondente |
+| Tra due conti dello stesso membro (es. ricarica di un conto prepagato) | stesso importo, segno opposto, conti diversi, date a distanza ≤ 3 giorni; se uno dei due conti è PayPal, la controparte del lato bancario contiene "PAYPAL" (due conti PayPal: mai) | da: conto dell'uscita; a: conto dell'entrata; entrambi i lati |
+| PayPal → banca (trasferimento del saldo) | caso precedente | da: PayPal; a: banca. **Mai un'entrata** |
+
+Il pagamento PayPal finanziato non si tocca (resta con il suo tipo, anche già classificato): basta che non compaia in un giroconto, annullato o no. Per trovarlo `eb-sync` legge anche i movimenti dei 7 giorni prima della finestra di 45 giorni, che servono solo a questo.
+
+**Candidati alla pari**, caso per caso:
+- addebito della carta: più carte nella stessa connessione → niente, l'uscita resta da classificare (e non passa alle regole successive); più accrediti possibili sulla carta, o un accredito possibile per più addebiti → giroconto senza lato in entrata;
+- banca o carta → PayPal: più conti PayPal collegati → niente, l'uscita resta da classificare; più uscite PayPal possibili da finanziare, o un'uscita possibile per più addebiti → giroconto senza `funded_transaction_id`;
+- tra due conti: un'uscita con più entrate possibili, o un'entrata con più uscite possibili → niente.
+
+**Decisione e scrittura:** le regole sono funzioni pure in `_shared/match/transfers.ts`. `eb-sync` legge i candidati con `transfer_candidates` e scrive i giroconti con `apply_transfers` (sezione 9), che lavora in una transazione con un lock sul membro e ricontrolla ogni condizione: i job delle sincronizzazioni partono per tutte le connessioni insieme, e due connessioni dello stesso membro farebbero gli abbinamenti in parallelo.
 
 ### 7.2 Conguagli PayPal (`settlements.origin = 'paypal'`)
 - **Lato di chi paga:** uscita su un conto PayPal di Anna, in EUR, con `counterparty_email` uguale a un'email di `paypal_emails` di Bruno, **membro attivo della stessa casa**. Se c'è un conguaglio con pagatore Anna, ricevente Bruno, stesso importo, EUR, `settled_on` a distanza ≤ 3 giorni, lato del pagatore libero e non eliminato, il movimento si collega a quello; altrimenti nasce un conguaglio con `settled_on` = data del movimento e `created_by_member_id` null.
@@ -262,7 +277,7 @@ Nessun accesso dall'app. Pulizia delle righe più vecchie di 7 giorni con un job
 | `history_from` | date null | ottenuta |
 | `history_incomplete` | bool | predefinito `false` |
 | `rows_received`, `raw_inserted`, `transactions_created`, `skipped_before_start`, `skipped_status`, `groups_shrunk`, `booked_then_cancelled`, `purchase_already_classified` | int | predefinito 0 |
-| `matched_transfers`, `matched_settlements`, `matched_installments` | int | predefinito 0 |
+| `matched_transfers`, `matched_settlements`, `matched_installments` | int | predefinito 0; sulla riga della connessione: giroconti, conguagli e rate abbinati dall'esecuzione (sezione 7) |
 | `amounts_rounded`, `rows_invalid` | int | predefinito 0: righe con l'importo arrotondato (6.3) e righe lasciate fuori dalla normalizzazione (`invalid_row`, sezione 4) |
 | `started_at`, `finished_at` | timestamptz | |
 
@@ -281,6 +296,8 @@ RLS: **select** il membro proprietario della connessione (servirà agli avvisi n
 | `finish_link_request(request_id, result)` | scrive l'esito `link_cancelled`, `link_rejected` o `link_failed` su una richiesta reclamata senza `result` (altrimenti `link_not_claimable`); nient'altro |
 | `begin_sync_run(connection_id, trigger)` / `finish_sync_run(...)` | apertura e chiusura di `sync_runs`, con il controllo di un'esecuzione già in corso |
 | `ingest_bank_rows(account_id, rows jsonb)` | importazione atomica (sezione 5), con un lock sul conto; restituisce i conteggi della riga del conto di `sync_runs`. Forma o tipi sbagliati: `invalid_rows`, senza i valori nel messaggio |
+| `transfer_candidates(member_id, since)` | conti del membro con una connessione e non archiviati (`id`, `kind`, `connection_id`, `aspsp_name`, `cash_account_type`) e i loro movimenti importati con `movement_date` da `since` (`transaction_id`, `account_id`, importo con segno, valuta, data, controparte, descrizione e lo stato: `free` libero, `in_transfer` in un giroconto, `cancelled` in un giroconto annullato), in un oggetto JSON. Membro non attivo: `member_not_eligible`; senza data: `invalid_since` |
+| `apply_transfers(member_id, transfers jsonb)` | scrive i giroconti automatici proposti da `eb-sync` (7.1) in **una transazione**, con un `pg_advisory_xact_lock` sul membro, condiviso dagli abbinamenti della sezione 7, e **ricontrolla** ogni condizione: due conti diversi del membro, con una connessione e non archiviati; uscita e entrata sui loro conti, con segni, importo e valuta coerenti, ancora libere e in nessun giroconto annullato; pagamento finanziato su un conto PayPal, in nessun giroconto. Quello che non vale più si salta e non si conta. Righe con `kind = 'transfer'` e `transfer_id`, transazioni invariate. Restituisce il numero dei giroconti creati. Forma o tipi sbagliati: `invalid_transfers`, senza i valori nel messaggio; membro non attivo: `member_not_eligible` |
 | `request_bank_sync(connection_id, trigger)` | `net.http_post` verso `eb-sync` con l'header `x-sync-secret`; URL del progetto e segreto letti da Vault. Senza l'URL o senza il segreto: errore con codice (`project_url_missing`, `sync_secret_missing`), nessuna chiamata |
 | `sync_secret_matches(secret)` | confronto con il segreto in Vault; non lo restituisce mai |
 
