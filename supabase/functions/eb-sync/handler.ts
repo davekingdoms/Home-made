@@ -24,10 +24,14 @@
  *    `invalid_row` is left out and counted in `rows_invalid`), then
  *    `ingest_bank_rows`. A failed page leaves the account as it was;
  * 4. once a run, after all the accounts and when at least one of them was
- *    imported (also with `partial`), the automatic transfers of the owner
- *    (`transfers.ts`, section 7.1). Their count goes in `matched_transfers`;
- *    a failure leaves the outcome of the accounts as it is, only its code
- *    in the log, and `matched_transfers` at 0;
+ *    imported (also with `partial`), the matches of the owner (section 7):
+ *    first the PayPal settlements (`settlements.ts`, 7.2), then the
+ *    automatic transfers (`transfers.ts`, 7.1). The sides linked go in
+ *    `matched_settlements`, the transfers in `matched_transfers`. A failure
+ *    leaves the outcome of the accounts as it is, only its code in the log
+ *    and its count at 0; a failure of the settlements also skips the
+ *    transfers of the run (both counts at 0), so a movement meant for a
+ *    settlement does not end up in a transfer;
  * 5. `finish_sync_run`: `ok` when every account is imported, `partial` with
  *    the code of the first failed account, `error` when the connection
  *    itself fails. A rate limit ends the connection: the accounts left are
@@ -73,6 +77,7 @@ import {
   type NormalizedTransaction,
   normalizeTransaction,
 } from "../_shared/normalize/transaction.ts";
+import { memberSettlements } from "./settlements.ts";
 import { memberTransfers } from "./transfers.ts";
 import {
   isoDay,
@@ -119,9 +124,16 @@ interface Outcome {
   status: "ok" | "partial" | "error";
   errorCode: SyncErrorCode | null;
   accounts: AccountResult[];
-  /** Automatic transfers created after the accounts (step 4). */
+  /** Movements linked to PayPal settlements after the accounts (step 4). */
+  matchedSettlements: number;
+  /** Automatic transfers created after the settlements (step 4). */
   matchedTransfers: number;
 }
+
+/** The counts of step 4. */
+type Matched = Pick<Outcome, "matchedSettlements" | "matchedTransfers">;
+
+const NOTHING_MATCHED: Matched = { matchedSettlements: 0, matchedTransfers: 0 };
 
 interface Connection {
   memberId: string;
@@ -299,7 +311,7 @@ async function syncConnection(work: Work): Promise<void> {
       status: "error",
       errorCode: syncCode(error),
       accounts: [],
-      matchedTransfers: 0,
+      ...NOTHING_MATCHED,
     };
   }
   try {
@@ -310,6 +322,7 @@ async function syncConnection(work: Work): Promise<void> {
         error_code: outcome.errorCode,
         result: {
           strategy: runStrategy(outcome.accounts),
+          matched_settlements: outcome.matchedSettlements,
           matched_transfers: outcome.matchedTransfers,
           accounts: outcome.accounts,
         },
@@ -367,7 +380,7 @@ async function runSync(work: Work, step: Step): Promise<Outcome> {
       status: "error",
       errorCode: consent,
       accounts: [],
-      matchedTransfers: 0,
+      ...NOTHING_MATCHED,
     };
   }
 
@@ -397,9 +410,9 @@ async function runSync(work: Work, step: Step): Promise<Outcome> {
     limited = result.error_code === "rate_limited";
   }
 
-  const matchedTransfers = results.some((result) => result.status === "ok")
-    ? await transfers(work, step, member.memberId, today)
-    : 0;
+  const matched = results.some((result) => result.status === "ok")
+    ? await matches(work, step, member.memberId, today)
+    : NOTHING_MATCHED;
 
   const failed = results.find((result) => result.status === "error");
   if (failed === undefined) {
@@ -407,27 +420,44 @@ async function runSync(work: Work, step: Step): Promise<Outcome> {
       status: "ok",
       errorCode: null,
       accounts: results,
-      matchedTransfers,
+      ...matched,
     };
   }
   return {
     status: "partial",
     errorCode: limited ? "rate_limited" : failed.error_code ?? "internal",
     accounts: results,
-    matchedTransfers,
+    ...matched,
   };
 }
 
 /**
- * The automatic transfers of the owner (section 7.1), once a run: a failure
- * leaves only its code in the log (step `match`) and counts 0.
+ * The matches of the owner (section 7), once a run: the PayPal settlements
+ * (step `settle`, 7.2), then the automatic transfers (step `match`, 7.1).
+ * A failure leaves only its code in the log and counts 0; a failure of the
+ * settlements also skips the transfers. The accounts keep their outcome;
+ * the next run tries again (the window of 45 days covers it).
  */
-async function transfers(
+async function matches(
   work: Work,
   step: Step,
   memberId: string,
   today: string,
-): Promise<number> {
+): Promise<Matched> {
+  let linked: number;
+  try {
+    linked = await step(
+      "settle",
+      () => memberSettlements(work.db, memberId, today),
+    );
+  } catch {
+    // A movement meant for a settlement must not end up in a transfer.
+    work.log({ fn: "eb-sync", step: "matched_settlements", count: 0 });
+    work.log({ fn: "eb-sync", step: "matched_transfers", count: 0 });
+    return NOTHING_MATCHED;
+  }
+  work.log({ fn: "eb-sync", step: "matched_settlements", count: linked });
+
   let created = 0;
   try {
     created = await step(
@@ -435,10 +465,10 @@ async function transfers(
       () => memberTransfers(work.db, memberId, today),
     );
   } catch {
-    // The accounts keep their outcome; the next run tries again.
+    // Only the code in the log.
   }
   work.log({ fn: "eb-sync", step: "matched_transfers", count: created });
-  return created;
+  return { matchedSettlements: linked, matchedTransfers: created };
 }
 
 async function syncAccount(
