@@ -323,6 +323,9 @@ RLS: **select** il membro proprietario della connessione (servirà agli avvisi n
 | `apply_installments(member_id, installments jsonb)` | scrive i piani proposti da `eb-sync` (7.3), ognuno `{plan_id, purchase_raw_id, first_raw_id, merchant, installments_before_start, installments_paid, last_installment_date, transaction_ids}`: `plan_id` null = piano nuovo, con acquisto, prima rata e `merchant`; altrimenti l'aggiornamento di un piano, senza; le rate pagate (nel grezzo), quelle prima dell'inizio, la data dell'ultima e i movimenti da collegare. In **una transazione**, con il `pg_advisory_xact_lock` del solo proprietario (chiave condivisa dagli abbinamenti della sezione 7) prima di rileggere e `for update` su grezzo e movimento dell'acquisto, piani e righe; **ricontrolla** ogni condizione: per una creazione acquisto e prima rata sui conti PayPal del membro con una connessione e non archiviati, `BOOK`, EUR, uscite `PAYMENT/PAYMENT` e `PAYMENT/LOAN` dello stesso giorno con `n` tra 2 e 12 e `|P − n·L| ≤ n`, nessun'altra prima rata per l'acquisto né altro acquisto per la rata, nessun piano per l'acquisto (anche eliminato), acquisto non annullato; per un aggiornamento un piano non eliminato di quei conti; `0 ≤ rate prima dell'inizio ≤ rate pagate ≤ n`, ultima rata non prima dell'acquisto; per un collegamento un movimento importato del conto del piano, `BOOK`, `PAYMENT/LOAN`, uscita in EUR dalla data dell'acquisto, con un importo vicino alle rate del piano, libero, non annullato e con posto nel piano. Stato e `next_due_date` dalle rate pagate e dall'ultima; un piano si aggiorna solo se cambia. Il movimento dell'acquisto si elimina o si conta come in 7.3. Quello che non vale più si salta e non si conta. Restituisce `{plans_created, matched_installments, purchase_already_classified}`. Forma o tipi sbagliati: `invalid_installments`, senza i valori nel messaggio; membro non attivo: `member_not_eligible` |
 | `request_bank_sync(connection_id, trigger)` | `net.http_post` verso `eb-sync` con l'header `x-sync-secret`; URL del progetto e segreto letti da Vault. Senza l'URL o senza il segreto: errore con codice (`project_url_missing`, `sync_secret_missing`), nessuna chiamata |
 | `sync_secret_matches(secret)` | confronto con il segreto in Vault; non lo restituisce mai |
+| `schedule_bank_syncs()` | job `bank-sync` (sezione 10): `request_bank_sync(id, 'schedule')` per ogni connessione scelta, in ordine di id, ognuna in un blocco con la propria `exception`; l'errore di una connessione diventa un `warning` con il solo codice e non ferma le altre; mai un errore alla fine. Restituisce il numero delle richieste messe in coda |
+| `expire_bank_consents()` | job `bank-consents` (sezione 10): connessioni `active` con `valid_until` passata → `status = 'expired'`, `last_error = 'consent_expired'`. Restituisce quante |
+| `cleanup_bank_sync()` | job `bank-cleanup` (sezione 10): richieste di collegamento oltre 7 giorni, esecuzioni oltre 180 giorni tranne quella con l'ultima riga `ok` di ogni conto, esecuzioni dei job oltre 30 giorni. Restituisce i conteggi `{link_requests, connection_runs, account_runs, job_runs}` |
 
 Alla cancellazione di una riga di `eb_credentials` (anche con l'account) un trigger cancella il suo segreto da Vault: la chiave privata non resta senza proprietario.
 
@@ -332,13 +335,29 @@ Vault contiene anche:
 
 ## 10. Programmazione (`pg_cron`)
 
-| Job | Quando (UTC) | Cosa fa |
-|---|---|---|
-| `bank-sync` | `10 6,12,19 * * *` (3 volte al giorno) | `request_bank_sync(id, 'schedule')` per ogni connessione `active` |
-| `bank-consents` | ogni giorno | connessioni con `valid_until` passata → `status = 'expired'`, `last_error = 'consent_expired'` |
-| `bank-cleanup` | ogni settimana | `bank_link_requests` più vecchie di 7 giorni; `sync_runs` più vecchie di 180 giorni |
+I job li crea la migrazione con `cron.schedule(nome, orario, comando)`, **per nome**: rilanciata, la migrazione aggiorna i job invece di duplicarli. Il comando è una sola `select` della funzione del job (sezione 9); i job girano come `postgres`, proprietario delle funzioni. Orari fissi in **UTC** (d'estate, in Italia, un'ora più tardi). Stessi job su `dev` e su `prod`.
 
-Tre sincronizzazioni lasciano margine sotto il limite di circa 4 accessi al giorno per un nuovo tentativo con un periodo più corto. Ogni chiamata lavora su **una connessione**, per stare nei limiti di CPU e durata delle Edge Functions.
+| Job | Quando (UTC) | Funzione | Cosa fa |
+|---|---|---|---|
+| `bank-consents` | `0 6 * * *` (ogni giorno, prima del primo giro) | `expire_bank_consents()` | consensi scaduti |
+| `bank-sync` | `10 6,12,19 * * *` (3 volte al giorno) | `schedule_bank_syncs()` | `request_bank_sync(id, 'schedule')` per ogni connessione scelta |
+| `bank-cleanup` | `30 3 * * 0` (ogni domenica) | `cleanup_bank_sync()` | pulizia |
+
+**Sincronizzazioni programmate** (`bank-sync`):
+- **Connessioni scelte:** `status = 'active'`, membro proprietario attivo (`left_at` null) e **nessuna esecuzione** della connessione (riga della connessione in `sync_runs`, stato diverso da `skipped`) **iniziata nelle ultime 2 ore**: dopo un collegamento o una sincronizzazione a mano il giro programmato si salta, così tre sincronizzazioni più un collegamento restano nel limite di circa 4 accessi al giorno (sezione 4, "Limiti delle banche"). Una riga `skipped` non conta. Ordine fisso (id). Il resto (credenziali mancanti, consenso scaduto davanti alla banca) lo gestisce `eb-sync` con i suoi codici in `sync_runs`.
+- Ogni richiesta sta in un blocco con la propria `exception` (sottotransazione): l'errore di una connessione **non ferma le altre** e diventa un `warning` con **solo il codice** (il messaggio se è una chiave `^[a-z_]{1,40}$`, altrimenti `internal`; mai valori). La funzione **non solleva mai un errore alla fine**: annullerebbe la transazione e con lei le richieste già messe in coda da `pg_net`, che partono solo al commit. Restituisce il numero delle richieste messe in coda. Senza `project_url` in Vault (come in CI) ogni richiesta finisce in un `warning` `project_url_missing` e non parte niente.
+- Ogni chiamata lavora su **una connessione**, per stare nei limiti di CPU e durata delle Edge Functions; `eb-sync` ne apre una alla volta per connessione (sezione 4, punto 1). Tre sincronizzazioni lasciano margine sotto il limite delle banche per un nuovo tentativo con un periodo più corto (sezione 4, "Periodo rifiutato").
+
+**Consensi scaduti** (`bank-consents`): le connessioni `active` con `valid_until` passata diventano `status = 'expired'` con `last_error = 'consent_expired'`; nessun'altra colonna cambia (il trigger dello schema aggiorna `version` e `updated_at`, come per ogni modifica). Una connessione senza `valid_until` resta com'è. Restituisce quante; rilanciato non cambia niente.
+
+**Pulizia** (`bank-cleanup`):
+- `bank_link_requests` con `created_at` più vecchia di 7 giorni;
+- righe della connessione di `sync_runs` iniziate più di 180 giorni fa, con le righe dei loro conti (`run_id` in cascata), **tranne l'esecuzione che contiene l'ultima riga `ok` di ogni conto**: la finestra delle sincronizzazioni successive parte da lì (sezione 4, "Finestra scaricata"); senza, un conto rimasto in errore per sei mesi ripartirebbe dalla data di inizio;
+- `cron.job_run_details` più vecchie di 30 giorni (per la fine dell'esecuzione; per l'inizio se non c'è la fine).
+
+Restituisce i conteggi in un oggetto JSON: `link_requests`, `connection_runs` (righe della connessione), `account_runs` (righe dei conti), `job_runs`.
+
+**Nessun keep-alive:** Supabase mette in pausa i progetti Free con poca attività in 7 giorni e non è chiaro se i job interni contino. Resta da verificare su `dev` e `prod` che la sincronizzazione tenga attivo il progetto; per ora nessun workflow né chiamata esterna.
 
 ## 11. Sicurezza e log
 
@@ -350,6 +369,8 @@ Tre sincronizzazioni lasciano margine sotto il limite di circa 4 accessi al gior
 ## 12. Test
 
 **Deno** (`deno test` nel job `functions` della CI, senza secrets né rete): client con risposte finte, normalizzazione, hash, abbinamenti come funzioni pure. **pgTAP**: funzioni SQL, permessi (app e `anon` non vedono grezzo, credenziali né richieste), `ingest_bank_rows`.
+
+**Job** (pgTAP, sezione 10): i tre job in `cron.job` con nome, orario e comando, e `cron.schedule` rilanciato non li duplica; `schedule_bank_syncs()` senza `project_url` in Vault (come in CI): nessun errore, nessuna richiesta, ogni connessione scelta provata comunque; con l'URL e il segreto inseriti nel test: una richiesta in `net.http_request_queue` per ogni connessione scelta, verso `…/functions/v1/eb-sync`, con `connection_id` e `trigger = 'schedule'` nel corpo e l'header del segreto (mai confrontato né stampato); connessioni escluse (`expired`, `revoked`, `pending`, membro uscito, esecuzione iniziata un'ora fa) e incluse (esecuzione iniziata 3 ore fa, riga `skipped` recente); la richiesta fallita di una connessione non ferma le successive; `expire_bank_consents()` solo sulle `active` con `valid_until` passata, idempotente; `cleanup_bank_sync()`: richieste e righe vecchie cancellate (con le righe dei conti), recenti tenute, l'ultima `ok` di ogni conto tenuta anche se vecchia, conteggi; app e `anon` non eseguono le tre funzioni (`42501`), `service_role` sì.
 
 **Dati sintetici** in `supabase/functions/_shared/testdata/eb/` (una sottocartella per formato della sezione 8; il `README.md` della cartella collega ogni caso ai suoi file): stessa struttura delle risposte di Enable Banking (sessione, conti, dettaglio, saldi, pagine di transazioni, errori), valori inventati; IBAN di esempio pubblici, carte palesemente finte, email `@example.com`; date intorno a una data di inizio inventata (1° marzo 2031). Casi obbligatori:
 1. due righe identiche senza riferimento lo stesso giorno: si salvano entrambe; scaricate di nuovo, nessuna riga in più; una terza uguale il giorno dopo nella finestra sovrapposta: si aggiunge solo quella;
