@@ -25,13 +25,18 @@
  *    `ingest_bank_rows`. A failed page leaves the account as it was;
  * 4. once a run, after all the accounts and when at least one of them was
  *    imported (also with `partial`), the matches of the owner (section 7):
- *    first the PayPal settlements (`settlements.ts`, 7.2), then the
- *    automatic transfers (`transfers.ts`, 7.1). The sides linked go in
- *    `matched_settlements`, the transfers in `matched_transfers`. A failure
- *    leaves the outcome of the accounts as it is, only its code in the log
- *    and its count at 0; a failure of the settlements also skips the
- *    transfers of the run (both counts at 0), so a movement meant for a
- *    settlement does not end up in a transfer;
+ *    first the PayPal installment plans (`installments.ts`, 7.3), then the
+ *    PayPal settlements (`settlements.ts`, 7.2), then the automatic
+ *    transfers (`transfers.ts`, 7.1). The installments linked go in
+ *    `matched_installments` and the purchases left in
+ *    `purchase_already_classified` (both on the row of the connection), the
+ *    sides linked in `matched_settlements`, the transfers in
+ *    `matched_transfers`. A failure leaves the outcome of the accounts as it
+ *    is, only its code in the log and its count at 0; a failure of the plans
+ *    skips the settlements and the transfers of the run, a failure of the
+ *    settlements the transfers (their counts at 0), so an installment does
+ *    not end up in a settlement or a transfer, nor a movement meant for a
+ *    settlement in a transfer;
  * 5. `finish_sync_run`: `ok` when every account is imported, `partial` with
  *    the code of the first failed account, `error` when the connection
  *    itself fails. A rate limit ends the connection: the accounts left are
@@ -77,6 +82,11 @@ import {
   type NormalizedTransaction,
   normalizeTransaction,
 } from "../_shared/normalize/transaction.ts";
+import {
+  type InstallmentCounts,
+  memberInstallments,
+  NO_INSTALLMENTS,
+} from "./installments.ts";
 import { memberSettlements } from "./settlements.ts";
 import { memberTransfers } from "./transfers.ts";
 import {
@@ -124,16 +134,30 @@ interface Outcome {
   status: "ok" | "partial" | "error";
   errorCode: SyncErrorCode | null;
   accounts: AccountResult[];
-  /** Movements linked to PayPal settlements after the accounts (step 4). */
+  /** Installments linked to PayPal plans after the accounts (step 4). */
+  matchedInstallments: number;
+  /** Movements of purchases left by the plans (step 4). */
+  purchaseAlreadyClassified: number;
+  /** Movements linked to PayPal settlements after the plans (step 4). */
   matchedSettlements: number;
   /** Automatic transfers created after the settlements (step 4). */
   matchedTransfers: number;
 }
 
 /** The counts of step 4. */
-type Matched = Pick<Outcome, "matchedSettlements" | "matchedTransfers">;
+type Matched = Pick<
+  Outcome,
+  | "matchedInstallments"
+  | "purchaseAlreadyClassified"
+  | "matchedSettlements"
+  | "matchedTransfers"
+>;
 
-const NOTHING_MATCHED: Matched = { matchedSettlements: 0, matchedTransfers: 0 };
+const NOTHING_MATCHED: Matched = {
+  ...NO_INSTALLMENTS,
+  matchedSettlements: 0,
+  matchedTransfers: 0,
+};
 
 interface Connection {
   memberId: string;
@@ -322,6 +346,8 @@ async function syncConnection(work: Work): Promise<void> {
         error_code: outcome.errorCode,
         result: {
           strategy: runStrategy(outcome.accounts),
+          purchase_already_classified: outcome.purchaseAlreadyClassified,
+          matched_installments: outcome.matchedInstallments,
           matched_settlements: outcome.matchedSettlements,
           matched_transfers: outcome.matchedTransfers,
           accounts: outcome.accounts,
@@ -432,11 +458,13 @@ async function runSync(work: Work, step: Step): Promise<Outcome> {
 }
 
 /**
- * The matches of the owner (section 7), once a run: the PayPal settlements
- * (step `settle`, 7.2), then the automatic transfers (step `match`, 7.1).
- * A failure leaves only its code in the log and counts 0; a failure of the
- * settlements also skips the transfers. The accounts keep their outcome;
- * the next run tries again (the window of 45 days covers it).
+ * The matches of the owner (section 7), once a run: the PayPal installment
+ * plans (step `plan`, 7.3), the PayPal settlements (step `settle`, 7.2),
+ * then the automatic transfers (step `match`, 7.1). A failure leaves only
+ * its code in the log and counts 0; a failure of the plans also skips the
+ * settlements and the transfers, a failure of the settlements the
+ * transfers. The accounts keep their outcome; the next run tries again
+ * (the window of 45 days covers it).
  */
 async function matches(
   work: Work,
@@ -444,6 +472,30 @@ async function matches(
   memberId: string,
   today: string,
 ): Promise<Matched> {
+  let plans: InstallmentCounts;
+  try {
+    plans = await step(
+      "plan",
+      () => memberInstallments(work.db, memberId, today),
+    );
+  } catch {
+    // An installment must not end up in a settlement or a transfer.
+    for (const name of MATCHED_STEPS) {
+      work.log({ fn: "eb-sync", step: name, count: 0 });
+    }
+    return NOTHING_MATCHED;
+  }
+  work.log({
+    fn: "eb-sync",
+    step: "matched_installments",
+    count: plans.matchedInstallments,
+  });
+  work.log({
+    fn: "eb-sync",
+    step: "purchase_already_classified",
+    count: plans.purchaseAlreadyClassified,
+  });
+
   let linked: number;
   try {
     linked = await step(
@@ -454,7 +506,7 @@ async function matches(
     // A movement meant for a settlement must not end up in a transfer.
     work.log({ fn: "eb-sync", step: "matched_settlements", count: 0 });
     work.log({ fn: "eb-sync", step: "matched_transfers", count: 0 });
-    return NOTHING_MATCHED;
+    return { ...NOTHING_MATCHED, ...plans };
   }
   work.log({ fn: "eb-sync", step: "matched_settlements", count: linked });
 
@@ -468,8 +520,16 @@ async function matches(
     // Only the code in the log.
   }
   work.log({ fn: "eb-sync", step: "matched_transfers", count: created });
-  return { matchedSettlements: linked, matchedTransfers: created };
+  return { ...plans, matchedSettlements: linked, matchedTransfers: created };
 }
+
+/** The counts of step 4, logged at 0 when the plans fail. */
+const MATCHED_STEPS = [
+  "matched_installments",
+  "purchase_already_classified",
+  "matched_settlements",
+  "matched_transfers",
+] as const;
 
 async function syncAccount(
   work: Work,

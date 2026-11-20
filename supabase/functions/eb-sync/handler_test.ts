@@ -228,6 +228,25 @@ function setup(options: Setup = {}) {
         finished.push(args);
         return new Response(null, { status: 204 });
       },
+      installment_candidates: () => ({
+        start_date: "2031-03-01",
+        rows: [],
+        plans: [],
+      }),
+      apply_installments: (args) => {
+        const plans = args.installments as {
+          plan_id: string | null;
+          transaction_ids: string[];
+        }[];
+        return {
+          plans_created: plans.filter((plan) => plan.plan_id === null).length,
+          matched_installments: plans.reduce(
+            (sum, plan) => sum + plan.transaction_ids.length,
+            0,
+          ),
+          purchase_already_classified: 0,
+        };
+      },
       settlement_candidates: () => ({ movements: [], settlements: [] }),
       apply_settlements: (args) => (args.settlements as unknown[]).length,
       transfer_candidates: () => ({ accounts: [], movements: [] }),
@@ -277,20 +296,26 @@ function closed(finished: Record<string, unknown>[]) {
   assertEquals(args.run_id, RUN_ID);
   const result = args.result as {
     strategy: string | null;
+    purchase_already_classified: number;
+    matched_installments: number;
     matched_settlements: number;
     matched_transfers: number;
     accounts: Record<string, unknown>[];
   };
   assertEquals(Object.keys(result).sort(), [
     "accounts",
+    "matched_installments",
     "matched_settlements",
     "matched_transfers",
+    "purchase_already_classified",
     "strategy",
   ]);
   return {
     status: args.status,
     errorCode: args.error_code,
     strategy: result.strategy,
+    purchaseAlreadyClassified: result.purchase_already_classified,
+    matchedInstallments: result.matched_installments,
     matchedSettlements: result.matched_settlements,
     matchedTransfers: result.matched_transfers,
     accounts: result.accounts,
@@ -1027,6 +1052,7 @@ Deno.test("step 4: the transfers of the owner once, after all the accounts, coun
   assertEquals(names.slice(names.indexOf("ingest_bank_rows")), [
     "ingest_bank_rows",
     "ingest_bank_rows",
+    "installment_candidates",
     "settlement_candidates",
     "transfer_candidates",
     "apply_transfers",
@@ -1107,11 +1133,15 @@ Deno.test("step 4: also with an account not imported; never without an imported 
   ];
   for (const { call, project, finished, logs } of none) {
     await call();
+    assertFalse(rpcNames(project).includes("installment_candidates"));
     assertFalse(rpcNames(project).includes("settlement_candidates"));
     assertFalse(rpcNames(project).includes("transfer_candidates"));
     assertFalse(rpcNames(project).includes("apply_transfers"));
+    assertEquals(closed(finished).matchedInstallments, 0);
+    assertEquals(closed(finished).purchaseAlreadyClassified, 0);
     assertEquals(closed(finished).matchedSettlements, 0);
     assertEquals(closed(finished).matchedTransfers, 0);
+    assertEquals(logged(logs, "plan"), []);
     assertEquals(logged(logs, "settle"), []);
     assertEquals(logged(logs, "match"), []);
   }
@@ -1220,7 +1250,8 @@ Deno.test("step 4: the settlements of the owner before the transfers, the sides 
   });
   await call();
   const names = rpcNames(project);
-  assertEquals(names.slice(names.indexOf("settlement_candidates")), [
+  assertEquals(names.slice(names.indexOf("installment_candidates")), [
+    "installment_candidates",
     "settlement_candidates",
     "apply_settlements",
     "transfer_candidates",
@@ -1357,4 +1388,280 @@ Deno.test("step 4 with the transfers failing: the settlements keep their count",
   assertEquals(logged(logs, "match"), [
     { fn: "eb-sync", step: "match", code: "57014" },
   ]);
+});
+
+const PLAN_INSTALLMENT = "00000000-0000-4000-8000-000000000103";
+const PLAN_PURCHASE_RAW = "00000000-0000-4000-8000-000000100101";
+const PLAN_FIRST_RAW = "00000000-0000-4000-8000-000000100102";
+
+/**
+ * The purchase in installments of case 4 after the first sync, as
+ * installment_candidates returns it for Anna: the purchase and the first
+ * installment before the start date, the second one a movement.
+ */
+function planCandidates() {
+  const row = {
+    account_id: PAYPAL_ID,
+    status: "BOOK",
+    currency: "EUR",
+    code: "PAYMENT",
+    creditor_name: null,
+    remittance: null,
+    transaction_id: null,
+    installment_plan_id: null,
+    free: false,
+    cancelled: false,
+  };
+  return {
+    start_date: "2031-03-01",
+    rows: [
+      {
+        ...row,
+        raw_id: PLAN_PURCHASE_RAW,
+        movement_date: "2031-02-10",
+        amount_cents: -9000,
+        sub_code: "PAYMENT",
+        creditor_name: "Negozio Esempio",
+        remittance: ["Ordine Negozio Esempio"],
+      },
+      {
+        ...row,
+        raw_id: PLAN_FIRST_RAW,
+        movement_date: "2031-02-10",
+        amount_cents: -3000,
+        sub_code: "LOAN",
+      },
+      {
+        ...row,
+        raw_id: "00000000-0000-4000-8000-000000100103",
+        movement_date: "2031-03-12",
+        amount_cents: -3000,
+        sub_code: "LOAN",
+        transaction_id: PLAN_INSTALLMENT,
+        free: true,
+      },
+    ],
+    plans: [],
+  };
+}
+
+const PLAN_VALUES = [
+  PLAN_INSTALLMENT,
+  PLAN_PURCHASE_RAW,
+  PLAN_FIRST_RAW,
+  "Negozio Esempio",
+  "Ordine",
+];
+
+Deno.test("step 4: the plans of the owner first, the installments and the purchases left on the connection", async () => {
+  const { call, project, finished, logs } = setup({
+    rpc: {
+      installment_candidates: () => planCandidates(),
+      apply_installments: () => ({
+        plans_created: 1,
+        matched_installments: 1,
+        purchase_already_classified: 1,
+      }),
+      settlement_candidates: () => paymentCandidates(),
+      transfer_candidates: () => topUpCandidates(),
+    },
+  });
+  await call();
+  const names = rpcNames(project);
+  assertEquals(names.slice(names.indexOf("installment_candidates")), [
+    "installment_candidates",
+    "apply_installments",
+    "settlement_candidates",
+    "apply_settlements",
+    "transfer_candidates",
+    "apply_transfers",
+    "finish_sync_run",
+  ]);
+  const candidates = project.rpcCalls.find((c) =>
+    c.name === "installment_candidates"
+  )!;
+  // The window of 45 days before 2031-03-20.
+  assertEquals(candidates.args, {
+    member_id: ANNA.memberId,
+    since: "2031-02-03",
+  });
+  assertEquals(candidates.apikey, SECRET_KEY);
+  assertEquals(
+    project.rpcCalls.find((c) => c.name === "apply_installments")!.args,
+    {
+      member_id: ANNA.memberId,
+      installments: [{
+        plan_id: null,
+        purchase_raw_id: PLAN_PURCHASE_RAW,
+        first_raw_id: PLAN_FIRST_RAW,
+        merchant: "Negozio Esempio",
+        installments_before_start: 1,
+        installments_paid: 2,
+        last_installment_date: "2031-03-12",
+        transaction_ids: [PLAN_INSTALLMENT],
+      }],
+    },
+  );
+
+  const run = closed(finished);
+  assertEquals(
+    [
+      run.status,
+      run.errorCode,
+      run.matchedInstallments,
+      run.purchaseAlreadyClassified,
+      run.matchedSettlements,
+      run.matchedTransfers,
+    ],
+    ["ok", null, 1, 1, 1, 1],
+  );
+  // Only the row of the connection counts the purchases left.
+  for (const account of run.accounts) {
+    assertFalse("purchase_already_classified" in account);
+  }
+  assertEquals(logged(logs, "plan"), [
+    { fn: "eb-sync", step: "plan", code: "ok" },
+  ]);
+  assertEquals(logged(logs, "plan_ms").length, 1);
+  assert(logged(logs, "plan_ms")[0]!.count! >= 0);
+  assertEquals(logged(logs, "matched_installments"), [
+    { fn: "eb-sync", step: "matched_installments", count: 1 },
+  ]);
+  assertEquals(logged(logs, "purchase_already_classified"), [
+    { fn: "eb-sync", step: "purchase_already_classified", count: 1 },
+  ]);
+  assertCleanLogs(logs, [...PLAN_VALUES, ...PAYMENT_VALUES, ...TOP_UP_VALUES]);
+});
+
+Deno.test("step 4 without plans to make: apply_installments is not called, the settlements go on", async () => {
+  const { call, project, finished, logs } = setup({
+    rpc: { settlement_candidates: () => paymentCandidates() },
+  });
+  await call();
+  assert(rpcNames(project).includes("installment_candidates"));
+  assertFalse(rpcNames(project).includes("apply_installments"));
+  assert(rpcNames(project).includes("apply_settlements"));
+  const run = closed(finished);
+  assertEquals(
+    [run.matchedInstallments, run.purchaseAlreadyClassified],
+    [0, 0],
+  );
+  assertEquals(run.matchedSettlements, 1);
+  assertEquals(logged(logs, "matched_installments")[0]?.count, 0);
+});
+
+Deno.test("step 4 with the plans failing: settlements and transfers skipped, only the code in the log, the counts at 0", async () => {
+  const detail = `Failing row contains (${PLAN_INSTALLMENT}, Negozio Esempio).`;
+  const cases: [string, Record<string, RpcHandler>][] = [
+    ["member_not_eligible", {
+      installment_candidates: () =>
+        pgError(400, "P0001", "member_not_eligible", detail),
+    }],
+    ["internal", {
+      installment_candidates: () => ({ ...planCandidates(), plans: "no" }),
+    }],
+    ["internal", {
+      installment_candidates: () => {
+        const candidates = planCandidates();
+        return {
+          ...candidates,
+          rows: [{ ...candidates.rows[0], amount_cents: "-9000" }],
+        };
+      },
+    }],
+    ["internal", {
+      installment_candidates: () => ({
+        ...planCandidates(),
+        plans: [{ id: "p1", purchase_date: "10 febbraio" }],
+      }),
+    }],
+    ["invalid_installments", {
+      installment_candidates: () => planCandidates(),
+      apply_installments: () =>
+        pgError(400, "P0001", "invalid_installments", detail),
+    }],
+    ["internal", {
+      installment_candidates: () => planCandidates(),
+      apply_installments: () => ({
+        plans_created: 1,
+        matched_installments: 2,
+        purchase_already_classified: 0,
+      }),
+    }],
+    ["internal", {
+      installment_candidates: () => planCandidates(),
+      apply_installments: () => ({
+        plans_created: 1,
+        matched_installments: 1,
+        purchase_already_classified: -1,
+      }),
+    }],
+    ["internal", {
+      installment_candidates: () => planCandidates(),
+      apply_installments: () => 1,
+    }],
+    ["40P01", {
+      installment_candidates: () => planCandidates(),
+      apply_installments: () => pgError(500, "40P01", "deadlock detected"),
+    }],
+  ];
+  for (const [code, rpc] of cases) {
+    const { call, project, finished, logs } = setup({
+      rpc: {
+        settlement_candidates: () => paymentCandidates(),
+        transfer_candidates: () => topUpCandidates(),
+        ...rpc,
+      },
+    });
+    assertEquals((await call()).status, 202);
+    const run = closed(finished);
+    assertEquals(
+      [
+        run.status,
+        run.errorCode,
+        run.matchedInstallments,
+        run.purchaseAlreadyClassified,
+        run.matchedSettlements,
+        run.matchedTransfers,
+      ],
+      ["ok", null, 0, 0, 0, 0],
+    );
+    assertEquals(run.accounts.map((a) => a.status), ["ok", "ok"]);
+    assertEquals(logged(logs, "plan"), [
+      { fn: "eb-sync", step: "plan", code },
+    ]);
+    assertEquals(logged(logs, "plan_ms").length, 1);
+    assertFalse(rpcNames(project).includes("settlement_candidates"));
+    assertFalse(rpcNames(project).includes("transfer_candidates"));
+    assertEquals(logged(logs, "settle"), []);
+    assertEquals(logged(logs, "match"), []);
+    for (
+      const name of [
+        "matched_installments",
+        "purchase_already_classified",
+        "matched_settlements",
+        "matched_transfers",
+      ]
+    ) {
+      assertEquals(logged(logs, name), [
+        { fn: "eb-sync", step: name, count: 0 },
+      ]);
+    }
+    assertCleanLogs(logs, [...PLAN_VALUES, "Failing row", "deadlock"]);
+  }
+});
+
+Deno.test("step 4 with the settlements failing: the plans keep their counts", async () => {
+  const { call, finished } = setup({
+    rpc: {
+      installment_candidates: () => planCandidates(),
+      settlement_candidates: () => pgError(500, "57014", "canceling statement"),
+    },
+  });
+  await call();
+  const run = closed(finished);
+  assertEquals(
+    [run.matchedInstallments, run.matchedSettlements, run.matchedTransfers],
+    [1, 0, 0],
+  );
 });
