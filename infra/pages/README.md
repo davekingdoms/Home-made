@@ -1,6 +1,6 @@
 # Pages
 
-Pagine statiche pubblicate con Cloudflare Pages: la pagina di ritorno dal collegamento bancario e `assetlinks.json` per gli App Link di Android. Specifica: [`docs/spec/sincronizzazione.md`](../../docs/spec/sincronizzazione.md), sezioni 1 e 3.
+Pagine statiche pubblicate con Cloudflare Pages: la pagina di ritorno dal collegamento bancario, l'informativa privacy provvisoria e `assetlinks.json` per gli App Link di Android. Specifiche: [`docs/spec/sincronizzazione.md`](../../docs/spec/sincronizzazione.md), sezioni 1 e 3; [`docs/spec/accesso.md`](../../docs/spec/accesso.md), A3.
 
 Pages pubblica **questa cartella così com'è**: nessuna build, nessuna dipendenza, nessuna risorsa esterna (niente CDN, font remoti o analytics).
 
@@ -11,6 +11,8 @@ Pages pubblica **questa cartella così com'è**: nessuna build, nessuna dipenden
 | `bank-link/index.html` | Pagina di ritorno (percorso `/bank-link/`): mostra l'esito del collegamento. Senza JavaScript, `<noscript>` mostra il testo generico |
 | `bank-link/app.js` | Legge `esito` e `codice` dall'indirizzo, sceglie titolo e testo dalla tabella `TEXTS` in cima al file e toglie la query dall'indirizzo (`history.replaceState`) |
 | `bank-link/style.css` | Stile: ruoli colore della palette Teal di [`docs/spec/stile.md`](../../docs/spec/stile.md), tema chiaro e scuro, carattere di sistema |
+| `privacy/index.html` | Informativa privacy provvisoria (percorso `/privacy/`, versione `p1`), per le prove tra i membri della casa; l'app la apre da A3 (`PAGES_BASE_URL` + `/privacy/`). Pagina statica, senza script |
+| `privacy/style.css` | Stile dell'informativa: gli stessi ruoli colore e lo stesso carattere della pagina di ritorno |
 | `index.html` | Radice minima con il solo nome dell'app |
 | `robots.txt` | Nessuna pagina da indicizzare |
 | `_headers` | Intestazioni di sicurezza (CSP, niente referrer, niente frame), `no-store` per `/bank-link/`, tipo JSON per `assetlinks.json` |
@@ -41,6 +43,7 @@ Wrangler serve la cartella come Pages, intestazioni di `_headers` comprese (di s
 - `/bank-link/?esito=errore&codice=link_expired` (e `link_rejected`, `link_failed`)
 - `/bank-link/?esito=errore&codice=<script>`, `/bank-link/?esito=boh`, `/bank-link/` senza parametri
 - tema chiaro e scuro, larghezza 320 px; nella console nessun errore CSP; dopo il caricamento l'indirizzo è solo `/bank-link/`
+- `/privacy/`: tema chiaro e scuro, larghezza 320 px, nessun errore CSP
 - intestazioni: `curl.exe -sI http://localhost:8788/bank-link/` e `curl.exe -sI http://localhost:8788/.well-known/assetlinks.json`
 
 Senza Node, solo per l'aspetto (le intestazioni di `_headers` non si applicano):
