@@ -93,7 +93,8 @@ class DeviceRegistry {
   /// Key of the identity in the [LocalStore].
   static const storeKey = 'device.identity';
 
-  /// Longest wait for the deletion of the row on "Esci".
+  /// Longest wait on "Esci", both for a sync still running and for the
+  /// deletion of the row.
   static const forgetTimeout = Duration(seconds: 3);
 
   final DeviceRepository _remote;
@@ -103,6 +104,10 @@ class DeviceRegistry {
 
   /// The sync running, if any: the next caller waits for it.
   Future<void>? _running;
+
+  /// Grows at every [forget]: a sync that started before it saves nothing,
+  /// so a late answer cannot bring the forgotten id back.
+  int _epoch = 0;
 
   /// The identity saved on this installation, or null.
   Future<DeviceIdentity?> identity() async {
@@ -118,13 +123,31 @@ class DeviceRegistry {
   /// Registers the device for [userId] if it is not yet, otherwise sends
   /// `last_seen_at` if today it has not been sent. Called when the account
   /// enters and when the app comes back to the foreground.
-  Future<void> sync(String userId) =>
-      _running ??= _sync(userId).whenComplete(() => _running = null);
+  Future<void> sync(String userId) {
+    final running = _running;
+    if (running != null) return running;
+    late final Future<void> started;
+    started = _sync(userId).whenComplete(() {
+      if (identical(_running, started)) _running = null;
+    });
+    return _running = started;
+  }
 
-  /// Deletes the row of the device and its local id. The deletion waits at
-  /// most [forgetTimeout]: without a network the local id goes anyway.
+  /// Deletes the row of the device and its local id. A sync still running
+  /// and the deletion each wait at most [forgetTimeout]: on a slow network
+  /// or without one the local id goes anyway.
   Future<void> forget() async {
-    await _running;
+    _epoch++;
+    final running = _running;
+    if (running != null) {
+      try {
+        await running.timeout(forgetTimeout);
+      } on TimeoutException catch (error) {
+        // Left behind: it saves nothing, and the next sync starts afresh.
+        _log('wait for sync', error);
+        if (identical(_running, running)) _running = null;
+      }
+    }
     final identity = await this.identity();
     if (identity == null) return;
     try {
@@ -136,11 +159,16 @@ class DeviceRegistry {
   }
 
   Future<void> _sync(String userId) async {
+    final epoch = _epoch;
+    Future<void> save(DeviceIdentity identity) async {
+      if (epoch == _epoch) await _save(identity);
+    }
+
     try {
       var identity = await this.identity();
       if (identity == null || identity.userId != userId) {
         identity = DeviceIdentity(id: _newId(), userId: userId);
-        await _save(identity);
+        await save(identity);
       }
       final today = _day(_now());
       if (!identity.registered) {
@@ -150,10 +178,10 @@ class DeviceRegistry {
           platform: devicePlatform,
         );
         // The new row has last_seen_at = now().
-        await _save(identity.copyWith(registered: true, lastSeenOn: today));
+        await save(identity.copyWith(registered: true, lastSeenOn: today));
       } else if (identity.lastSeenOn != today) {
         await _remote.touch(identity.id, _now());
-        await _save(identity.copyWith(lastSeenOn: today));
+        await save(identity.copyWith(lastSeenOn: today));
       }
     } on Object catch (error) {
       // Tried again at the next start or return to the foreground.

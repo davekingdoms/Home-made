@@ -119,6 +119,9 @@ class FakeDeviceRepository implements DeviceRepository {
   /// When set, every call throws it.
   Exception? error;
 
+  /// When set, [insert] waits for it.
+  Completer<void>? insertGate;
+
   @override
   Future<void> insert({
     required String id,
@@ -126,6 +129,7 @@ class FakeDeviceRepository implements DeviceRepository {
     required String platform,
   }) async {
     inserts++;
+    await insertGate?.future;
     final error = this.error;
     if (error != null) throw error;
     rows[id] = userId;

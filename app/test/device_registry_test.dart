@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -129,6 +130,44 @@ void main() {
       await harness.registry.forget();
 
       expect(harness.saved, isNull);
+    });
+
+    testWidgets('does not wait without limit for a sync that hangs', (
+      tester,
+    ) async {
+      final harness = _Harness()..devices.insertGate = Completer<void>();
+      unawaited(harness.registry.sync(_annaId));
+      await tester.pump();
+      expect(harness.saved?.registered, isFalse);
+
+      var done = false;
+      unawaited(harness.registry.forget().then((_) => done = true));
+      await tester.pump(DeviceRegistry.forgetTimeout);
+      await tester.pump();
+
+      expect(done, isTrue);
+      expect(harness.saved, isNull);
+    });
+
+    testWidgets('a sync that answers after it brings nothing back', (
+      tester,
+    ) async {
+      final harness = _Harness()..devices.insertGate = Completer<void>();
+      unawaited(harness.registry.sync(_annaId));
+      await tester.pump();
+      final forgotten = harness.registry.forget();
+      await tester.pump(DeviceRegistry.forgetTimeout);
+      await forgotten;
+
+      harness.devices.insertGate!.complete();
+      await tester.pump();
+      expect(harness.saved, isNull);
+
+      // The next entry starts a sync of its own.
+      harness.devices.insertGate = null;
+      await harness.registry.sync(_brunoId);
+      expect(harness.saved?.userId, _brunoId);
+      expect(harness.saved?.registered, isTrue);
     });
 
     test('after it, the next entry is a new device', () async {
