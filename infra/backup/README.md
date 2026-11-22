@@ -1,3 +1,3 @@
 # Backup
 
-Backup notturno del database: un workflow di GitHub Actions fa il dump di Supabase, lo cifra e lo carica su Cloudflare R2; un secondo workflow mensile prova il ripristino. In arrivo. Nei log solo esiti, mai dati.
+Per ora non è previsto alcun backup del database (`docs/spec/sincronizzazione.md`, sezione 13). La cartella resta per quando si riprende: allora qui arriveranno i workflow e le istruzioni. Nei log solo esiti, mai dati.
