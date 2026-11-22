@@ -62,6 +62,13 @@ class SupabaseAuthRepository implements AuthRepository {
   ValueListenable<bool> get hasSession => _hasSession;
 
   @override
+  SessionUser? get currentUser {
+    final user = _auth.currentUser;
+    if (_auth.currentSession == null || user == null) return null;
+    return sessionUserFrom(user);
+  }
+
+  @override
   Future<SignInResult> signInWithGoogle() async {
     try {
       final account = await _googleSignIn.authenticate();
@@ -116,6 +123,22 @@ class SupabaseAuthRepository implements AuthRepository {
     await _authStateSubscription.cancel();
     _hasSession.dispose();
   }
+}
+
+/// The [SessionUser] of [user]: the name and the photo come from the Google
+/// ID token, which Supabase copies into the metadata of the user.
+SessionUser sessionUserFrom(User user) {
+  final metadata = user.userMetadata ?? const <String, dynamic>{};
+  String? text(String key) {
+    final value = metadata[key];
+    return value is String && value.trim().isNotEmpty ? value : null;
+  }
+
+  return SessionUser(
+    id: user.id,
+    name: text('full_name') ?? text('name'),
+    avatarUrl: text('avatar_url') ?? text('picture'),
+  );
 }
 
 /// The result for a failure of the Google account picker with [code].

@@ -129,6 +129,7 @@ const screenCatalog = <ScreenEntry>[
     ScreenLevel.global,
     path: '/household/join',
   ),
+  ScreenEntry('A11', 'Posizione', ScreenLevel.global, path: '/location'),
   ScreenEntry('B1', 'Hub', ScreenLevel.global, path: '/', opens: ['C1', 'I1']),
   ScreenEntry(
     'I1',

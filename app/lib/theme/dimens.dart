@@ -72,6 +72,10 @@ abstract final class AppSizes {
 
   static const double topBarHeight = 64;
 
+  /// Widest content of a screen with the phone layout, centred on wide
+  /// windows (`docs/spec/navigazione.md`, section 5).
+  static const double maxContentWidth = 640;
+
   /// Avatar in the hub.
   static const double hubAvatar = 48;
 

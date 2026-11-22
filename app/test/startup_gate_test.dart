@@ -1,0 +1,344 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:homemade/core/remote/remote_failure.dart';
+import 'package:homemade/features/auth/auth_repository.dart';
+import 'package:homemade/features/device/device_registry.dart';
+import 'package:homemade/features/startup/account_status.dart';
+import 'package:homemade/features/startup/startup_gate.dart';
+import 'package:homemade/features/startup/startup_state.dart';
+
+import 'helpers/fake_auth_repository.dart';
+import 'helpers/fakes.dart';
+
+/// A second invented account.
+const bruno = SessionUser(id: 'user-bruno', name: 'Bruno');
+
+/// The gate with fakes around it.
+class _Harness {
+  new({bool signedIn = true, AccountStatus account = readyAccount})
+    : auth = FakeAuthRepository(signedIn: signedIn),
+      accounts = FakeAccountRepository(status: account);
+
+  final FakeAuthRepository auth;
+  final FakeAccountRepository accounts;
+  final devices = FakeDeviceRepository();
+  final store = MemoryLocalStore();
+
+  late final registry = DeviceRegistry(remote: devices, store: store);
+
+  StartupGate start() {
+    final gate = StartupGate(
+      auth: auth,
+      accounts: accounts,
+      store: store,
+      devices: registry,
+    );
+    addTearDown(gate.dispose);
+    return gate;
+  }
+
+  /// Saves [status] as the last state read for Anna.
+  void saveState(AccountStatus status) =>
+      store.values[StartupGate.storeKey(anna.id)] = jsonEncode(status.toJson());
+
+  /// The state saved for Anna, if any.
+  AccountStatus? get savedState {
+    final saved = store.values[StartupGate.storeKey(anna.id)];
+    return saved == null ? null : AccountStatus.fromJson(jsonDecode(saved));
+  }
+}
+
+/// Lets the reads of the fakes complete.
+Future<void> flush() async {
+  for (var i = 0; i < 20; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
+void main() {
+  group('the first missing step', () {
+    test('without a session is sign-in', () async {
+      final gate = _Harness(signedIn: false).start();
+      await flush();
+
+      expect(gate.value, const StartupState.signIn());
+      expect(gate.value.sessionLost, isFalse);
+    });
+
+    test('with a session is unknown until the account is read', () async {
+      final harness = _Harness()..accounts.readGate = Completer<void>();
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.checking());
+
+      harness.accounts.readGate!.complete();
+      await flush();
+      expect(gate.value, const StartupState.hub());
+    });
+
+    test('without user_settings is the whole first access', () async {
+      final gate = _Harness(account: newAccount).start();
+      await flush();
+
+      expect(gate.value, const StartupState.welcome(noticeOnly: false));
+    });
+
+    test('with another version of the notice is the checkbox only', () async {
+      final gate = _Harness(account: oldNoticeAccount).start();
+      await flush();
+
+      expect(gate.value, const StartupState.welcome(noticeOnly: true));
+    });
+
+    test('with every step done is the hub, and the state is saved', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.savedState, readyAccount);
+    });
+
+    test('without a household is still the hub until PR 4.6', () async {
+      final gate = _Harness(
+        account: const AccountStatus(
+          hasProfile: true,
+          noticeVersion: privacyNoticeVersion,
+          hasMember: false,
+        ),
+      ).start();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+    });
+  });
+
+  group('offline', () {
+    test('uses the state saved on the device', () async {
+      final harness = _Harness()
+        ..accounts.readError = offline
+        ..saveState(readyAccount);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+    });
+
+    test('also when the saved state asks for the notice', () async {
+      final harness = _Harness()
+        ..accounts.readError = offline
+        ..saveState(oldNoticeAccount);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.welcome(noticeOnly: true));
+    });
+
+    test('without a saved state is unavailable, until a retry', () async {
+      final harness = _Harness()..accounts.readError = offline;
+      final gate = harness.start();
+      await flush();
+
+      expect(
+        gate.value,
+        const StartupState.unavailable(RemoteFailure.connection),
+      );
+
+      harness.accounts.readError = null;
+      gate.retry();
+      await flush();
+      expect(gate.value, const StartupState.hub());
+      expect(harness.accounts.reads, 2);
+    });
+
+    test('tells an error of Supabase apart from a missing network', () async {
+      final harness = _Harness()..accounts.readError = serverError;
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.unavailable(RemoteFailure.server));
+    });
+
+    test('ignores the state saved for another account', () async {
+      final harness = _Harness()..accounts.readError = offline;
+      harness.store.values[StartupGate.storeKey(bruno.id)] = jsonEncode(
+        readyAccount.toJson(),
+      );
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value.step, StartupStep.unavailable);
+    });
+  });
+
+  group('a change of session while the app is open', () {
+    test('a sign-in reads the account and registers the device', () async {
+      final harness = _Harness(signedIn: false);
+      final gate = harness.start();
+      await flush();
+      expect(gate.value.step, StartupStep.signIn);
+
+      harness.auth.openSession();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.devices.rows.values, [anna.id]);
+    });
+
+    test('a lost session leads to sign-in, saying so', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+
+      harness.auth.loseSession();
+      await flush();
+
+      expect(gate.value, const StartupState.signIn(SignInArrival.sessionLost));
+      expect(gate.value.sessionLost, isTrue);
+    });
+
+    test(
+      '"Esci" leads to sign-in, without saying the session expired',
+      () async {
+        final harness = _Harness();
+        final gate = harness.start();
+        await flush();
+
+        await gate.signOut();
+        await flush();
+
+        expect(gate.value, const StartupState.signIn(SignInArrival.signedOut));
+        expect(gate.value.sessionLost, isFalse);
+      },
+    );
+
+    test('another account reads its own state', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+      harness.auth.loseSession();
+      await flush();
+
+      harness.accounts.status = newAccount;
+      harness.auth.openSession(bruno);
+      await flush();
+
+      expect(gate.value, const StartupState.welcome(noticeOnly: false));
+      expect(harness.store.values, contains(StartupGate.storeKey(bruno.id)));
+    });
+
+    test('a late read of a closed session is ignored', () async {
+      final harness = _Harness()..accounts.readGate = Completer<void>();
+      final gate = harness.start();
+      await flush();
+
+      harness.auth.loseSession();
+      harness.accounts.readGate!.complete();
+      await flush();
+
+      expect(gate.value.step, StartupStep.signIn);
+    });
+  });
+
+  group('a start without a session', () {
+    test('after "Esci" says nothing', () async {
+      final harness = _Harness();
+      final first = harness.start();
+      await flush();
+      await first.signOut();
+
+      // The app starts again.
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.signIn());
+    });
+
+    test('after a session lost while the app was closed says so', () async {
+      final harness = _Harness(signedIn: false);
+      // The device is still registered: the last session ended without
+      // "Esci".
+      await harness.registry.sync(anna.id);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.signIn(SignInArrival.sessionLost));
+    });
+  });
+
+  group('first access', () {
+    test('saves the profile and the notice, then moves on', () async {
+      final harness = _Harness(account: newAccount);
+      final gate = harness.start();
+      await flush();
+
+      await gate.saveFirstAccess(displayName: 'Anna');
+
+      expect(harness.accounts.saves.single, (
+        userId: anna.id,
+        displayName: 'Anna',
+        avatarUrl: null,
+        noticeVersion: privacyNoticeVersion,
+      ));
+      expect(gate.value, const StartupState.hub());
+      expect(harness.savedState?.noticeRead, isTrue);
+      expect(harness.savedState?.hasProfile, isTrue);
+    });
+
+    test('with the checkbox only saves only the notice', () async {
+      final harness = _Harness(account: oldNoticeAccount);
+      final gate = harness.start();
+      await flush();
+
+      await gate.saveFirstAccess();
+
+      expect(harness.accounts.saves.single.displayName, isNull);
+      expect(gate.value, const StartupState.hub());
+    });
+
+    test('stays when the save fails', () async {
+      final harness = _Harness(account: newAccount)
+        ..accounts.saveError = offline;
+      final gate = harness.start();
+      await flush();
+
+      await expectLater(
+        gate.saveFirstAccess(displayName: 'Anna'),
+        throwsA(offline),
+      );
+      expect(gate.value, const StartupState.welcome(noticeOnly: false));
+    });
+  });
+
+  group('"Esci"', () {
+    test('deletes the device and the saved state, then signs out', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+      expect(harness.devices.rows, hasLength(1));
+      harness.store.values['device.location'] = 'kept';
+
+      await gate.signOut();
+
+      expect(harness.devices.rows, isEmpty);
+      expect(harness.store.values, {'device.location': 'kept'});
+      expect(harness.auth.signOuts, 1);
+    });
+
+    test('signs out also when the device cannot be deleted', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+      harness.devices.error = offline;
+
+      await gate.signOut();
+
+      expect(harness.store.values, isNot(contains(DeviceRegistry.storeKey)));
+      expect(harness.auth.signOuts, 1);
+      expect(gate.value.step, StartupStep.signIn);
+    });
+  });
+}
