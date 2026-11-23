@@ -48,7 +48,7 @@ select policies_are(
 );
 select columns_are(
   'public', 'profiles',
-  array['id', 'display_name', 'avatar_url', 'paypal_me', 'version', 'created_at', 'updated_at'],
+  array['id', 'display_name', 'avatar_url', 'paypal_me', 'is_demo', 'version', 'created_at', 'updated_at'],
   'the privacy notice moved to user_settings'
 );
 

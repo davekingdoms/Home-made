@@ -21,6 +21,7 @@ class AccountStatus {
     required this.hasProfile,
     required this.noticeVersion,
     required this.hasMember,
+    this.isDemo = false,
   });
 
   /// Reads what [toJson] wrote; null when [json] is not a status.
@@ -34,6 +35,11 @@ class AccountStatus {
         hasProfile: hasProfile,
         noticeVersion: noticeVersion,
         hasMember: hasMember,
+        // The states saved before the demo accounts have no flag.
+        isDemo: switch (json) {
+          {'isDemo': true} => true,
+          _ => false,
+        },
       );
     }
     return null;
@@ -48,20 +54,29 @@ class AccountStatus {
   /// Whether the account is an active member of a household.
   final bool hasMember;
 
+  /// Whether the profile is of a demo account, which can delete itself
+  /// (`docs/spec/accesso.md`, section 12).
+  final bool isDemo;
+
   /// Whether the current version of the privacy notice is read.
   bool get noticeRead => noticeVersion == privacyNoticeVersion;
 
-  AccountStatus copyWith({bool? hasProfile, String? noticeVersion}) =>
-      AccountStatus(
-        hasProfile: hasProfile ?? this.hasProfile,
-        noticeVersion: noticeVersion ?? this.noticeVersion,
-        hasMember: hasMember,
-      );
+  AccountStatus copyWith({
+    bool? hasProfile,
+    String? noticeVersion,
+    bool? isDemo,
+  }) => AccountStatus(
+    hasProfile: hasProfile ?? this.hasProfile,
+    noticeVersion: noticeVersion ?? this.noticeVersion,
+    hasMember: hasMember,
+    isDemo: isDemo ?? this.isDemo,
+  );
 
   Map<String, Object?> toJson() => {
     'hasProfile': hasProfile,
     'noticeVersion': noticeVersion,
     'hasMember': hasMember,
+    'isDemo': isDemo,
   };
 
   @override
@@ -69,10 +84,11 @@ class AccountStatus {
       other is AccountStatus &&
       other.hasProfile == hasProfile &&
       other.noticeVersion == noticeVersion &&
-      other.hasMember == hasMember;
+      other.hasMember == hasMember &&
+      other.isDemo == isDemo;
 
   @override
-  int get hashCode => Object.hash(hasProfile, noticeVersion, hasMember);
+  int get hashCode => Object.hash(hasProfile, noticeVersion, hasMember, isDemo);
 }
 
 /// Reads and writes the account of the signed-in user on Supabase: its
@@ -85,7 +101,7 @@ abstract interface class AccountRepository {
 
   /// Saves the first access (A3) of [userId]: the profile, when
   /// [displayName] is given, then the version of the notice read at
-  /// [readAt].
+  /// [readAt]. With [isDemo] the profile is created as a demo account.
   ///
   /// It throws when Supabase cannot be reached or answers with an error.
   Future<void> saveFirstAccess({
@@ -94,7 +110,14 @@ abstract interface class AccountRepository {
     required DateTime readAt,
     String? displayName,
     String? avatarUrl,
+    bool isDemo = false,
   });
+
+  /// Deletes the demo account of the signed-in user, with the households
+  /// left without members and all their data.
+  ///
+  /// It throws when Supabase cannot be reached or answers with an error.
+  Future<void> deleteDemoAccount();
 }
 
 /// The repository of the app. `main` overrides it; tests use a fake.
