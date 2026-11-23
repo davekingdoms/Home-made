@@ -28,11 +28,29 @@ enum SignInResult {
   failed,
 }
 
+/// The signed-in user, as Google describes the account.
+@immutable
+class SessionUser {
+  const new({required this.id, this.name, this.avatarUrl});
+
+  /// Id of the account on Supabase.
+  final String id;
+
+  /// Name of the Google account, if any.
+  final String? name;
+
+  /// Address of the photo of the Google account, if any.
+  final String? avatarUrl;
+}
+
 /// Session of the signed-in user: sign-in with Google, sign-out and whether
 /// a session is open.
 abstract interface class AuthRepository {
-  /// Whether a session is open. The router listens to it.
+  /// Whether a session is open. The startup gate listens to it.
   ValueListenable<bool> get hasSession;
+
+  /// The user of the open session; null without a session.
+  SessionUser? get currentUser;
 
   /// Asks Google for an account and opens a session with it.
   ///

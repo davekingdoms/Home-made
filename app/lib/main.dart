@@ -3,8 +3,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:homemade/app.dart';
 import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/core/config/config_error_app.dart';
+import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/supabase_auth_repository.dart';
+import 'package:homemade/features/device/device_repository.dart';
+import 'package:homemade/features/device/supabase_device_repository.dart';
+import 'package:homemade/features/startup/account_status.dart';
+import 'package:homemade/features/startup/supabase_account_repository.dart';
 import 'package:homemade/theme/font_license.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,7 +40,17 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(auth)],
+      overrides: [
+        appConfigProvider.overrideWithValue(config),
+        authRepositoryProvider.overrideWithValue(auth),
+        accountRepositoryProvider.overrideWithValue(
+          SupabaseAccountRepository(supabase.client),
+        ),
+        deviceRepositoryProvider.overrideWithValue(
+          SupabaseDeviceRepository(supabase.client),
+        ),
+        localStoreProvider.overrideWithValue(SharedPreferencesLocalStore()),
+      ],
       child: const HomemadeApp(),
     ),
   );

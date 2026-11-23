@@ -15,8 +15,12 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 | 5 | Riapertura con una sessione salvata | A1 Sblocco |
 | 6 | Altrimenti | Hub |
 
+- Un solo stato dell'avvio decide il passo, e il router legge solo quello: attesa, stato offline e ritorno alla schermata chiesta in [`navigazione.md`](navigazione.md), sezione 2.
 - Lo sblocco non si chiede subito dopo l'accesso con Google.
 - **Secondo dispositivo dello stesso account:** A2 → A11 → hub; il dispositivo si registra sull'account.
+- **Dispositivo:** alla prima entrata di un account su un'installazione l'app genera l'id del dispositivo (UUID), lo salva sul dispositivo insieme all'id dell'account e inserisce la riga in `devices` (piattaforma `android`, senza nome né token per le notifiche): un secondo inserimento con lo stesso id (`23505`) vuol dire già registrato. `last_seen_at` si aggiorna al più una volta al giorno, all'avvio e al ritorno in primo piano. Ogni dispositivo dello stesso account ha la sua riga. Nei log solo il passo e il codice, mai id né modelli.
+- **Uscire dall'account** (I2, menu di A3 e A7, A1): sempre con la conferma "Uscire dall'account?", testo "Per rientrare ti servirà il tuo account Google.", tasti "Annulla" e "Esci" (testo nel colore `error`). "Esci" cancella la riga del dispositivo in `devices` (senza bloccare l'uscita se manca la rete), l'id locale del dispositivo e lo stato dell'avvio salvato per l'account, poi chiude la sessione: A2, senza il messaggio della sessione scaduta. I valori del dispositivo che non dipendono dall'account (la posizione chiesta) restano.
+- **Sessione persa senza "Esci"** (scaduta o revocata, anche ad app chiusa): A2 con il messaggio della sessione scaduta. Lo riconosce l'id del dispositivo, che solo "Esci" cancella.
 - "Posizione già chiesta" si salva solo sul dispositivo, mai sul server.
 - Nessuna presentazione iniziale a schede.
 - **Schermi larghi:** layout del telefono centrato (vedi `navigazione.md`, sezione 5).
@@ -31,24 +35,28 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 ## 3. A2 — Accesso
 
-- Logo, "Home-made", la frase "Conti, spese e conguagli di casa in un posto solo.", tasto "Continua con Google" e sotto il tasto "Accedi o registrati con il tuo account Google.". Unico metodo di accesso e registrazione.
+- Logo, "Home-made", la frase "Conti, spese e conguagli di casa in un posto solo.", tasto "Continua con Google" e sotto il tasto "Accedi o registrati con il tuo account Google.". Unico metodo di accesso e registrazione. Finché non c'è il logo, al suo posto una casa sul biscotto.
 - Durante l'accesso il tasto mostra un indicatore ed è disattivato.
+- I messaggi degli errori sono snackbar; quello della sessione scaduta è un avviso fisso sopra il tasto, finché non si accede di nuovo.
 
 | Caso | Messaggio |
 |---|---|
 | Accesso annullato dall'utente | nessuno |
 | Senza rete | "Nessuna connessione. Controlla la rete e riprova." |
-| Nessun account Google sul dispositivo | "Aggiungi un account Google nelle impostazioni di Android e riprova." |
+| Nessun account Google sul dispositivo | "Aggiungi un account Google nelle impostazioni di Android e riprova.", solo quando `google_sign_in` lo distinguerà con un codice proprio; oggi "Accesso non riuscito. Riprova." |
 | Qualunque altro errore (anche di configurazione, solo nel log) | "Accesso non riuscito. Riprova." |
-| Arrivo per sessione scaduta | "La sessione è scaduta: accedi di nuovo." |
+| Arrivo per sessione persa senza "Esci" | "La sessione è scaduta: accedi di nuovo." |
+| Arrivo dopo "Esci" | nessuno |
 
-**Da verificare:** quale codice restituisce `google_sign_in` quando sul dispositivo non c'è un account Google.
+**Nessun account Google:** `google_sign_in` (7.2, Android) non ha un codice per questo caso: lo segnala come `unknownError`, distinguibile solo dalla descrizione, che non è un dato sicuro. Il caso riceve il messaggio generico e nel log va solo il codice.
 
 ## 4. A3 — Primo accesso
 
-- Foto dell'account Google (nessun caricamento; se manca, le iniziali), **nome** preso da Google e modificabile (obbligatorio), casella **"Ho letto l'informativa privacy"** con il link all'informativa, tasto "Continua" (attivo con nome e casella).
+- Foto dell'account Google (nessun caricamento; se manca o non si carica, l'iniziale del nome sul biscotto), **nome** preso da Google e modificabile (obbligatorio: spazi alle estremità tolti, da 1 a 80 caratteri come il vincolo di `profiles`), casella **"Ho letto l'informativa privacy"** con il link all'informativa, tasto "Continua" (attivo con nome e casella). Layout del telefono, centrato.
 - **"Esci dall'account"** nel menu della barra in alto, per chi ha scelto l'account Google sbagliato (con conferma, poi A2).
-- Sul profilo si salvano nome visualizzato, versione dell'informativa e data di presa visione. Con una nuova versione dell'informativa A3 ricompare con la sola casella.
+- **Informativa:** versione **`p1`** (provvisoria 1), costante nel codice. È la pagina `/privacy/` del sito su Cloudflare Pages (indirizzo nella configurazione `PAGES_BASE_URL`), che il link apre nel browser: un'informativa provvisoria per le prove tra i membri della casa; quella definitiva arriverà prima che l'app sia usata da persone esterne alla casa.
+- A3 compare se `user_settings` manca o ha un'altra versione dell'informativa. Se il profilo c'è già (cambia solo la versione), A3 mostra la sola casella.
+- "Continua" crea o aggiorna il proprio profilo (nome e foto) e poi `user_settings` (versione e data di presa visione); con la sola casella salva solo `user_settings`. Durante il salvataggio il tasto mostra un indicatore. Errori (snackbar): "Nessuna connessione. Controlla la rete e riprova." oppure "Non è stato possibile salvare. Riprova.". Poi lo stato dell'avvio passa al passo successivo, o alla schermata chiesta.
 - La casella registra la presa visione dell'informativa, non un consenso.
 
 ## 5. A7 — Crea o entra in una casa
@@ -117,11 +125,12 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 
 ## 11. Dati
 
-- **Profilo:** nome visualizzato, versione e data di presa visione dell'informativa.
+- **Profilo:** nome visualizzato e foto; nelle impostazioni dell'account (`user_settings`) versione e data di presa visione dell'informativa.
 - **Casa:** nome, data di inizio, creata da.
 - **Membro:** casa, utente, data di ingresso, data di inizio propria (da cui valgono anche le sue quote predefinite).
 - **Invito:** casa, hash del token, codice breve, creato da, etichetta, scadenza, usato da e quando, revocato.
-- **Dispositivo:** utente, piattaforma (token per le notifiche quando arrivano).
+- **Dispositivo:** id generato sul dispositivo, utente, piattaforma, ultimo accesso (token per le notifiche quando arrivano).
+- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account; poi posizione chiesta, città, invito in sospeso e tempo dello sblocco. Mai dati delle finanze.
 - **Conto Contanti:** creato con il membro; saldo iniziale con la data a cui si riferisce.
 - **Saldo iniziale tra i membri:** casa, membro, importo, data (= data di inizio della casa), inserito o modificato da; "Nessun saldo da riportare" salva importi a zero.
 
@@ -136,6 +145,11 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - Un membro che entra in una casa non ancora iniziata ha la data di inizio della casa e non può cambiarla.
 - Le quote predefinite uguali dopo un ingresso valgono dalla data di inizio del nuovo membro.
 - Accesso annullato: nessun messaggio.
+- Sessione persa senza "Esci": A2 con "La sessione è scaduta: accedi di nuovo."; dopo "Esci" A2 senza messaggi.
+- "Esci" chiede conferma; "Annulla" non esce; "Esci" cancella la riga del dispositivo e l'id locale ed esce anche se la cancellazione fallisce.
+- Il dispositivo si registra una volta per account e installazione: il secondo avvio non inserisce una nuova riga.
+- Dopo A3 l'informativa non si chiede più finché la versione non cambia; con il profilo già salvato si chiede la sola casella.
+- Offline con uno stato salvato l'app si apre; senza stato salvato compare "Riprova".
 - Il codice d'invito si accetta con e senza lo spazio tra i due gruppi da 4.
 - In A9, arrivando da A8, il tasto "Più tardi" diventa "Continua" dopo una condivisione o una copia.
 - La voce "Saldo iniziale tra i membri" compare solo con almeno due membri e accetta solo cifre con somma zero.

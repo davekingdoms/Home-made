@@ -4,53 +4,59 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/config/app_config.dart';
 
+/// A configuration with every value set, except the ones given.
+AppConfig _config({
+  String appEnv = 'dev',
+  String supabaseUrl = 'placeholder',
+  String supabasePublishableKey = 'placeholder',
+  String googleWebClientId = 'placeholder',
+  String pagesBaseUrl = 'placeholder',
+}) => AppConfig(
+  appEnv: appEnv,
+  supabaseUrl: supabaseUrl,
+  supabasePublishableKey: supabasePublishableKey,
+  googleWebClientId: googleWebClientId,
+  pagesBaseUrl: pagesBaseUrl,
+);
+
 void main() {
   test('lists the names of the required keys without a value', () {
-    const config = AppConfig(
-      appEnv: 'dev',
-      supabaseUrl: '',
-      supabasePublishableKey: 'placeholder',
-      googleWebClientId: '',
-    );
+    final config = _config(supabaseUrl: '', googleWebClientId: '');
 
     expect(config.missingKeys, ['SUPABASE_URL', 'GOOGLE_WEB_CLIENT_ID']);
   });
 
-  test('requires the Supabase and Google keys', () {
-    const config = AppConfig(
-      appEnv: 'dev',
+  test('requires the Supabase, Google and Pages keys', () {
+    final config = _config(
       supabaseUrl: '',
       supabasePublishableKey: '',
       googleWebClientId: '',
+      pagesBaseUrl: '',
     );
 
     expect(config.missingKeys, [
       'SUPABASE_URL',
       'SUPABASE_PUBLISHABLE_KEY',
       'GOOGLE_WEB_CLIENT_ID',
+      'PAGES_BASE_URL',
     ]);
   });
 
   test('has no missing key when every required value is set', () {
-    const config = AppConfig(
-      appEnv: 'dev',
-      supabaseUrl: 'placeholder',
-      supabasePublishableKey: 'placeholder',
-      googleWebClientId: 'placeholder',
-    );
-
-    expect(config.missingKeys, isEmpty);
+    expect(_config().missingKeys, isEmpty);
   });
 
   test('APP_ENV is optional', () {
-    const config = AppConfig(
-      appEnv: '',
-      supabaseUrl: 'placeholder',
-      supabasePublishableKey: 'placeholder',
-      googleWebClientId: 'placeholder',
-    );
+    expect(_config(appEnv: '').missingKeys, isEmpty);
+  });
 
-    expect(config.missingKeys, isEmpty);
+  test('builds the address of a page of the Pages site', () {
+    final config = _config(pagesBaseUrl: 'https://example.pages.dev');
+
+    expect(
+      config.pagesUri('/privacy/'),
+      Uri.parse('https://example.pages.dev/privacy/'),
+    );
   });
 
   test('the keys match env.example.json', () {

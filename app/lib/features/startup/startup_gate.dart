@@ -1,0 +1,253 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:homemade/core/remote/remote_failure.dart';
+import 'package:homemade/core/storage/local_store.dart';
+import 'package:homemade/features/auth/auth_repository.dart';
+import 'package:homemade/features/device/device_registry.dart';
+import 'package:homemade/features/startup/account_status.dart';
+import 'package:homemade/features/startup/startup_state.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'startup_gate.g.dart';
+
+/// The one place that decides the first step missing at startup
+/// (`docs/spec/accesso.md`, section 1): session (A2), privacy notice (A3),
+/// household (A7/A10), location (A11), unlock (A1), then the hub.
+///
+/// It follows the session of [AuthRepository]; with a session it reads the
+/// account from Supabase and saves it on the device for that account, so an
+/// offline start uses the last state saved. The router reads only [value].
+class StartupGate extends ChangeNotifier
+    implements ValueListenable<StartupState> {
+  new({
+    required this._auth,
+    required this._accounts,
+    required this._store,
+    required this._devices,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now {
+    _auth.hasSession.addListener(_onSessionChanged);
+    _onSessionChanged();
+  }
+
+  /// Longest wait for the state of the account: then the start goes on with
+  /// the state saved on the device.
+  static const readTimeout = Duration(seconds: 8);
+
+  /// Key of the saved state of the account [userId] in the [LocalStore].
+  static String storeKey(String userId) => 'startup.account.$userId';
+
+  final AuthRepository _auth;
+  final AccountRepository _accounts;
+  final LocalStore _store;
+  final DeviceRegistry _devices;
+  final DateTime Function() _now;
+
+  StartupState _state = const StartupState.checking();
+
+  /// Account of the open session, null without one.
+  String? _userId;
+
+  /// Last state of the account, read or saved.
+  AccountStatus? _status;
+
+  /// True while "Esci" runs: the session ends because the user asked.
+  bool _signingOut = false;
+
+  /// Grows at every session change and every read: an older read that
+  /// completes late is ignored.
+  int _generation = 0;
+
+  @override
+  StartupState get value => _state;
+
+  /// Reads the state of the account again, after it was unavailable.
+  void retry() {
+    final userId = _userId;
+    if (userId == null) return;
+    unawaited(_load(userId, ++_generation));
+  }
+
+  /// Saves the first access (A3) of the signed-in user, then moves to the
+  /// next step. With [displayName] it creates or updates the profile too;
+  /// without it, it saves only the version of the notice read.
+  ///
+  /// It throws when the save fails: A3 tells the user and stays.
+  Future<void> saveFirstAccess({String? displayName, String? avatarUrl}) async {
+    final userId = _userId;
+    final status = _status;
+    if (userId == null || status == null) return;
+    await _accounts.saveFirstAccess(
+      userId: userId,
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+      noticeVersion: privacyNoticeVersion,
+      readAt: _now(),
+    );
+    if (userId != _userId) return;
+    final saved = status.copyWith(
+      hasProfile: status.hasProfile || displayName != null,
+      noticeVersion: privacyNoticeVersion,
+    );
+    _status = saved;
+    await _save(userId, saved);
+    _set(_stepFor(saved));
+  }
+
+  /// "Esci": deletes the row of the device (without waiting long for the
+  /// network), forgets the device id and the state of the account on this
+  /// installation, then closes the session. It never throws.
+  Future<void> signOut() async {
+    final userId = _userId;
+    _signingOut = true;
+    try {
+      await _devices.forget();
+      if (userId != null) await _store.remove(storeKey(userId));
+      await _auth.signOut();
+    } finally {
+      _signingOut = false;
+    }
+  }
+
+  /// The app is back in the foreground.
+  void handleResume() {
+    final userId = _userId;
+    if (userId != null) unawaited(_devices.sync(userId));
+  }
+
+  @override
+  void dispose() {
+    _auth.hasSession.removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    final generation = ++_generation;
+    final user = _auth.hasSession.value ? _auth.currentUser : null;
+    if (user == null) {
+      final hadSession = _userId != null;
+      _userId = null;
+      _status = null;
+      if (_signingOut) {
+        _set(const StartupState.signIn(SignInArrival.signedOut));
+      } else if (hadSession) {
+        _set(const StartupState.signIn(SignInArrival.sessionLost));
+      } else {
+        _set(const StartupState.signIn());
+        unawaited(_checkLostSession(generation));
+      }
+      return;
+    }
+    if (user.id == _userId) return;
+    _userId = user.id;
+    unawaited(_devices.sync(user.id));
+    unawaited(_load(user.id, generation));
+  }
+
+  /// At a start without a session: a device id still saved means that the
+  /// last session ended without "Esci", which deletes it.
+  Future<void> _checkLostSession(int generation) async {
+    final identity = await _devices.identity();
+    if (identity == null || generation != _generation) return;
+    _set(const StartupState.signIn(SignInArrival.sessionLost));
+  }
+
+  Future<void> _load(String userId, int generation) async {
+    _set(const StartupState.checking());
+    AccountStatus? status;
+    var failure = RemoteFailure.connection;
+    try {
+      status = await _accounts.readStatus(userId).timeout(readTimeout);
+    } on Object catch (error) {
+      failure = RemoteFailure.of(error);
+      _log('read', error);
+    }
+    if (status != null) {
+      await _save(userId, status);
+    } else {
+      status = await _saved(userId);
+    }
+    if (generation != _generation) return;
+    if (status == null) {
+      _set(StartupState.unavailable(failure));
+      return;
+    }
+    _status = status;
+    _set(_stepFor(status));
+  }
+
+  /// The first step missing for an account in [status].
+  StartupState _stepFor(AccountStatus status) {
+    if (!status.noticeRead) {
+      return StartupState.welcome(noticeOnly: status.hasProfile);
+    }
+    if (!_householdDone(status)) return const StartupState.household();
+    if (!_locationDone) return const StartupState.location();
+    if (!_unlockDone) return const StartupState.unlock();
+    return const StartupState.hub();
+  }
+
+  /// Household (A7, A10): always done until PR 4.6 builds its screens and
+  /// checks [AccountStatus.hasMember]. Meanwhile the members of the test
+  /// household keep using the app.
+  bool _householdDone(AccountStatus status) => true;
+
+  /// Location (A11), asked once per device: always done until PR 4.8 reads
+  /// it from the [LocalStore].
+  bool get _locationDone => true;
+
+  /// Unlock (A1) at reopening with a saved session, never right after the
+  /// sign-in with Google: always done until PR 4.4.
+  bool get _unlockDone => true;
+
+  Future<AccountStatus?> _saved(String userId) async {
+    try {
+      final saved = await _store.read(storeKey(userId));
+      return saved == null ? null : AccountStatus.fromJson(jsonDecode(saved));
+    } on Object catch (error) {
+      _log('read saved', error);
+      return null;
+    }
+  }
+
+  Future<void> _save(String userId, AccountStatus status) async {
+    try {
+      await _store.write(storeKey(userId), jsonEncode(status.toJson()));
+    } on Object catch (error) {
+      _log('save', error);
+    }
+  }
+
+  void _set(StartupState state) {
+    if (state == _state) return;
+    _state = state;
+    notifyListeners();
+  }
+
+  static void _log(String step, Object error) => developer.log(
+    'startup $step failed: ${remoteErrorCode(error)}',
+    name: 'startup',
+  );
+}
+
+/// The startup gate of the app. It also tells the device registry when the
+/// app comes back to the foreground.
+@Riverpod(keepAlive: true)
+StartupGate startupGate(Ref ref) {
+  final gate = StartupGate(
+    auth: ref.watch(authRepositoryProvider),
+    accounts: ref.watch(accountRepositoryProvider),
+    store: ref.watch(localStoreProvider),
+    devices: ref.watch(deviceRegistryProvider),
+  );
+  final lifecycle = AppLifecycleListener(onResume: gate.handleResume);
+  ref.onDispose(() {
+    lifecycle.dispose();
+    gate.dispose();
+  });
+  return gate;
+}

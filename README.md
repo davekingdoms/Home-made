@@ -14,8 +14,8 @@ Flutter (Android, telefono e tablet) · Supabase (Postgres, accesso con Google, 
 |---|---|
 | `app/` | App Flutter: scheletro installabile con tema, navigazione e schermate segnaposto |
 | `supabase/` | Configurazione locale di Supabase; migrazioni, test pgTAP ed Edge Functions in arrivo |
-| `infra/backup/` | Backup notturno del database |
-| `infra/pages/` | Pagine per gli App Link e il ritorno dal collegamento bancario |
+| `infra/backup/` | Backup del database: per ora nessuno |
+| `infra/pages/` | Pagine per gli App Link, il ritorno dal collegamento bancario e l'informativa privacy provvisoria |
 | `docs/spec/` | Specifiche tecniche, da leggere prima di scrivere codice |
 | `tools/` | Strumenti di sviluppo (controllo dei contrasti dei colori) |
 

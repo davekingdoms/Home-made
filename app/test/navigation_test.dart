@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
+import 'package:homemade/features/auth/sign_in_screen.dart';
+import 'package:homemade/features/auth/welcome_screen.dart';
 import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fakes.dart';
 import 'helpers/pump_app.dart';
 
 /// Narrows [finder] to the open bottom sheet: the screen under it stays
@@ -21,8 +24,8 @@ void main() {
   final sheets = inventory.where((entry) => entry.isSheet).toList();
 
   group('catalog', () {
-    test('has the 31 screens and 7 sheets of the specification', () {
-      expect(screens, hasLength(31));
+    test('has the 32 screens and 7 sheets of the specification', () {
+      expect(screens, hasLength(32));
       expect(sheets, hasLength(7));
     });
 
@@ -58,15 +61,26 @@ void main() {
           final router = await pumpApp(
             tester,
             location: location,
-            // With a session, sign-in (A2) leads to the hub.
+            // Sign-in (A2) and first access (A3) show only while their step
+            // is missing; once done they lead to the hub.
             auth: FakeAuthRepository(signedIn: entry.code != 'A2'),
+            accounts: FakeAccountRepository(
+              status: entry.code == 'A3' ? newAccount : readyAccount,
+            ),
           );
 
           expect(router.location, location);
-          if (entry.code == 'B1') {
-            expect(find.byType(HubScreen), findsOneWidget);
-            expect(find.text('Home-made'), findsOneWidget);
-            return;
+          switch (entry.code) {
+            case 'B1':
+              expect(find.byType(HubScreen), findsOneWidget);
+              expect(find.text('Home-made'), findsOneWidget);
+              return;
+            case 'A2':
+              expect(find.byType(SignInScreen), findsOneWidget);
+              return;
+            case 'A3':
+              expect(find.byType(WelcomeScreen), findsOneWidget);
+              return;
           }
           expect(find.text(entry.label), findsOneWidget);
           expect(find.text('Segnaposto'), findsOneWidget);

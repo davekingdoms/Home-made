@@ -1,13 +1,36 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:homemade/core/router/screen_catalog.dart';
-import 'package:homemade/design/placeholder_screen.dart';
+import 'package:homemade/design/app_logo.dart';
+import 'package:homemade/design/notice_card.dart';
+import 'package:homemade/design/phone_layout.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
+import 'package:homemade/features/startup/startup_gate.dart';
+import 'package:homemade/theme/dimens.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Sign-in (A2), provisional: the "Continua con Google" button and nothing
-/// about the user. Layout and texts arrive with the sign-in specification.
+/// Text of A2 after an expired or revoked session.
+const sessionLostMessage = 'La sessione è scaduta: accedi di nuovo.';
+
+/// The message A2 shows after a sign-in that ended with [result]; null for
+/// none.
+///
+/// `google_sign_in` has no code of its own for a phone without a Google
+/// account (on Android it is an `unknownError`, told apart only by its
+/// description): that case gets the generic message, and the log only the
+/// code.
+String? signInMessage(SignInResult result) => switch (result) {
+  SignInResult.signedIn || SignInResult.cancelled => null,
+  SignInResult.networkError =>
+    'Nessuna connessione. Controlla la rete e riprova.',
+  SignInResult.configurationError ||
+  SignInResult.rejected ||
+  SignInResult.failed => 'Accesso non riuscito. Riprova.',
+};
+
+/// Sign-in (A2): logo, name of the app, the "Continua con Google" button,
+/// the one way to sign in and to sign up (`docs/spec/accesso.md`,
+/// section 3).
 class SignInScreen extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -25,40 +48,67 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     // until then.
     if (!mounted || result == SignInResult.signedIn) return;
     setState(() => _signingIn = false);
+    final message = signInMessage(result);
+    if (message == null) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            result == SignInResult.cancelled
-                ? 'Accesso annullato'
-                : 'Accesso non riuscito. Riprova.',
-          ),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final gate = ref.watch(startupGateProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(screenByCode('A2').label)),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: PhoneLayout(
+          centered: true,
           children: [
-            Text('Home-made', style: theme.textTheme.headlineLarge),
-            const SizedBox(height: 8),
-            const PlaceholderMark(),
-            const SizedBox(height: 24),
+            const Center(child: AppLogo()),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Home-made',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Conti, spese e conguagli di casa in un posto solo.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sectionGap),
+            ValueListenableBuilder(
+              valueListenable: gate,
+              builder: (context, state, _) => !state.sessionLost
+                  ? const SizedBox.shrink()
+                  : const Padding(
+                      padding: EdgeInsets.only(bottom: AppSpacing.md),
+                      child: NoticeCard(
+                        kind: NoticeKind.info,
+                        title: sessionLostMessage,
+                      ),
+                    ),
+            ),
             FilledButton(
               onPressed: _signingIn ? null : () => unawaited(_signIn()),
               child: _signingIn
                   ? const SizedBox.square(
-                      dimension: 20,
+                      dimension: AppSizes.iconSmall,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text('Continua con Google'),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Accedi o registrati con il tuo account Google.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

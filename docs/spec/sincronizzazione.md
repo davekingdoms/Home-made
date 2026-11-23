@@ -397,10 +397,10 @@ Restituisce i conteggi in un oggetto JSON: `link_requests`, `connection_runs` (r
 
 Le prove con la banca finta di Enable Banking (Sandbox, Mock ASPSP) si fanno a mano dal PC, mai in CI.
 
-## 13. Rilascio e backup
+## 13. Rilascio
 
 - **Rilascio** (`release.yml`, environment `prod`): su un tag `v*` o avviato a mano da `main`, mai da un altro branch; CLI di Supabase alla versione fissata nel workflow. `supabase link`, poi `supabase db push --dry-run --remote`, che elenca le migrazioni da applicare e fallisce se `prod` ne ha una che il repository non ha. Avviato a mano ha l'opzione **prova** (predefinita sì), che si ferma qui. Altrimenti `supabase db push --remote` **senza seed**, `supabase migration list --remote` (le migrazioni di `prod` devono essere quelle del repository) e deploy di tutte le Edge Functions con la loro configurazione di `config.toml`. Nel log solo l'elenco delle migrazioni (nomi dei file del repository), il confronto locale/remoto e i nomi delle funzioni; ref del progetto, URL e password mascherati; nessun artifact. Su `dev` migrazioni e funzioni si portano dal PC con la CLI, sempre con `--remote`, dalla radice del repository.
-- **Backup** (`backup.yml`, ogni notte, environment `prod`): `pg_dump` dal pooler in modalità sessione, cifrato con `age`, caricato su un bucket R2 con giurisdizione EU in `daily/` (e il primo del mese anche in `monthly/`); la conservazione la fanno le regole del bucket (30 giorni per `daily/`, 365 per `monthly/`). **Prova di ripristino** (`restore-check.yml`, ogni mese e a mano): scarica l'ultimo dump, lo decifra, lo ripristina in un Postgres temporaneo e controlla che sia più recente di 36 ore e che le tabelle principali abbiano gli stessi conteggi del database, con la tolleranza delle righe nate dopo il dump. Nei log solo gli esiti; nessun dump come artifact.
+- **Backup:** per ora non è previsto alcun backup del database.
 - I segreti di Vault non si possono decifrare fuori dal progetto: dopo un ripristino su un progetto nuovo le chiavi private si salvano di nuovo con `eb-credentials`.
 
 ## 14. Fuori da questa specifica

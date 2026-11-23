@@ -1,0 +1,147 @@
+/*
+ * Colors: Teal palette roles of docs/spec/stile.md (section 2.1), light and
+ * dark theme, as in bank-link/style.css. The rules below use only these
+ * roles.
+ */
+:root {
+  color-scheme: light dark;
+
+  --surface: #f4fbfa;
+  --surface-container-low: #e7f1f0;
+  --on-surface: #161d1d;
+  --on-surface-variant: #3f5052;
+  --testo-terziario: #566a6c;
+  --outline-variant: #cbdcdb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #161a1a;
+    --surface-container-low: #1a2526;
+    --on-surface: #e3f1f2;
+    --on-surface-variant: #a9c2c5;
+    --testo-terziario: #8ea1a4;
+    --outline-variant: #24393c;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1.5rem 1rem;
+}
+
+/* labelLarge: 14/20, 600 */
+.brand {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.card {
+  width: 100%;
+  max-width: 40rem;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.75rem;
+  background: var(--surface-container-low);
+}
+
+/* titleLarge: 22/28, 500 */
+.title {
+  margin: 0 0 0.25rem;
+  color: var(--on-surface);
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+  font-weight: 500;
+  overflow-wrap: break-word;
+}
+
+/* titleMedium: 16/24, 600 */
+h2 {
+  margin: 1.5rem 0 0.5rem;
+  color: var(--on-surface);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+/* bodyMedium: 15/22, 400 */
+p,
+li {
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  overflow-wrap: break-word;
+}
+
+p {
+  margin: 0;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+li + li {
+  margin-top: 0.5rem;
+}
+
+strong {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+/* bodyLarge: 16/24, 400 */
+.lead {
+  margin-top: 1rem;
+  color: var(--on-surface);
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+/* bodySmall: 13/18, 400 */
+.version,
+.note {
+  color: var(--testo-terziario);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+
+.note {
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 30rem) {
+  .card {
+    padding: 2.5rem 2rem;
+  }
+}

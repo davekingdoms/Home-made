@@ -11,6 +11,7 @@ void main() {
       supabaseUrl: '',
       supabasePublishableKey: 'placeholder',
       googleWebClientId: '',
+      pagesBaseUrl: 'placeholder',
     );
 
     await tester.pumpWidget(ConfigErrorApp(missingKeys: config.missingKeys));

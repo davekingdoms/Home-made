@@ -61,13 +61,19 @@ Ogni commit segue [Conventional Commits](https://www.conventionalcommits.org/) e
 | Cartella | Contenuto |
 |---|---|
 | `app/lib/core/config/` | Configurazione letta da `--dart-define-from-file` (`AppConfig`) |
+| `app/lib/core/links/` | Apertura delle pagine web nel browser (`url_launcher`), sostituibile nei test |
 | `app/lib/core/money/` | `Money`: importo in centesimi interi e valuta ISO 4217, formato italiano |
-| `app/lib/core/router/` | Router (go_router) e catalogo delle schermate e dei fogli |
+| `app/lib/core/remote/` | Errori delle richieste a Supabase: connessione o risposta d'errore, codice per i log |
+| `app/lib/core/router/` | Router (go_router), redirect dello stato dell'avvio e catalogo delle schermate e dei fogli |
+| `app/lib/core/storage/` | `LocalStore`: piccoli valori del dispositivo (`shared_preferences`), mai dati delle finanze |
 | `app/lib/theme/` | Sistema grafico da `docs/spec/stile.md`: token delle sei combinazioni (`tokens.dart`), `AppColors`, `CasaColors` (colori della casa, calcolati in OKLab), scala tipografica in Google Sans Flex, spaziature, raggi e dimensioni (`dimens.dart`), durate e transizioni, temi dei componenti Material, varianti dei bottoni (`AppButtonStyles`), palette e tema scelti (`appearance.dart`) |
-| `app/lib/design/` | Componenti fatti a mano, condivisi tra le schermate: biscotto, banda diagonale, card in evidenza, avviso, card di sezione dell'hub, tessere, riga movimento, barra dei Saldi, tastierino, "fade through" tra le schede; più il segnaposto. Ricevono valori già pronti: niente logica di business |
+| `app/lib/design/` | Componenti fatti a mano, condivisi tra le schermate: biscotto, banda diagonale, card in evidenza, avviso, card di sezione dell'hub, tessere, riga movimento, barra dei Saldi, tastierino, "fade through" tra le schede; più il segnaposto, il logo provvisorio e il layout del telefono centrato. Ricevono valori già pronti: niente logica di business |
 | `app/assets/fonts/` | Google Sans Flex (file variabile ufficiale) con la sua licenza `OFL.txt` |
-| `app/lib/features/auth/` | Sblocco, accesso, primo accesso (A1–A3) |
+| `app/lib/features/startup/` | Stato dell'avvio (`StartupGate`): primo passo mancante, stato dell'account letto e salvato per account, schermata d'avvio |
+| `app/lib/features/auth/` | Sblocco, accesso, primo accesso (A1–A3), uscita dall'account con conferma |
+| `app/lib/features/device/` | Registrazione del dispositivo in `devices` e suo id locale |
 | `app/lib/features/household/` | Crea o entra in una casa, inviti (A7–A10) |
+| `app/lib/features/location/` | Posizione (A11) |
 | `app/lib/features/hub/` | Hub (B1) |
 | `app/lib/features/finance/` | Sezione Finanze: `summary`, `transactions`, `manual_entry`, `analytics`, `accounts` |
 | `app/lib/features/settings/` | Impostazioni (I1–I10) |
