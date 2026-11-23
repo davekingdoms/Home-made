@@ -59,7 +59,7 @@ jobs:
             echo "keyAlias=$ANDROID_KEY_ALIAS"
           } > "$PRIVATE_DIR/key.properties"
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
