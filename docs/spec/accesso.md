@@ -37,6 +37,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 - Logo, "Home-made", la frase "Conti, spese e conguagli di casa in un posto solo.", tasto "Continua con Google" e sotto il tasto "Accedi o registrati con il tuo account Google.". Unico metodo di accesso e registrazione. Finché non c'è il logo, al suo posto una casa sul biscotto.
 - Durante l'accesso il tasto mostra un indicatore ed è disattivato.
+- Solo su `dev`: la casella "Modalità demo" (sezione 12).
 - I messaggi degli errori sono snackbar; quello della sessione scaduta è un avviso fisso sopra il tasto, finché non si accede di nuovo.
 
 | Caso | Messaggio |
@@ -58,6 +59,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 - A3 compare se `user_settings` manca o ha un'altra versione dell'informativa. Se il profilo c'è già (cambia solo la versione), A3 mostra la sola casella.
 - "Continua" crea o aggiorna il proprio profilo (nome e foto) e poi `user_settings` (versione e data di presa visione); con la sola casella salva solo `user_settings`. Durante il salvataggio il tasto mostra un indicatore. Errori (snackbar): "Nessuna connessione. Controlla la rete e riprova." oppure "Non è stato possibile salvare. Riprova.". Poi lo stato dell'avvio passa al passo successivo, o alla schermata chiesta.
 - La casella registra la presa visione dell'informativa, non un consenso.
+- Per un account demo, la riga sotto il nome della sezione 12.
 
 ## 5. A7 — Crea o entra in una casa
 
@@ -130,11 +132,27 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - **Membro:** casa, utente, data di ingresso, data di inizio propria (da cui valgono anche le sue quote predefinite).
 - **Invito:** casa, hash del token, codice breve, creato da, etichetta, scadenza, usato da e quando, revocato.
 - **Dispositivo:** id generato sul dispositivo, utente, piattaforma, ultimo accesso (token per le notifiche quando arrivano).
-- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account; poi posizione chiesta, città, invito in sospeso e tempo dello sblocco. Mai dati delle finanze.
+- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account, scelta della modalità demo (solo `dev`, sezione 12); poi posizione chiesta, città, invito in sospeso e tempo dello sblocco. Mai dati delle finanze.
 - **Conto Contanti:** creato con il membro; saldo iniziale con la data a cui si riferisce.
 - **Saldo iniziale tra i membri:** casa, membro, importo, data (= data di inizio della casa), inserito o modificato da; "Nessun saldo da riportare" salva importi a zero.
 
-## 12. Criteri di accettazione
+## 12. Account demo (solo sviluppo)
+
+Strumento di sviluppo: su `dev` un account Google creato come demo si elimina dall'app con tutto ciò che gli appartiene, così il primo avvio si rifà da capo. Su `prod` non esiste: né la casella né l'eliminazione. **Non è** l'eliminazione dell'account delle Impostazioni, che resta da decidere. Colonne, funzioni ed errori in [`schema.md`](schema.md), sezione 3.
+
+- **Interruttore lato server:** gli account demo sono attivi in un ambiente solo se in Vault c'è il segreto `demo_accounts` con valore `enabled`, inserito a mano su `dev`, mai su `prod`; nessun valore nel repository (come `project_url`). In locale e in CI lo creano e lo tolgono i test.
+- **Flag sul profilo** (`profiles.is_demo`): deciso alla creazione del profilo e poi mai cambiato. Con l'interruttore spento un profilo demo non si crea (`demo_disabled`); un account vero non diventa demo e un demo non diventa vero (`demo_immutable`).
+- **Case di soli demo:** una casa è tutta demo o tutta vera. `redeem_invite` rifiuta con `invite_demo_mismatch` chi ha il flag diverso da quello dei membri attivi della casa, dopo i controlli dell'invito e prima di quello dei posti; gli altri errori restano com'erano. Il testo per A10 arriva con gli inviti.
+- **A2:** solo se `APP_ENV` è esattamente `dev` (assente o diverso: niente casella), sotto il tasto "Continua con Google" e la sua riga, la casella **"Modalità demo"**, che si spunta anche toccando il testo. La scelta si salva sul dispositivo come valore in sospeso e vale solo per un account **nuovo**: in A3 "Continua", quando crea il profilo, lo crea demo; poi il valore si cancella. Se il profilo c'è già (A3 con la sola casella, oppure un account che salta A3) il valore si cancella senza effetto. "Esci" non lo cancella: dopo un'uscita da A3 la casella mostra ancora la scelta.
+- **Interruttore spento con la casella spuntata** (in locale, o su `dev` prima del segreto): "Continua" di A3 dà l'errore generico "Non è stato possibile salvare. Riprova."; si esce con "Esci dall'account" dal menu di A3 e si toglie la spunta in A2.
+- **A3:** per un account demo, sotto il nome, la riga "Account demo: si potrà eliminare da Impostazioni › Account."
+- **I2 Account:** per un account demo (letto dal profilo), sotto "Esci", il tasto **"Elimina account demo"** (colore `error`) con il dialogo **"Eliminare l'account demo?"**, testo **"Si cancellano l'account, le case rimaste senza altri membri e tutti i loro dati. Non si può annullare."**, tasti **"Annulla"** e **"Elimina"** (testo nel colore `error`). Durante l'eliminazione il tasto mostra un indicatore. Errori (snackbar): "Nessuna connessione. Controlla la rete e riprova." oppure "Non è stato possibile eliminare l'account. Riprova.". Per un account vero il tasto non c'è.
+- **Eliminazione** (`delete_my_demo_account()`, in una transazione): in ogni casa di cui l'account è membro attivo, se non restano altri membri attivi la casa si cancella con **tutti** i suoi dati; se restano altri membri (demo) il membro diventa ex membro e le sue righe restano, come per ogni ex membro (le quote predefinite non si ricalcolano: rischio accettato, solo `dev`). Poi si cancella l'account, con profilo, impostazioni, dispositivi, email PayPal e credenziali di Enable Banking (con il segreto di Vault). Una seconda chiamata, dopo una risposta persa, non fa niente.
+- **Dopo l'eliminazione, sul dispositivo:** come "Esci" (id del dispositivo, stato dell'avvio salvato, uscita da Google e da Supabase), più **tutti i valori del dispositivo** (posizione chiesta, città, invito in sospeso, scelta della modalità demo), così il primo avvio si rifà intero. La riga di `devices` va con l'account: niente cancellazione separata. A2 senza il messaggio della sessione scaduta.
+- **Stato dell'avvio:** legge anche `is_demo` dal profilo e lo salva con lo stato dell'account; nessun passo nuovo.
+- **Banca:** nessun codice. Gli account demo si collegano solo alla Mock ASPSP con lo script di servizio, dopo che esiste una casa. All'eliminazione nessuna revoca della sessione su Enable Banking: la Mock non ha consensi reali.
+
+## 13. Criteri di accettazione
 
 - Con una sessione e una casa, l'avvio a freddo apre A1 e, dopo lo sblocco, l'hub; subito dopo l'accesso con Google A1 non compare.
 - Un secondo dispositivo con lo stesso account passa da A2 ad A11 all'hub, senza A3 né A7.
@@ -154,3 +172,6 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - In A9, arrivando da A8, il tasto "Più tardi" diventa "Continua" dopo una condivisione o una copia.
 - La voce "Saldo iniziale tra i membri" compare solo con almeno due membri e accetta solo cifre con somma zero.
 - "Nessun saldo da riportare" fissa a zero il saldo iniziale di ogni membro e toglie la voce a tutti.
+- Gli account demo esistono solo con il segreto `demo_accounts` in Vault: su `prod` né la casella di A2 né l'eliminazione, e il server rifiuta sia il flag sia l'eliminazione.
+- Un account demo non entra in una casa vera, né un account vero in una casa demo.
+- "Elimina account demo" chiede conferma ("Annulla" non elimina), cancella l'account e le case rimaste senza membri con tutti i loro dati, e il dispositivo riparte dal primo avvio, con A2 senza messaggi.

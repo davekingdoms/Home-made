@@ -41,9 +41,11 @@ Le migrazioni stanno in `supabase/migrations/`, i test pgTAP in `supabase/tests/
 | `display_name` | text | 1–80 caratteri dopo `btrim` |
 | `avatar_url` | text null | foto dell'account Google |
 | `paypal_me` | text null | nome PayPal.Me, 1–20 caratteri alfanumerici (regole esatte da verificare con il link PayPal.Me) |
+| `is_demo` | bool | predefinito `false`; account demo, solo sviluppo ([`accesso.md`](accesso.md), sezione 12) |
 | comuni | | `version`, `created_at`, `updated_at` |
 
 RLS: **select** il proprietario e i membri attivi della stessa casa, solo se il profilo è di un membro attivo (chi è uscito compare come "Ex membro"); **insert** e **update** solo il proprietario; nessun delete (va con l'account).
+Trigger (`check_profile_demo`, security definer perché legge l'interruttore): all'inserimento `is_demo = true` solo con l'interruttore degli account demo acceso (`demo_disabled`); poi `is_demo` non cambia mai, in nessun verso (`demo_immutable`).
 
 ### `user_settings` — impostazioni private dell'account
 | Colonna | Tipo | Note |
@@ -120,10 +122,22 @@ RLS: tutto solo il proprietario. La posizione per il meteo **non** si salva qui 
 | `create_household(id, name, start_date, cash_opening_cents)` | Crea la casa, il creatore come primo membro con la data di inizio della casa, poi (dai trigger) il conto Contanti, le quote predefinite e le categorie iniziali. Se `start_date` è oggi, `cash_opening_cents` (facoltativo) diventa il saldo iniziale dei contanti. | `no_profile`, `already_member`, `start_date_out_of_range` (da 90 giorni prima a 12 mesi dopo, con un giorno di tolleranza per i fusi orari) |
 | `create_invite(label)` | Crea un invito; restituisce token e codice (unica volta in cui il token esiste in chiaro). | `not_member`, `household_full` |
 | `invite_preview(code \| token)` | Prima di entrare: nome della casa, chi invita, nomi dei membri attivi. | nella colonna `error`: `invite_invalid`, `invite_expired`, `invite_used`, `invite_revoked`, `too_many_attempts` |
-| `redeem_invite(code \| token, cash_opening_cents)` | Crea il membro con `start_date = max(data di inizio della casa, oggi)` e segna l'invito come usato. Una seconda chiamata con lo stesso invito, dallo stesso account, restituisce lo stesso membro. | nella colonna `error`: come sopra, più `no_profile`, `already_member`, `household_full` |
+| `redeem_invite(code \| token, cash_opening_cents)` | Crea il membro con `start_date = max(data di inizio della casa, oggi)` e segna l'invito come usato. Una seconda chiamata con lo stesso invito, dallo stesso account, restituisce lo stesso membro. Una casa è tutta demo o tutta vera: chi entra ha `is_demo` uguale a quello dei membri attivi della casa (controllo dopo l'invito, prima dei posti). | nella colonna `error`: come sopra, più `no_profile`, `already_member`, `invite_demo_mismatch`, `household_full` |
 | `set_my_start_date(date)` | Sposta la data di inizio del membro **all'indietro**, fino a quella della casa. Non è ammessa se la casa non è ancora iniziata (la data resta quella della casa). Sposta anche la versione delle quote predefinite nata con il suo ingresso. | `not_member`, `start_date_out_of_range`, `household_not_started` |
 
-Il codice si accetta con o senza spazio e senza distinzione tra maiuscole e minuscole. `invite_preview` e `redeem_invite` ricevono il codice nel parametro `code` oppure il token del link nel parametro `token`; ogni chiamata conta come tentativo, tranne quelle rifiutate per `too_many_attempts`. **Lasciare la casa, rimuovere un membro ed eliminare l'account** arrivano con le impostazioni: lo schema ha già `left_at` e `user_id` nullable. Un membro uscito perde ogni accesso (`current_member_id()` è null).
+Il codice si accetta con o senza spazio e senza distinzione tra maiuscole e minuscole. `invite_preview` e `redeem_invite` ricevono il codice nel parametro `code` oppure il token del link nel parametro `token`; ogni chiamata conta come tentativo, tranne quelle rifiutate per `too_many_attempts`. **Lasciare la casa, rimuovere un membro ed eliminare l'account** arrivano con le impostazioni: lo schema ha già `left_at` e `user_id` nullable. Un membro uscito perde ogni accesso (`current_member_id()` è null). L'eliminazione degli account demo, solo per lo sviluppo, è qui sotto.
+
+### Account demo (solo sviluppo)
+Regole in [`accesso.md`](accesso.md), sezione 12.
+
+- **Interruttore:** segreto `demo_accounts` in Vault, con valore `enabled`, inserito a mano su `dev`, mai su `prod`; nessun valore nel repository. In locale e in CI lo creano e lo tolgono i test pgTAP.
+
+| Funzione | Cosa fa | Errori |
+|---|---|---|
+| `demo_accounts_enabled()` | Vero solo con il segreto `demo_accounts` uguale a `enabled`. Interna: security definer, `search_path` vuoto, nessun `execute` ad `anon` né ad `authenticated`. | — |
+| `delete_my_demo_account()` | Senza parametri, solo su `auth.uid()`, in una transazione. In ogni casa di cui l'utente è membro attivo, con un lock sulla casa: se non restano altri membri attivi cancella la casa e **tutti** i suoi dati nell'ordine delle chiavi esterne (il grezzo lascia prima i movimenti; anticipi e rimborsi, tag delle righe, quote, righe, giroconti, conguagli, salvadanai, movimenti, piani a rate, grezzo, saldi, conti, connessioni con le loro esecuzioni, richieste di collegamento, contatti, saldi iniziali, quote predefinite, tag, categorie, inviti, membri, casa); altrimenti il membro diventa ex membro (`left_at` = adesso) e le sue righe restano, senza ricalcolare le quote predefinite. Poi cancella l'utente da `auth.users`: le cascate tolgono profilo, `user_settings`, `devices`, `paypal_emails`, `invite_attempts` ed `eb_credentials` con il segreto di Vault. Se l'utente non c'è più (seconda chiamata dopo una risposta persa) non fa niente. Security definer, `execute` solo ad `authenticated`. | `demo_disabled` (interruttore spento), `not_demo` (profilo non demo) |
+
+Errori solo come chiavi, senza dati nei messaggi. Il test pgTAP controlla che le tabelle che puntano a una casa, direttamente o no, siano proprio quelle che la funzione svuota: una tabella nuova lo fa fallire finché non entra nella funzione.
 
 ## 4. Conti e dati delle banche
 
@@ -266,7 +280,7 @@ RLS: tutto con `can_see_transaction`. Chi è solo coinvolto in una riga **non le
 
 Il **tipo di movimento sta sulla riga**: una transazione può essere in parte giroconto e in parte commissioni. Nel **bilancio** entrano solo le righe `expense` e `income` con `excluded_from_budget = false`.
 Vincoli (trigger differiti a fine transazione):
-- la somma delle righe non eliminate è uguale a `transactions.amount_cents` (`lines_sum_mismatch`);
+- la somma delle righe non eliminate è uguale a `transactions.amount_cents` (`lines_sum_mismatch`); una transazione cancellata insieme alle sue righe non si controlla più (la chiave esterna non lascia righe senza transazione);
 - una riga con una quota di un membro diverso da chi ha pagato ha una **categoria condivisa** e solo tag condivisi (`shared_line_personal_category`, `shared_line_personal_tag`);
 - una categoria personale si usa solo dal suo proprietario, cioè sulle righe che ha pagato lui (`personal_category_not_owned`); lo stesso per i tag (`personal_tag_not_owned`).
 
@@ -479,6 +493,12 @@ Utenti inventati: **Anna**, **Bruno**, **Carla**; "Casa di prova" con 1, 2 e 3 m
 - Ingresso: data di inizio = oggi, oppure quella della casa se non è iniziata (e non si sposta); spostamento all'indietro fino a quella della casa; nuova versione delle quote uguali dalla data di inizio del nuovo membro.
 - Profili: nome, foto e PayPal.Me visibili ai membri della casa, non a Dario; `user_settings` e `devices` solo al proprietario.
 - Un membro uscito non vede più niente e non è visibile nei profili.
+
+**Account demo** (utenti demo Anna e Bruno in "Casa demo", Carla vera in "Casa di prova")
+- Interruttore spento: profilo demo e eliminazione rifiutati (`demo_disabled`); acceso: profilo demo creato, `is_demo` immutabile nei due versi (`demo_immutable`).
+- `redeem_invite`: demo → casa vera e vero → casa demo rifiutati (`invite_demo_mismatch`, invito non consumato); demo → casa demo ammesso.
+- Eliminazione con un altro membro demo: casa intatta, membro ex, utente cancellato. Eliminazione dell'ultimo membro, con righe in **ogni** tabella che punta alla casa: nessuna riga rimasta della casa né dell'utente (anche il segreto di Vault), controlli differiti superati, altre case intatte.
+- Account vero → `not_demo`; seconda chiamata dopo l'eliminazione senza errori; `execute` negato ad `anon`, interruttore non leggibile dall'app.
 
 **Conti e transazioni**
 - Conti, saldi, connessioni e transazioni visibili solo al proprietario; grezzo e credenziali invisibili all'app.
