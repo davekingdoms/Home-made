@@ -154,6 +154,30 @@ void main() {
       expect(profile.url.queryParameters['id'], 'eq.$_userId');
     });
 
+    test('reads the flag of a demo account', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (request) async {
+        return switch (request.url.path) {
+          '/rest/v1/profiles' => _json([
+            {'id': _userId, 'is_demo': true},
+          ]),
+          '/rest/v1/user_settings' => _json([
+            {'privacy_notice_version': 'p1'},
+          ]),
+          _ => _json(null),
+        };
+      });
+
+      final status = await SupabaseAccountRepository(client)
+          .readStatus(_userId);
+
+      expect(status.isDemo, isTrue);
+      final profile = requests.firstWhere(
+        (request) => request.url.path == '/rest/v1/profiles',
+      );
+      expect(profile.url.queryParameters['select'], contains('is_demo'));
+    });
+
     test('reads a new account as one without anything', () async {
       final client = _client([], (request) async {
         if (request.url.path.startsWith('/rest/v1/rpc/')) return _json(null);
@@ -205,6 +229,26 @@ void main() {
       });
     });
 
+    test('creates the profile of a demo account with its flag', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (_) async => http.Response('', 201));
+
+      await SupabaseAccountRepository(client).saveFirstAccess(
+        userId: _userId,
+        displayName: 'Anna',
+        noticeVersion: 'p1',
+        readAt: DateTime.utc(2030, 3, 1, 9),
+        isDemo: true,
+      );
+
+      expect(jsonDecode(requests.first.body), {
+        'id': _userId,
+        'display_name': 'Anna',
+        'avatar_url': null,
+        'is_demo': true,
+      });
+    });
+
     test('with the checkbox only saves only the notice', () async {
       final requests = <http.Request>[];
       final client = _client(requests, (_) async => http.Response('', 201));
@@ -216,6 +260,29 @@ void main() {
       );
 
       expect(requests.single.url.path, '/rest/v1/user_settings');
+    });
+
+    test('deletes the demo account with its function', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (_) async => http.Response('', 204));
+
+      await SupabaseAccountRepository(client).deleteDemoAccount();
+
+      final request = requests.single;
+      expect(request.method, 'POST');
+      expect(request.url.path, '/rest/v1/rpc/delete_my_demo_account');
+    });
+
+    test('throws when the deletion is refused', () async {
+      final client = _client(
+        [],
+        (_) async => _json({'code': 'P0001', 'message': 'not_demo'}, 400),
+      );
+
+      await expectLater(
+        SupabaseAccountRepository(client).deleteDemoAccount(),
+        throwsA(isA<PostgrestException>()),
+      );
     });
   });
 }

@@ -136,7 +136,10 @@ class DeviceRegistry {
   /// Deletes the row of the device and its local id. A sync still running
   /// and the deletion each wait at most [forgetTimeout]: on a slow network
   /// or without one the local id goes anyway.
-  Future<void> forget() async {
+  ///
+  /// With [deleteRow] false only the local id goes: after the deletion of a
+  /// demo account the row already went with it.
+  Future<void> forget({bool deleteRow = true}) async {
     _epoch++;
     final running = _running;
     if (running != null) {
@@ -150,10 +153,12 @@ class DeviceRegistry {
     }
     final identity = await this.identity();
     if (identity == null) return;
-    try {
-      await _remote.delete(identity.id).timeout(forgetTimeout);
-    } on Object catch (error) {
-      _log('delete', error);
+    if (deleteRow) {
+      try {
+        await _remote.delete(identity.id).timeout(forgetTimeout);
+      } on Object catch (error) {
+        _log('delete', error);
+      }
     }
     await _store.remove(storeKey);
   }

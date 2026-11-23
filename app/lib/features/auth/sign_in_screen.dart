@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/design/app_logo.dart';
 import 'package:homemade/design/notice_card.dart';
 import 'package:homemade/design/phone_layout.dart';
@@ -28,9 +29,13 @@ String? signInMessage(SignInResult result) => switch (result) {
   SignInResult.failed => 'Accesso non riuscito. Riprova.',
 };
 
+/// Text of the checkbox of the demo accounts in A2.
+const demoChoiceLabel = 'Modalità demo';
+
 /// Sign-in (A2): logo, name of the app, the "Continua con Google" button,
 /// the one way to sign in and to sign up (`docs/spec/accesso.md`,
-/// section 3).
+/// section 3). On `dev` only, the checkbox of the demo accounts
+/// (section 12).
 class SignInScreen extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -40,6 +45,26 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _signingIn = false;
+
+  /// The choice of "Modalità demo"; null until it is read from the device.
+  bool? _demo;
+
+  @override
+  void initState() {
+    super.initState();
+    if (ref.read(appConfigProvider).isDev) unawaited(_readDemoChoice());
+  }
+
+  Future<void> _readDemoChoice() async {
+    final chosen = await ref.read(startupGateProvider).demoChosen();
+    // A tap that came first wins.
+    if (mounted && _demo == null) setState(() => _demo = chosen);
+  }
+
+  void _chooseDemo(bool demo) {
+    setState(() => _demo = demo);
+    unawaited(ref.read(startupGateProvider).chooseDemo(demo: demo));
+  }
 
   Future<void> _signIn() async {
     setState(() => _signingIn = true);
@@ -110,9 +135,51 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 color: scheme.onSurfaceVariant,
               ),
             ),
+            if (ref.watch(appConfigProvider).isDev) ...[
+              const SizedBox(height: AppSpacing.md),
+              _DemoCheckbox(
+                value: _demo ?? false,
+                enabled: !_signingIn,
+                onChanged: _chooseDemo,
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "Modalità demo": the box and the text toggle it.
+class _DemoCheckbox extends StatelessWidget {
+  const new({
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Checkbox(
+          value: value,
+          semanticLabel: demoChoiceLabel,
+          onChanged: enabled ? (value) => onChanged(value ?? false) : null,
+        ),
+        GestureDetector(
+          onTap: enabled ? () => onChanged(!value) : null,
+          child: Text(
+            demoChoiceLabel,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+      ],
     );
   }
 }

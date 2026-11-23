@@ -50,6 +50,13 @@ void main() {
     expect(_config(appEnv: '').missingKeys, isEmpty);
   });
 
+  test('is dev only when APP_ENV is exactly dev', () {
+    expect(_config().isDev, isTrue);
+    for (final appEnv in ['', 'prod', 'test', 'Dev', 'dev ', ' dev']) {
+      expect(_config(appEnv: appEnv).isDev, isFalse, reason: appEnv);
+    }
+  });
+
   test('builds the address of a page of the Pages site', () {
     final config = _config(pagesBaseUrl: 'https://example.pages.dev');
 

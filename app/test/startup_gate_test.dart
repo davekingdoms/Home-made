@@ -282,6 +282,7 @@ void main() {
         displayName: 'Anna',
         avatarUrl: null,
         noticeVersion: privacyNoticeVersion,
+        isDemo: false,
       ));
       expect(gate.value, const StartupState.hub());
       expect(harness.savedState?.noticeRead, isTrue);
@@ -339,6 +340,109 @@ void main() {
       expect(harness.store.values, isNot(contains(DeviceRegistry.storeKey)));
       expect(harness.auth.signOuts, 1);
       expect(gate.value.step, StartupStep.signIn);
+    });
+
+    test('keeps the choice of a demo account not yet used', () async {
+      final harness = _Harness(account: newAccount);
+      harness.store.values[StartupGate.demoChoiceKey] = 'true';
+      final gate = harness.start();
+      await flush();
+
+      await gate.signOut();
+
+      expect(harness.store.values, {StartupGate.demoChoiceKey: 'true'});
+    });
+  });
+
+  group('demo accounts', () {
+    test('the choice of A2 makes A3 create a demo profile', () async {
+      final harness = _Harness(account: newAccount);
+      final gate = harness.start();
+      await gate.chooseDemo(demo: true);
+      expect(await gate.demoChosen(), isTrue);
+      harness.auth.loseSession();
+      harness.auth.openSession();
+      await flush();
+
+      expect(
+        gate.value,
+        const StartupState.welcome(noticeOnly: false, demo: true),
+      );
+
+      await gate.saveFirstAccess(displayName: 'Anna');
+
+      expect(harness.accounts.saves.single.isDemo, isTrue);
+      expect(await gate.demoChosen(), isFalse);
+      expect(gate.isDemo, isTrue);
+      expect(harness.savedState?.isDemo, isTrue);
+    });
+
+    test('with a profile the choice goes, without effect', () async {
+      final harness = _Harness(account: oldNoticeAccount);
+      harness.store.values[StartupGate.demoChoiceKey] = 'true';
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.welcome(noticeOnly: true));
+      expect(await gate.demoChosen(), isFalse);
+
+      await gate.saveFirstAccess();
+      expect(harness.accounts.saves.single.isDemo, isFalse);
+      expect(gate.isDemo, isFalse);
+    });
+
+    test('the account says whether it is demo', () async {
+      final gate = _Harness(account: demoAccount).start();
+      await flush();
+
+      expect(gate.isDemo, isTrue);
+    });
+
+    test('the deletion empties the device and signs out in silence', () async {
+      final harness = _Harness(account: demoAccount);
+      final gate = harness.start();
+      await flush();
+      harness.store.values['device.location'] = 'asked';
+
+      await gate.deleteDemoAccount();
+      await flush();
+
+      expect(harness.accounts.deletions, 1);
+      expect(harness.store.values, isEmpty);
+      expect(harness.devices.rows, hasLength(1));
+      expect(harness.auth.signOuts, 1);
+      expect(gate.value, const StartupState.signIn(SignInArrival.signedOut));
+    });
+
+    test('a failed deletion changes nothing and throws', () async {
+      final harness = _Harness(account: demoAccount)
+        ..accounts.deleteError = offline;
+      final gate = harness.start();
+      await flush();
+      final before = Map.of(harness.store.values);
+
+      await expectLater(gate.deleteDemoAccount(), throwsA(offline));
+
+      expect(harness.store.values, before);
+      expect(harness.auth.signOuts, 0);
+      expect(gate.value, const StartupState.hub());
+    });
+  });
+
+  group('the saved state', () {
+    test('keeps the flag of a demo account', () {
+      expect(AccountStatus.fromJson(demoAccount.toJson()), demoAccount);
+    });
+
+    test('saved before the demo accounts reads as a real account', () {
+      expect(
+        AccountStatus.fromJson({
+          'hasProfile': true,
+          'noticeVersion': privacyNoticeVersion,
+          'hasMember': true,
+        }),
+        readyAccount,
+      );
     });
   });
 }

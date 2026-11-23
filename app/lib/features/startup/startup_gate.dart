@@ -41,6 +41,10 @@ class StartupGate extends ChangeNotifier
   /// Key of the saved state of the account [userId] in the [LocalStore].
   static String storeKey(String userId) => 'startup.account.$userId';
 
+  /// Key of the choice of "Modalità demo" (A2) in the [LocalStore]: a value
+  /// of the device, kept until the profile of a new account uses it.
+  static const demoChoiceKey = 'auth.demo';
+
   final AuthRepository _auth;
   final AccountRepository _accounts;
   final LocalStore _store;
@@ -55,6 +59,10 @@ class StartupGate extends ChangeNotifier
   /// Last state of the account, read or saved.
   AccountStatus? _status;
 
+  /// Whether the profile A3 creates is of a demo account: the choice of A2,
+  /// read for an account without a profile.
+  bool _demoChosen = false;
+
   /// True while "Esci" runs: the session ends because the user asked.
   bool _signingOut = false;
 
@@ -65,6 +73,32 @@ class StartupGate extends ChangeNotifier
   @override
   StartupState get value => _state;
 
+  /// Whether the signed-in account is a demo account, as its profile says.
+  bool get isDemo => _status?.isDemo ?? false;
+
+  /// The choice of "Modalità demo" saved on this device (A2).
+  Future<bool> demoChosen() async {
+    try {
+      return await _store.read(demoChoiceKey) != null;
+    } on Object catch (error) {
+      _log('read demo choice', error);
+      return false;
+    }
+  }
+
+  /// Saves the choice of "Modalità demo" (A2), or forgets it.
+  Future<void> chooseDemo({required bool demo}) async {
+    try {
+      if (demo) {
+        await _store.write(demoChoiceKey, 'true');
+      } else {
+        await _store.remove(demoChoiceKey);
+      }
+    } on Object catch (error) {
+      _log('save demo choice', error);
+    }
+  }
+
   /// Reads the state of the account again, after it was unavailable.
   void retry() {
     final userId = _userId;
@@ -73,25 +107,33 @@ class StartupGate extends ChangeNotifier
   }
 
   /// Saves the first access (A3) of the signed-in user, then moves to the
-  /// next step. With [displayName] it creates or updates the profile too;
-  /// without it, it saves only the version of the notice read.
+  /// next step. With [displayName] it creates or updates the profile too,
+  /// as a demo account if A2 chose so, and the choice goes; without it, it
+  /// saves only the version of the notice read.
   ///
   /// It throws when the save fails: A3 tells the user and stays.
   Future<void> saveFirstAccess({String? displayName, String? avatarUrl}) async {
     final userId = _userId;
     final status = _status;
     if (userId == null || status == null) return;
+    final demo = displayName != null && _demoChosen;
     await _accounts.saveFirstAccess(
       userId: userId,
       displayName: displayName,
       avatarUrl: avatarUrl,
       noticeVersion: privacyNoticeVersion,
       readAt: _now(),
+      isDemo: demo,
     );
     if (userId != _userId) return;
+    if (displayName != null) {
+      _demoChosen = false;
+      await chooseDemo(demo: false);
+    }
     final saved = status.copyWith(
       hasProfile: status.hasProfile || displayName != null,
       noticeVersion: privacyNoticeVersion,
+      isDemo: status.isDemo || demo,
     );
     _status = saved;
     await _save(userId, saved);
@@ -107,6 +149,29 @@ class StartupGate extends ChangeNotifier
     try {
       await _devices.forget();
       if (userId != null) await _store.remove(storeKey(userId));
+      await _auth.signOut();
+    } finally {
+      _signingOut = false;
+    }
+  }
+
+  /// "Elimina account demo" (I2): deletes the account on the server, then
+  /// leaves it as "Esci" does, and forgets every value of the device, so the
+  /// first start runs again in full. The row of the device went with the
+  /// account: only its local id goes here.
+  ///
+  /// It throws when the deletion fails: I2 tells the user and stays.
+  Future<void> deleteDemoAccount() async {
+    await _accounts.deleteDemoAccount();
+    _signingOut = true;
+    try {
+      await _devices.forget(deleteRow: false);
+      try {
+        await _store.clear();
+      } on Object catch (error) {
+        _log('clear', error);
+      }
+      _demoChosen = false;
       await _auth.signOut();
     } finally {
       _signingOut = false;
@@ -171,19 +236,35 @@ class StartupGate extends ChangeNotifier
     } else {
       status = await _saved(userId);
     }
+    final demo = await _demoFor(status);
     if (generation != _generation) return;
     if (status == null) {
       _set(StartupState.unavailable(failure));
       return;
     }
     _status = status;
+    _demoChosen = demo;
     _set(_stepFor(status));
+  }
+
+  /// Whether the choice of A2 applies to the account in [status]: only to a
+  /// new one. With a profile already there the choice goes, without effect.
+  Future<bool> _demoFor(AccountStatus? status) async {
+    if (status == null) return false;
+    if (status.hasProfile) {
+      await chooseDemo(demo: false);
+      return false;
+    }
+    return await demoChosen();
   }
 
   /// The first step missing for an account in [status].
   StartupState _stepFor(AccountStatus status) {
     if (!status.noticeRead) {
-      return StartupState.welcome(noticeOnly: status.hasProfile);
+      return StartupState.welcome(
+        noticeOnly: status.hasProfile,
+        demo: !status.hasProfile && _demoChosen,
+      );
     }
     if (!_householdDone(status)) return const StartupState.household();
     if (!_locationDone) return const StartupState.location();

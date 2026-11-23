@@ -20,6 +20,10 @@ import 'package:material_ui/material_ui.dart';
 /// after removing the spaces at both ends.
 const maxDisplayNameLength = 80;
 
+/// Line of A3 for a demo account, under the name.
+const demoAccountNotice =
+    'Account demo: si potrà eliminare da Impostazioni › Account.';
+
 /// Whether [name], without the spaces at both ends, fits `profiles`.
 bool isValidDisplayName(String name) {
   final length = name.trim().runes.length;
@@ -134,6 +138,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     ],
                     onChanged: (_) => setState(() {}),
                   ),
+                  if (state.demo) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      demoAccountNotice,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                 ],
                 _NoticeCheckbox(

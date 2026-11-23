@@ -34,6 +34,9 @@ class AppConfig {
   static const googleWebClientIdKey = 'GOOGLE_WEB_CLIENT_ID';
   static const pagesBaseUrlKey = 'PAGES_BASE_URL';
 
+  /// Value of [appEnv] for the development environment.
+  static const devEnv = 'dev';
+
   /// Every key, in the order of `env.example.json`.
   static const List<String> keys = [
     appEnvKey,
@@ -62,6 +65,10 @@ class AppConfig {
     if (googleWebClientId.isEmpty) googleWebClientIdKey,
     if (pagesBaseUrl.isEmpty) pagesBaseUrlKey,
   ];
+
+  /// Whether the build points to the development environment: `APP_ENV` is
+  /// exactly `dev`. Only there sign-in (A2) offers the demo accounts.
+  bool get isDev => appEnv == devEnv;
 
   /// The page [path] of the Pages site, such as `/privacy/`.
   Uri pagesUri(String path) => Uri.parse('$pagesBaseUrl$path');

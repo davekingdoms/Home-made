@@ -20,6 +20,14 @@ const newAccount = AccountStatus(
   hasMember: false,
 );
 
+/// A demo account that has done every step.
+const demoAccount = AccountStatus(
+  hasProfile: true,
+  noticeVersion: privacyNoticeVersion,
+  hasMember: true,
+  isDemo: true,
+);
+
 /// An account with its profile and an older notice.
 const oldNoticeAccount = AccountStatus(
   hasProfile: true,
@@ -45,6 +53,9 @@ class MemoryLocalStore implements LocalStore {
 
   @override
   Future<void> remove(String key) async => values.remove(key);
+
+  @override
+  Future<void> clear() async => values.clear();
 }
 
 /// A save of the first access, as [FakeAccountRepository] received it.
@@ -53,6 +64,7 @@ typedef FirstAccessSave = ({
   String? displayName,
   String? avatarUrl,
   String noticeVersion,
+  bool isDemo,
 });
 
 /// [AccountRepository] in memory.
@@ -74,7 +86,11 @@ class FakeAccountRepository implements AccountRepository {
   /// When set, [saveFirstAccess] waits for it.
   Completer<void>? saveGate;
 
+  /// When set, [deleteDemoAccount] throws it.
+  Exception? deleteError;
+
   int reads = 0;
+  int deletions = 0;
   final saves = <FirstAccessSave>[];
 
   @override
@@ -93,6 +109,7 @@ class FakeAccountRepository implements AccountRepository {
     required DateTime readAt,
     String? displayName,
     String? avatarUrl,
+    bool isDemo = false,
   }) async {
     await saveGate?.future;
     final error = saveError;
@@ -102,7 +119,15 @@ class FakeAccountRepository implements AccountRepository {
       displayName: displayName,
       avatarUrl: avatarUrl,
       noticeVersion: noticeVersion,
+      isDemo: isDemo,
     ));
+  }
+
+  @override
+  Future<void> deleteDemoAccount() async {
+    final error = deleteError;
+    if (error != null) throw error;
+    deletions++;
   }
 }
 

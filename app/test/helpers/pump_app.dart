@@ -27,10 +27,12 @@ const testConfig = AppConfig(
 ///
 /// Every dependency is a fake: [auth] defaults to an open session, and
 /// [accounts] to an account that has done every step. [openedLinks]
-/// collects the pages the app opens in the browser.
+/// collects the pages the app opens in the browser. [config] defaults to
+/// [testConfig], whose `APP_ENV` is not `dev`.
 Future<GoRouter> pumpApp(
   WidgetTester tester, {
   String location = '/',
+  AppConfig config = testConfig,
   AuthRepository? auth,
   AccountRepository? accounts,
   DeviceRepository? devices,
@@ -39,7 +41,7 @@ Future<GoRouter> pumpApp(
 }) async {
   final container = ProviderContainer(
     overrides: [
-      appConfigProvider.overrideWithValue(testConfig),
+      appConfigProvider.overrideWithValue(config),
       authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
       accountRepositoryProvider.overrideWithValue(
         accounts ?? FakeAccountRepository(),
