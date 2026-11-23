@@ -259,7 +259,7 @@ Vincoli e trigger:
 
 RLS: tutto con `can_see_transaction`. Chi è solo coinvolto in una riga **non legge mai la transazione**, quindi non vede mai il totale né l'email della controparte. Insert dall'app solo con `source = 'manual'`.
 
-**Da classificare** = transazioni con almeno una riga senza `kind`: non c'è una colonna di stato.
+**Da classificare:** non c'è una colonna di stato. La definizione unica (transazioni con una riga senza `kind`, piani a rate senza categoria) è `unclassified_count()`, sezione 10.
 
 ### `transaction_lines`
 | Colonna | Tipo | Note |
@@ -342,6 +342,7 @@ Se cambia l'importo di una riga, i centesimi si ricalcolano con gli stessi pesi.
 | Riga di un'entrata | anche gli altri membri attivi, se chi la riceve ha `show_income = true` e la data della riga è dalla **data di inizio di chi guarda** |
 | Conguaglio | i due membri coinvolti; gli altri ne vedono solo l'effetto sui saldi netti |
 | Saldi netti di tutti i membri | tutti i membri attivi, **solo con `member_balances()`**: nessuna riga in più diventa visibile |
+| Proprie spese per mese | chi chiama, **solo con `my_spending_by_month()`**: le sue quote e le altre quote delle stesse righe, nessuna riga in più diventa visibile |
 | Categorie e tag condivisi | tutti i membri attivi; personali solo il proprietario |
 | Salvadanaio e versamenti | i membri del salvadanaio; mai i saldi dei conti |
 | Anticipi | come la riga da cui nascono |
@@ -457,6 +458,15 @@ net = Σ righe pagate da lui (−amount_cents)
 - La somma dei saldi netti di una casa è sempre zero (test).
 - Il **piano dei pagamenti** (chi deve di più paga chi deve ricevere di più) si calcola nell'app dai saldi.
 
+### Funzioni di lettura (hub, Movimenti, Riepilogo)
+I numeri dell'hub, con **una sola definizione** per l'hub, il badge di Movimenti e il Riepilogo. Tutte `stable`, con `search_path` vuoto, `execute` solo ad `authenticated`; agiscono solo sul membro attivo di chi chiama (`current_member_id()`), senza parametri con un id di membro; **senza casa** danno 0 o, per i mesi, righe a zero. Errori solo come chiavi.
+
+| Funzione | Restituisce | Errori |
+|---|---|---|
+| `unclassified_count()` | **Da classificare**, numero esatto (il "99+" lo fa l'app). Somma di: le **transazioni** di chi chiama (`paid_by_member_id`; con un conto è il proprietario), non eliminate, con almeno una riga non eliminata senza `kind` che non è collegata (`transaction_lines.installment_plan_id`) a un piano non eliminato senza categoria; i **piani a rate** dei suoi conti, non eliminati, senza categoria, **qualunque sia lo stato** (anche `completed`, anche nati prima della data di inizio). Un piano conta **1** al posto delle sue rate; la rata senza tipo di un piano eliminato conta con la sua transazione. Security invoker: legge con le policy di chi chiama. | — |
+| `my_spending_by_month(today, months)` | "Le tue spese": `month` (primo giorno del mese), `shared_cents`, `personal_cents` per ognuno degli ultimi `months` mesi (predefinito 6) **compreso quello di `today`**, dal più vecchio, anche a zero. `today` è la data locale del telefono (il server è in UTC). Contano le **proprie quote** delle righe `expense` non eliminate, con `excluded_from_budget = false`, con la data nel mese e dalla propria data di inizio, di transazioni non eliminate e in EUR (le altre valute restano rimandate). Spese in positivo, `-sum(amount_cents)` delle quote: un reso classificato come spesa riduce il totale. **Personali** = righe con la sola quota di chi chiama, pagate da lui (Mia); **Condivise** = tutte le altre righe con una sua quota (con altri membri, o pagate da un altro solo per lui); nessuna sovrapposizione. Le righe pagate per altri senza una propria quota non contano. Security definer, come `member_balances()`: legge solo le quote di chi chiama, le altre quote delle stesse righe (che vede, avendo una quota) e della transazione solo `deleted_at` e `currency`; con le policy, `can_see_line()` girerebbe su ogni quota di sempre. | `invalid_months` (fuori da 1–12 o null), `invalid_date` (`today` null) |
+| `my_accounts_total()` — **provvisoria** | Totale in centesimi di EUR dei conti di chi chiama (`owner_member_id`), non archiviati e non esclusi dal totale. **Conti delle banche** (`bank`, `card`, `paypal`): il saldo in EUR di `account_balances` del tipo `preferred_balance_type`; se è null o il conto non ha un saldo in EUR di quel tipo, il primo presente tra `ITAV`, `CLAV`, `XPCD`, `ITBD`, `CLBD`, poi qualunque altro tipo in ordine alfabetico; senza un saldo in EUR, 0. Il saldo negativo di una carta resta negativo; PayPal solo in EUR. **Contanti e manuali** in EUR: `coalesce(opening_balance_cents, 0)` + `amount_cents` delle transazioni del conto non eliminate e in EUR; in un'altra valuta, 0. Security invoker. | — |
+
 ### `paypal_emails`
 `id`, `user_id`, `email` (minuscolo, **unica**: una persona per email), `source` (`linked_account`, `manual`), comuni.
 RLS: tutto solo il proprietario; il riconoscimento dei conguagli la legge solo lato server.
@@ -520,3 +530,9 @@ Utenti inventati: **Anna**, **Bruno**, **Carla**; "Casa di prova" con 1, 2 e 3 m
 - `member_balances()` con tre membri su un caso calcolato a mano: spese condivise, una spesa "Per Carla", un'entrata condivisa, un anticipo con il rimborso, un conguaglio, il saldo iniziale; **somma zero**.
 - Saldo iniziale: somma diversa da zero rifiutata; "Nessun saldo da riportare" salvato come zeri; escluso un membro entrato dopo la data di inizio della casa.
 - Salvadanaio condiviso: i membri vedono i versamenti, non i conti; un non membro non vede il salvadanaio.
+
+**Numeri dell'hub** (Anna e Bruno in "Casa di prova", Carla che entra dopo; Dario prima senza casa, poi da solo nella sua)
+- Permessi: `execute` ad `authenticated`, negato ad `anon`; `unclassified_count()` e `my_accounts_total()` security invoker, `my_spending_by_month()` security definer.
+- `unclassified_count()`: una riga senza tipo (1); due righe senza tipo (1); divisa con una riga classificata (1); tutte classificate (0); riga eliminata; movimento manuale eliminato; una transazione di Bruno, anche inserita da Anna, non conta per Anna; piano senza categoria con due rate senza tipo (1); piano con categoria e rata senza tipo (1, la rata); piano eliminato (contano le sue rate senza tipo); piano `completed` e piano nato prima della data di inizio (1); Dario senza casa (0).
+- `my_spending_by_month()`: un membro (tutto in Personali); due membri con Mia, condivisa 50/50, pagata da Bruno per Anna sola (Condivise), pagata da Anna per Bruno solo (non conta); tre membri con quote diverse e il centesimo di chi paga; esclusa dal bilancio, tipi diversi da `expense`, riga eliminata, movimento eliminato o in USD (nemmeno per chi ha solo una quota), reso positivo; ultimo e primo giorno del mese; mesi a zero; `months` = 1, 12, 0, 13 e null, `today` null; righe della casa di Dario mai contate; Dario senza casa (righe a zero).
+- `my_accounts_total()`: tipo preferito, ordine dei tipi con `preferred_balance_type` null, tipo preferito senza saldo in EUR, conto senza saldo, carta negativa, PayPal con EUR e USD, conto escluso dal totale, conto archiviato, contanti con saldo iniziale e transazioni (una eliminata), conto manuale con una transazione in USD, conto manuale in USD, conti di Bruno mai contati, Dario senza casa (0).

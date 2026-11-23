@@ -44,7 +44,8 @@ select set_eq(
     'can_see_installment_plan', 'set_line_shares', 'split_line',
     'default_shares_at', 'set_default_shares', 'merge_categories',
     'set_initial_balances', 'member_balances', 'is_piggy_bank_member',
-    'delete_my_demo_account'
+    'delete_my_demo_account', 'unclassified_count', 'my_spending_by_month',
+    'my_accounts_total'
   ],
   'the app calls only the support and RPC functions'
 );
