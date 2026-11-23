@@ -51,16 +51,19 @@ class StartupState {
   const new unavailable(RemoteFailure this.failure)
     : step = StartupStep.unavailable,
       arrival = null,
-      noticeOnly = false;
+      noticeOnly = false,
+      demo = false;
 
   const new signIn([SignInArrival this.arrival = SignInArrival.start])
     : step = StartupStep.signIn,
       failure = null,
-      noticeOnly = false;
+      noticeOnly = false,
+      demo = false;
 
   /// First access; [noticeOnly] when the profile is already there and only
-  /// the version of the notice changed.
-  const new welcome({required this.noticeOnly})
+  /// the version of the notice changed; [demo] when the profile A3 creates
+  /// is of a demo account, as chosen in A2.
+  const new welcome({required this.noticeOnly, this.demo = false})
     : step = StartupStep.welcome,
       failure = null,
       arrival = null;
@@ -76,7 +79,11 @@ class StartupState {
 
   const new hub() : this._(StartupStep.hub);
 
-  const new _(this.step) : failure = null, arrival = null, noticeOnly = false;
+  const new _(this.step)
+    : failure = null,
+      arrival = null,
+      noticeOnly = false,
+      demo = false;
 
   final StartupStep step;
 
@@ -89,6 +96,9 @@ class StartupState {
   /// Whether A3 shows the checkbox only.
   final bool noticeOnly;
 
+  /// Whether A3 creates the profile of a demo account.
+  final bool demo;
+
   /// Whether A2 says that the session expired.
   bool get sessionLost => arrival == SignInArrival.sessionLost;
 
@@ -98,10 +108,11 @@ class StartupState {
       other.step == step &&
       other.failure == failure &&
       other.arrival == arrival &&
-      other.noticeOnly == noticeOnly;
+      other.noticeOnly == noticeOnly &&
+      other.demo == demo;
 
   @override
-  int get hashCode => Object.hash(step, failure, arrival, noticeOnly);
+  int get hashCode => Object.hash(step, failure, arrival, noticeOnly, demo);
 
   @override
   String toString() => 'StartupState(${step.name})';

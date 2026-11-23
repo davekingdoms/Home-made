@@ -114,6 +114,7 @@ void main() {
         displayName: 'Anna Maria',
         avatarUrl: 'https://example.com/anna.png',
         noticeVersion: privacyNoticeVersion,
+        isDemo: false,
       ));
       expect(find.byType(HubScreen), findsOneWidget);
     });

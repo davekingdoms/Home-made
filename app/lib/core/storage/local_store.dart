@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 part 'local_store.g.dart';
 
 /// Small values of this installation, kept on the device: its id, the
-/// startup state of each account and, from the next iterations, the values
-/// the device asks only once (location, pending invite, unlock time).
+/// startup state of each account, the choice of a demo account and, from the
+/// next iterations, the values the device asks only once (location, pending
+/// invite, unlock time).
 ///
 /// Never data of the finances: their cache is a database of its own.
 abstract interface class LocalStore {
@@ -16,6 +17,9 @@ abstract interface class LocalStore {
 
   /// Removes [key]; nothing happens when it is not there.
   Future<void> remove(String key);
+
+  /// Removes every value: the device is as after a new installation.
+  Future<void> clear();
 }
 
 /// [LocalStore] on the asynchronous API of `shared_preferences`.
@@ -33,6 +37,9 @@ class SharedPreferencesLocalStore implements LocalStore {
 
   @override
   Future<void> remove(String key) => _preferences.remove(key);
+
+  @override
+  Future<void> clear() => _preferences.clear();
 }
 
 /// The store of the app. `main` overrides it; tests use one in memory.

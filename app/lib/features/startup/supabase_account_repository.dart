@@ -1,8 +1,9 @@
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// [AccountRepository] on Supabase: `profiles`, `user_settings` and
-/// `current_member_id()`, all under the policies of the signed-in user.
+/// [AccountRepository] on Supabase: `profiles`, `user_settings`,
+/// `current_member_id()` and `delete_my_demo_account()`, all under the
+/// policies of the signed-in user.
 class SupabaseAccountRepository implements AccountRepository {
   const new(this._client);
 
@@ -15,7 +16,7 @@ class SupabaseAccountRepository implements AccountRepository {
     final results = await Future.wait<Object?>([
       _client
           .from('profiles')
-          .select('id')
+          .select('id, is_demo')
           .eq('id', userId)
           .maybeSingle()
           .retry(enabled: false),
@@ -35,6 +36,10 @@ class SupabaseAccountRepository implements AccountRepository {
         _ => null,
       },
       hasMember: memberId != null,
+      isDemo: switch (profile) {
+        {'is_demo': true} => true,
+        _ => false,
+      },
     );
   }
 
@@ -45,14 +50,18 @@ class SupabaseAccountRepository implements AccountRepository {
     required DateTime readAt,
     String? displayName,
     String? avatarUrl,
+    bool isDemo = false,
   }) async {
     // The profile comes first: user_settings refers to it. Both writes can
     // be repeated: a retry after a half-done save ends in the same rows.
+    // The flag goes only when it is true: the server refuses to change it,
+    // and without it the save of a real account is the same as before.
     if (displayName != null) {
       await _client.from('profiles').upsert({
         'id': userId,
         'display_name': displayName,
         'avatar_url': avatarUrl,
+        if (isDemo) 'is_demo': true,
       });
     }
     await _client.from('user_settings').upsert({
@@ -60,5 +69,10 @@ class SupabaseAccountRepository implements AccountRepository {
       'privacy_notice_version': noticeVersion,
       'privacy_notice_read_at': readAt.toUtc().toIso8601String(),
     });
+  }
+
+  @override
+  Future<void> deleteDemoAccount() async {
+    await _client.rpc<Object?>('delete_my_demo_account');
   }
 }
