@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
+import 'package:homemade/design/content_column.dart';
 import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/theme/app_colors.dart';
 import 'package:homemade/theme/dimens.dart';
@@ -30,25 +31,43 @@ class HubScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
+        // In the centred column until the hub gets its layouts for each
+        // window class (PR 4.10).
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _SectionCard(
-              icon: Symbols.account_balance_wallet_rounded,
-              name: 'Finanze',
-              onTap: () => context.go(screenByCode('C1').location!),
-            ),
-            const SizedBox(height: 12),
-            const _SectionCard(icon: Symbols.kitchen_rounded, name: 'Dispensa'),
-            const SizedBox(height: 12),
-            const _SectionCard(icon: Symbols.folder_rounded, name: 'Documenti'),
-            const SizedBox(height: 12),
-            const _SectionCard(icon: Symbols.pets_rounded, name: 'Animali'),
-            const SizedBox(height: 24),
-            Center(
-              child: TextButton(
-                onPressed: () => context.go(screenIndexPath),
-                child: const Text('Indice delle schermate'),
+            ContentColumn(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SectionCard(
+                    icon: Symbols.account_balance_wallet_rounded,
+                    name: 'Finanze',
+                    onTap: () => context.go(screenByCode('C1').location!),
+                  ),
+                  const SizedBox(height: 12),
+                  const _SectionCard(
+                    icon: Symbols.kitchen_rounded,
+                    name: 'Dispensa',
+                  ),
+                  const SizedBox(height: 12),
+                  const _SectionCard(
+                    icon: Symbols.folder_rounded,
+                    name: 'Documenti',
+                  ),
+                  const SizedBox(height: 12),
+                  const _SectionCard(
+                    icon: Symbols.pets_rounded,
+                    name: 'Animali',
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.go(screenIndexPath),
+                      child: const Text('Indice delle schermate'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

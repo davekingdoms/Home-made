@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:homemade/core/remote/remote_failure.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
+import 'package:homemade/design/content_column.dart';
 import 'package:homemade/design/placeholder_screen.dart';
 import 'package:homemade/features/auth/delete_demo_account.dart';
 import 'package:homemade/features/auth/sign_out.dart';
@@ -61,36 +62,43 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const PlaceholderMark(),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              style: errorStyle,
-              onPressed: _deleting
-                  ? null
-                  : () => unawaited(confirmSignOut(context, ref)),
-              child: const Text('Esci'),
-            ),
-            ValueListenableBuilder(
-              valueListenable: gate,
-              builder: (context, _, _) => !gate.isDemo
-                  ? const SizedBox.shrink()
-                  : Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.md),
-                      child: OutlinedButton(
-                        style: errorStyle,
-                        onPressed: _deleting
-                            ? null
-                            : () => unawaited(_deleteDemoAccount()),
-                        child: _deleting
-                            ? const SizedBox.square(
-                                dimension: AppSizes.iconSmall,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(deleteDemoAccountLabel),
-                      ),
-                    ),
+            ContentColumn(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const PlaceholderMark(),
+                  const SizedBox(height: 24),
+                  OutlinedButton(
+                    style: errorStyle,
+                    onPressed: _deleting
+                        ? null
+                        : () => unawaited(confirmSignOut(context, ref)),
+                    child: const Text('Esci'),
+                  ),
+                  ValueListenableBuilder(
+                    valueListenable: gate,
+                    builder: (context, _, _) => !gate.isDemo
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.md),
+                            child: OutlinedButton(
+                              style: errorStyle,
+                              onPressed: _deleting
+                                  ? null
+                                  : () => unawaited(_deleteDemoAccount()),
+                              child: _deleting
+                                  ? const SizedBox.square(
+                                      dimension: AppSizes.iconSmall,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(deleteDemoAccountLabel),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
