@@ -125,7 +125,6 @@ void main() {
     });
 
     test('the placeholders of the steps not on yet are destinations', () {
-      expect(_redirect(state, '/start?from=%2Funlock'), '/unlock');
       expect(
         _redirect(state, '/start?from=%2Fhousehold%2Fjoin'),
         '/household/join',
@@ -145,7 +144,29 @@ void main() {
     expect(startupStepPath(StartupStep.welcome), '/welcome');
     expect(startupStepPath(StartupStep.household), '/household');
     expect(startupStepPath(StartupStep.location), '/location');
-    expect(startupStepPath(StartupStep.unlock), '/unlock');
     expect(startupStepPath(StartupStep.hub), isNull);
+  });
+
+  test('no step leads to the unlock (A1), which covers the app', () {
+    for (final step in StartupStep.values) {
+      expect(startupStepPath(step), isNot('/unlock'), reason: step.name);
+    }
+    expect(_redirect(const StartupState.hub(), '/unlock'), isNull);
+  });
+
+  test('the lock does not move the router', () {
+    for (final state in [
+      const StartupState.checking(),
+      const StartupState.welcome(noticeOnly: true),
+      const StartupState.hub(),
+    ]) {
+      for (final location in ['/', '/start', '/welcome', '/finance/summary']) {
+        expect(
+          _redirect(state.withLock(locked: true), location),
+          _redirect(state, location),
+          reason: '$state at $location',
+        );
+      }
+    }
   });
 }

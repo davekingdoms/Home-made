@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:homemade/core/storage/local_store.dart';
+import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -173,4 +174,56 @@ class FakeDeviceRepository implements DeviceRepository {
     if (error != null) throw error;
     rows.remove(id);
   }
+}
+
+/// [DeviceLock] in memory. A request stays open until [answer].
+class FakeDeviceLock implements DeviceLock {
+  new({this.secure = false});
+
+  /// Whether the device has a secure screen lock.
+  bool secure;
+
+  /// When set, [isSecure] waits for it.
+  Completer<void>? checkGate;
+
+  /// Calls to [isSecure] and to [unlock].
+  int checks = 0;
+  int requests = 0;
+
+  Completer<UnlockResult>? _open;
+
+  /// Whether a request of the system is open.
+  bool get requestOpen => _open != null;
+
+  @override
+  Future<bool> isSecure() async {
+    checks++;
+    await checkGate?.future;
+    return secure;
+  }
+
+  @override
+  Future<UnlockResult> unlock() {
+    requests++;
+    final open = Completer<UnlockResult>();
+    _open = open;
+    return open.future;
+  }
+
+  /// Ends the open request with [result].
+  void answer(UnlockResult result) {
+    final open = _open;
+    if (open == null) throw StateError('no request is open');
+    _open = null;
+    open.complete(result);
+  }
+}
+
+/// A monotonic clock the tests move by hand.
+class FakeClock {
+  Duration now = Duration.zero;
+
+  Duration call() => now;
+
+  void advance(Duration duration) => now += duration;
 }

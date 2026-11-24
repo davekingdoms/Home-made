@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:homemade/core/remote/remote_failure.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
+import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_registry.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_state.dart';
@@ -16,11 +17,18 @@ part 'startup_gate.g.dart';
 
 /// The one place that decides the first step missing at startup
 /// (`docs/spec/accesso.md`, section 1): session (A2), privacy notice (A3),
-/// household (A7/A10), location (A11), unlock (A1), then the hub.
+/// household (A7/A10), location (A11), then the hub; and whether the unlock
+/// (A1) covers the app, above the steps (section 2).
 ///
 /// It follows the session of [AuthRepository]; with a session it reads the
 /// account from Supabase and saves it on the device for that account, so an
-/// offline start uses the last state saved. The router reads only [value].
+/// offline start uses the last state saved. The router reads only the step
+/// of [value]; the app covers itself with A1 while [StartupState.locked].
+///
+/// The lock comes at a cold start with a saved session and when the app
+/// returns to the hub after [lockAfter] hidden; never with the sign-in
+/// itself, during a request to unlock, or on a device without a secure
+/// screen lock. The clock is monotonic, never the time of the system.
 class StartupGate extends ChangeNotifier
     implements ValueListenable<StartupState> {
   new({
@@ -28,11 +36,20 @@ class StartupGate extends ChangeNotifier
     required this._accounts,
     required this._store,
     required this._devices,
+    required this._lock,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now {
+    Duration Function()? clock,
+  }) : _now = now ?? DateTime.now,
+       _clock = clock ?? _stopwatch() {
     _auth.hasSession.addListener(_onSessionChanged);
+    _starting = true;
     _onSessionChanged();
+    _starting = false;
   }
+
+  /// Time hidden after which the app locks again on its return: one minute,
+  /// with no setting.
+  static const lockAfter = Duration(minutes: 1);
 
   /// Longest wait for the state of the account: then the start goes on with
   /// the state saved on the device.
@@ -49,9 +66,36 @@ class StartupGate extends ChangeNotifier
   final AccountRepository _accounts;
   final LocalStore _store;
   final DeviceRegistry _devices;
+  final DeviceLock _lock;
   final DateTime Function() _now;
 
+  /// Monotonic time, for the time hidden.
+  final Duration Function() _clock;
+
+  /// The first missing step, without the lock.
+  StartupState _step = const StartupState.checking();
+
+  /// Whether A1 covers the app.
+  bool _locked = false;
+
   StartupState _state = const StartupState.checking();
+
+  /// True while the constructor reads the session restored at startup.
+  bool _starting = false;
+
+  final _unlocking = ValueNotifier<bool>(false);
+
+  /// Whether the app is hidden: between [handleHide] and [handleResume].
+  bool _hidden = false;
+
+  /// When the app was hidden, by the clock; null while it shows, and when it
+  /// was hidden during a request to unlock, which hides it itself.
+  Duration? _hiddenSince;
+
+  /// Whether the request ended while the app was hidden, without the user
+  /// closing it: the system stopped it when the app left the screen, so it
+  /// starts again on the return.
+  bool _askOnReturn = false;
 
   /// Account of the open session, null without one.
   String? _userId;
@@ -72,6 +116,9 @@ class StartupGate extends ChangeNotifier
 
   @override
   StartupState get value => _state;
+
+  /// Whether the request of the system is open: "Sblocca" waits for it.
+  ValueListenable<bool> get unlocking => _unlocking;
 
   /// Whether the signed-in account is a demo account, as its profile says.
   bool get isDemo => _status?.isDemo ?? false;
@@ -178,15 +225,68 @@ class StartupGate extends ChangeNotifier
     }
   }
 
-  /// The app is back in the foreground.
+  /// Asks the system to unlock, when A1 covers the app and no request is
+  /// open. A1 calls it with "Sblocca"; the gate itself when A1 appears and
+  /// when the app returns with A1 on screen.
+  ///
+  /// Unlocked, or no screen lock any more: A1 goes. Closed by the user, or
+  /// any other failure: A1 stays, without a message (the system shows its
+  /// own), and no request starts by itself until the next return.
+  Future<void> unlock() async {
+    if (!_locked || _unlocking.value) return;
+    _unlocking.value = true;
+    try {
+      final result = await _lock.unlock();
+      if (!_locked) return;
+      switch (result) {
+        case UnlockResult.unlocked:
+        case UnlockResult.noCredentials:
+          _setLocked(false);
+        case UnlockResult.cancelled:
+          break;
+        case UnlockResult.failed:
+          if (_hidden) _askOnReturn = true;
+      }
+    } finally {
+      _unlocking.value = false;
+    }
+  }
+
+  /// The app is hidden (another app, the home screen, the screen off). The
+  /// changes that a request to unlock causes, such as the screen of the PIN,
+  /// do not count.
+  void handleHide() {
+    _hidden = true;
+    if (_unlocking.value) return;
+    _hiddenSince = _clock();
+  }
+
+  /// The app is back in the foreground. After [lockAfter] hidden on the hub,
+  /// on a device with a secure screen lock, A1 covers it; with A1 already
+  /// on screen, the request of the system starts again.
   void handleResume() {
     final userId = _userId;
     if (userId != null) unawaited(_devices.sync(userId));
+    final hiddenSince = _hiddenSince;
+    final askAgain = _askOnReturn;
+    _hidden = false;
+    _hiddenSince = null;
+    _askOnReturn = false;
+    if (_unlocking.value) return;
+    if (_locked) {
+      if (hiddenSince != null || askAgain) unawaited(unlock());
+      return;
+    }
+    if (hiddenSince == null || userId == null) return;
+    if (_step.step != StartupStep.hub) return;
+    if (_clock() - hiddenSince < lockAfter) return;
+    unawaited(_lockIfSecure(_generation));
   }
 
   @override
   void dispose() {
     _auth.hasSession.removeListener(_onSessionChanged);
+    _unlocking.dispose();
     super.dispose();
   }
 
@@ -197,6 +297,7 @@ class StartupGate extends ChangeNotifier
       final hadSession = _userId != null;
       _userId = null;
       _status = null;
+      _locked = false;
       if (_signingOut) {
         _set(const StartupState.signIn(SignInArrival.signedOut));
       } else if (hadSession) {
@@ -209,8 +310,20 @@ class StartupGate extends ChangeNotifier
     }
     if (user.id == _userId) return;
     _userId = user.id;
+    // A sign-in of this run never locks; a session restored at startup does
+    // after the check of the screen lock, in [_load].
+    _locked = false;
     unawaited(_devices.sync(user.id));
-    unawaited(_load(user.id, generation));
+    unawaited(_load(user.id, generation, restored: _starting));
+  }
+
+  /// Covers the app with A1 if the device has a secure screen lock and the
+  /// session of [generation] is still open, then asks to unlock.
+  Future<void> _lockIfSecure(int generation) async {
+    if (!await _lock.isSecure()) return;
+    if (generation != _generation || _userId == null || _locked) return;
+    _setLocked(true);
+    unawaited(unlock());
   }
 
   /// At a start without a session: a device id still saved means that the
@@ -221,8 +334,19 @@ class StartupGate extends ChangeNotifier
     _set(const StartupState.signIn(SignInArrival.sessionLost));
   }
 
-  Future<void> _load(String userId, int generation) async {
+  /// Reads the state of the account. For the session [restored] at startup
+  /// the check of the screen lock runs alongside: A1 covers the app as soon
+  /// as the device says it has one, and the first step shows only once the
+  /// check is done, so that no other screen shows before A1.
+  Future<void> _load(
+    String userId,
+    int generation, {
+    bool restored = false,
+  }) async {
     _set(const StartupState.checking());
+    final lockCheck = restored
+        ? _lockIfSecure(generation)
+        : Future<void>.value();
     AccountStatus? status;
     var failure = RemoteFailure.connection;
     try {
@@ -237,6 +361,7 @@ class StartupGate extends ChangeNotifier
       status = await _saved(userId);
     }
     final demo = await _demoFor(status);
+    await lockCheck;
     if (generation != _generation) return;
     if (status == null) {
       _set(StartupState.unavailable(failure));
@@ -268,7 +393,6 @@ class StartupGate extends ChangeNotifier
     }
     if (!_householdDone(status)) return const StartupState.household();
     if (!_locationDone) return const StartupState.location();
-    if (!_unlockDone) return const StartupState.unlock();
     return const StartupState.hub();
   }
 
@@ -280,10 +404,6 @@ class StartupGate extends ChangeNotifier
   /// Location (A11), asked once per device: always done until PR 4.8 reads
   /// it from the [LocalStore].
   bool get _locationDone => true;
-
-  /// Unlock (A1) at reopening with a saved session, never right after the
-  /// sign-in with Google: always done until PR 4.4.
-  bool get _unlockDone => true;
 
   Future<AccountStatus?> _saved(String userId) async {
     try {
@@ -303,10 +423,27 @@ class StartupGate extends ChangeNotifier
     }
   }
 
-  void _set(StartupState state) {
+  void _set(StartupState step) {
+    _step = step;
+    _publish();
+  }
+
+  void _setLocked(bool locked) {
+    _locked = locked;
+    _publish();
+  }
+
+  void _publish() {
+    final state = _step.withLock(locked: _locked);
     if (state == _state) return;
     _state = state;
     notifyListeners();
+  }
+
+  /// A monotonic clock: the time since the gate was born.
+  static Duration Function() _stopwatch() {
+    final stopwatch = Stopwatch()..start();
+    return () => stopwatch.elapsed;
   }
 
   static void _log(String step, Object error) => developer.log(
@@ -315,8 +452,8 @@ class StartupGate extends ChangeNotifier
   );
 }
 
-/// The startup gate of the app. It also tells the device registry when the
-/// app comes back to the foreground.
+/// The startup gate of the app. It follows the app as it hides and comes
+/// back to the foreground: the lock and the device registry need it.
 @Riverpod(keepAlive: true)
 StartupGate startupGate(Ref ref) {
   final gate = StartupGate(
@@ -324,11 +461,24 @@ StartupGate startupGate(Ref ref) {
     accounts: ref.watch(accountRepositoryProvider),
     store: ref.watch(localStoreProvider),
     devices: ref.watch(deviceRegistryProvider),
+    lock: ref.watch(deviceLockProvider),
+    clock: ref.watch(monotonicClockProvider),
   );
-  final lifecycle = AppLifecycleListener(onResume: gate.handleResume);
+  final lifecycle = AppLifecycleListener(
+    onHide: gate.handleHide,
+    onResume: gate.handleResume,
+  );
   ref.onDispose(() {
     lifecycle.dispose();
     gate.dispose();
   });
   return gate;
+}
+
+/// Monotonic time since the app started, for the time spent hidden: never
+/// the time of the system, which the user can change. Tests override it.
+@Riverpod(keepAlive: true)
+Duration Function() monotonicClock(Ref ref) {
+  final stopwatch = Stopwatch()..start();
+  return () => stopwatch.elapsed;
 }

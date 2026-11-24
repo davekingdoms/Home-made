@@ -24,8 +24,10 @@ part 'app_router.g.dart';
 /// always ends there.
 ///
 /// The redirect reads only [startup], the state of the startup gate, and
-/// runs again whenever it changes: while a step is missing every path leads
-/// to its screen, then to the screen asked for ([startupRedirect]).
+/// runs again whenever its step changes: while a step is missing every path
+/// leads to its screen, then to the screen asked for ([startupRedirect]).
+/// The lock is not a step: the unlock (A1) covers the app from outside the
+/// router, which does not move when it comes or goes.
 GoRouter buildAppRouter({
   required ValueListenable<StartupState> startup,
   String initialLocation = '/',
@@ -34,7 +36,7 @@ GoRouter buildAppRouter({
   return GoRouter(
     navigatorKey: rootKey,
     initialLocation: initialLocation,
-    refreshListenable: startup,
+    refreshListenable: _StepChanges(startup),
     redirect: (context, state) => startupRedirect(startup.value, state.uri),
     routes: [
       startupRoute(),
@@ -61,4 +63,36 @@ GoRouter appRouter(Ref ref) {
   final router = buildAppRouter(startup: ref.watch(startupGateProvider));
   ref.onDispose(router.dispose);
   return router;
+}
+
+/// Notifies when the startup state changes apart from the lock.
+class _StepChanges implements Listenable {
+  new(this._startup);
+
+  final ValueListenable<StartupState> _startup;
+
+  /// The listener given to [_startup] for each listener of the router.
+  final _forwarders = <VoidCallback, VoidCallback>{};
+
+  @override
+  void addListener(VoidCallback listener) {
+    var last = _unlocked;
+    void forward() {
+      final current = _unlocked;
+      if (current == last) return;
+      last = current;
+      listener();
+    }
+
+    _forwarders[listener] = forward;
+    _startup.addListener(forward);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    final forward = _forwarders.remove(listener);
+    if (forward != null) _startup.removeListener(forward);
+  }
+
+  StartupState get _unlocked => _startup.value.withLock(locked: false);
 }

@@ -13,16 +13,17 @@ String? startupStepPath(StartupStep step) => switch (step) {
   StartupStep.welcome => screenByCode('A3').path,
   StartupStep.household => screenByCode('A7').path,
   StartupStep.location => screenByCode('A11').path,
-  StartupStep.unlock => screenByCode('A1').path,
   StartupStep.hub => null,
 };
 
 /// Paths of the steps the gate checks today: sign-in, first access and the
 /// startup screen. They are never a destination to return to, and once
 /// their step is done they give way to the screen asked for (or to the
-/// hub). Unlock, household and location join when PRs 4.4, 4.6 and 4.8 turn
-/// their steps on; until then their screens are placeholders like the
-/// others.
+/// hub). Household and location join when PRs 4.6 and 4.8 turn their steps
+/// on; until then their screens are placeholders like the others.
+///
+/// The unlock (A1) is not a step: it covers the app from outside the router,
+/// and no redirect leads to `/unlock`, which shows A1 only as a preview.
 final Set<String> _gatePaths = {
   startupPath,
   screenByCode('A2').path!,
