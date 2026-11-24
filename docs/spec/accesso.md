@@ -12,11 +12,10 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 | 2 | Informativa privacy non letta (o cambiata di versione) | A3 Primo accesso |
 | 3 | Nessuna casa | A7 → A8 → A9; A10 se c'è un invito in sospeso |
 | 4 | Posizione mai chiesta su questo dispositivo | A11 Posizione |
-| 5 | Riapertura con una sessione salvata | A1 Sblocco |
-| 6 | Altrimenti | Hub |
+| 5 | Altrimenti | Hub |
 
 - Un solo stato dell'avvio decide il passo, e il router legge solo quello: attesa, stato offline e ritorno alla schermata chiesta in [`navigazione.md`](navigazione.md), sezione 2.
-- Lo sblocco non si chiede subito dopo l'accesso con Google.
+- **Sblocco: un blocco sopra i passi, non un passo del router.** A1 copre l'app all'avvio a freddo con una sessione salvata, qualunque sia il passo, e al ritorno in primo piano dopo almeno 1 minuto con l'app nascosta, solo sull'hub; mai con l'accesso con Google, mai durante una richiesta di sblocco, mai su un dispositivo senza blocco schermo. Lo decide lo stesso stato dell'avvio, ma il router non lo legge: niente cambi di rotta. Regole nella sezione 2.
 - **Secondo dispositivo dello stesso account:** A2 → A11 → hub; il dispositivo si registra sull'account.
 - **Dispositivo:** alla prima entrata di un account su un'installazione l'app genera l'id del dispositivo (UUID), lo salva sul dispositivo insieme all'id dell'account e inserisce la riga in `devices` (piattaforma `android`, senza nome né token per le notifiche): un secondo inserimento con lo stesso id (`23505`) vuol dire già registrato. `last_seen_at` si aggiorna al più una volta al giorno, all'avvio e al ritorno in primo piano. Ogni dispositivo dello stesso account ha la sua riga. Nei log solo il passo e il codice, mai id né modelli.
 - **Uscire dall'account** (I2, menu di A3 e A7, A1): sempre con la conferma "Uscire dall'account?", testo "Per rientrare ti servirà il tuo account Google.", tasti "Annulla" e "Esci" (testo nel colore `error`). "Esci" cancella la riga del dispositivo in `devices` (senza bloccare l'uscita se manca la rete), l'id locale del dispositivo e lo stato dell'avvio salvato per l'account, poi chiude la sessione: A2, senza il messaggio della sessione scaduta. I valori del dispositivo che non dipendono dall'account (la posizione chiesta) restano.
@@ -28,10 +27,21 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 ## 2. A1 — Sblocco
 
-- Logo, nome dell'app, richiesta di sistema con biometria o credenziale del dispositivo (PIN, sequenza, password) tramite `local_auth`; tasto "Sblocca" per riprovare; "Esci dall'account" (con conferma, poi A2).
-- **Quando:** sempre all'avvio a freddo con una sessione salvata; al ritorno dal background dopo **1 minuto** (predefinito; scelte nelle impostazioni: subito, 1 minuto, 5 minuti).
+- Logo, "Home-made", "Sblocca per continuare"; in basso il tasto "Sblocca" e il tasto "Esci dall'account". La richiesta di sistema chiede la biometria o la credenziale del dispositivo (PIN, sequenza, password) tramite `local_auth`.
+- **Quando:**
+  - all'avvio a freddo con una sessione salvata, qualunque sia il passo dopo (lettura dello stato in corso, A3, A7, A11, hub). Lo sblocco e la lettura dello stato da Supabase vanno in parallelo: dopo lo sblocco si vede il passo che lo stato dice;
+  - al ritorno in primo piano dopo almeno **1 minuto** con l'app nascosta (un'altra app, la schermata home, lo schermo spento), solo se il passo è l'hub: durante A3 e A7–A11 no (per esempio chi legge l'informativa nel browser). L'app soltanto inattiva (tendina delle notifiche, schermo diviso senza fuoco) non conta. Il tempo si misura con un orologio monotono, mai con l'ora del sistema; la durata è una costante, senza scelta nelle impostazioni;
+  - mai con l'accesso con Google (dopo, la regola del minuto vale come per tutti), mai mentre una richiesta di sblocco è aperta (i cambi che la richiesta stessa causa, come la schermata del PIN, non contano), mai su un dispositivo senza blocco schermo.
+- **Sopra l'app:** A1 non è una rotta. Copre tutta l'app dall'esterno del router, senza cambiare rotta: sotto resta tutto com'era (scheda, dettagli, fogli aperti, testo scritto) e dopo lo sblocco si ritrova. Con A1 visibile sotto non arrivano tocchi, il lettore di schermo non trova niente e la tastiera si chiude; l'indietro di Android fa quello che fa dall'hub (l'app esce) e non agisce sotto, salvo chiudere la conferma di "Esci" se è aperta. A1 compare senza animazione e sparisce con una dissolvenza. Il percorso `/unlock` mostra A1 solo come anteprima, dall'indice delle schermate.
+- **Richiesta di sistema:** parte da sola quando A1 compare e a ogni ritorno in primo piano con A1 visibile. Dopo un annullamento non riparte da sola fino al ritorno successivo: si riprova con "Sblocca", disattivato mentre la richiesta è aperta; se invece il sistema la ferma perché l'app è uscita dallo schermo, riparte al ritorno. Prima la biometria, poi PIN, sequenza o password; nessuna conferma dopo il riconoscimento del volto; la richiesta non continua dopo l'uscita dall'app. Testi in italiano: titolo "Home-made", descrizione "Sblocca per continuare", nessun sottotitolo, tasto "Annulla" (con la credenziale del dispositivo ammessa Android mostra i suoi tasti).
+- **Esiti:** riuscito → A1 sparisce. Annullato, tempo scaduto, fermato dal sistema, troppi tentativi (temporaneo o permanente), qualunque altro errore → resta A1, senza messaggi (li mostra il sistema); nel log solo il codice. Blocco schermo tolto mentre l'app era in background → A1 sparisce, come su un dispositivo senza blocco schermo.
+- **Esci dall'account:** con la conferma della sezione 1, poi A2 senza messaggio. Sessione persa con A1 visibile: A2 con il messaggio della sessione scaduta.
+- **Disposizione:** fondo `surface`; colonna centrata larga al massimo 640 dp, anche sugli schermi larghi, con margini laterali di 16 dp e 24 dp sopra la barra dei gesti.
+  - In alto, centrati, con 16 dp tra l'uno e l'altro: il logo provvisorio (biscotto di 88 dp in `primary` con la casa in `onPrimary`), "Home-made" (headlineMedium) e "Sblocca per continuare" (bodyMedium in `onSurfaceVariant`). Sopra il logo uno spazio pari a 200/844 dell'altezza dello schermo (circa un quarto: 200 dp su un telefono alto 844), mai meno di 48 dp sotto la barra di stato.
+  - In basso, centrati, con 8 dp tra l'uno e l'altro: "Sblocca", tasto pieno largo quanto la colonna, alto 56 dp, con l'icona dell'impronta; "Esci dall'account", tasto contornato largo quanto il suo contenuto, alto 44 dp, con testo e icona di uscita in `error`.
+  - Con il testo fino al 200% niente si taglia: la colonna scorre se serve e i tasti restano in fondo finché ci stanno.
+- **Blocco schermo del dispositivo:** si controlla con `isDeviceSupported()` di `local_auth` (su Android: blocco sicuro, oppure biometria registrata, che richiede un blocco sicuro), ogni volta che serve, mai salvato; se il controllo fallisce vale come un dispositivo senza blocco schermo. Lo stesso controllo serve all'avviso dell'hub.
 - **Dispositivo senza blocco schermo:** A1 non compare, l'app funziona e l'hub mostra un avviso fisso "Proteggi Home-made: attiva il blocco schermo", con il tasto che apre le impostazioni di sicurezza del sistema.
-- Sblocco annullato: resta su A1. Sessione scaduta: A2 con il messaggio di sessione scaduta.
 
 ## 3. A2 — Accesso
 
@@ -132,7 +142,7 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - **Membro:** casa, utente, data di ingresso, data di inizio propria (da cui valgono anche le sue quote predefinite).
 - **Invito:** casa, hash del token, codice breve, creato da, etichetta, scadenza, usato da e quando, revocato.
 - **Dispositivo:** id generato sul dispositivo, utente, piattaforma, ultimo accesso (token per le notifiche quando arrivano).
-- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account, scelta della modalità demo (solo `dev`, sezione 12); poi posizione chiesta, città, invito in sospeso e tempo dello sblocco. Mai dati delle finanze.
+- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account, scelta della modalità demo (solo `dev`, sezione 12); poi posizione chiesta, città e invito in sospeso. Mai dati delle finanze.
 - **Conto Contanti:** creato con il membro; saldo iniziale con la data a cui si riferisce.
 - **Saldo iniziale tra i membri:** casa, membro, importo, data (= data di inizio della casa), inserito o modificato da; "Nessun saldo da riportare" salva importi a zero.
 

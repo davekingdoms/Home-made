@@ -14,8 +14,8 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 ## 2. Regole
 
 - **Ingresso:** l'hub (B1) è sempre la schermata d'ingresso.
-- **Avvio e primo avvio** (dettagli in [`accesso.md`](accesso.md)): un solo **stato dell'avvio** decide il primo passo mancante, in quest'ordine, all'avvio e a ogni cambio di stato (sessione o dati letti): nessuna sessione → Accesso (A2); informativa non letta nella versione attuale → Primo accesso (A3); nessuna casa → A7 (o A10 se c'è un invito in sospeso); posizione mai chiesta su questo dispositivo → Posizione (A11); riapertura con una sessione salvata → Sblocco (A1); altrimenti l'hub. Lo sblocco non si chiede subito dopo l'accesso. Il router legge solo questo stato.
-  - **Passi attivi oggi:** sessione e informativa. Casa, posizione e sblocco risultano sempre fatti finché non arrivano le loro schermate (sblocco dalla PR 4.4, casa dalla 4.6, inviti dalla 4.7, posizione dalla 4.8): fino ad allora A1, A7–A10 e A11 restano segnaposto raggiungibili.
+- **Avvio e primo avvio** (dettagli in [`accesso.md`](accesso.md)): un solo **stato dell'avvio** decide il primo passo mancante, in quest'ordine, all'avvio e a ogni cambio di stato (sessione o dati letti): nessuna sessione → Accesso (A2); informativa non letta nella versione attuale → Primo accesso (A3); nessuna casa → A7 (o A10 se c'è un invito in sospeso); posizione mai chiesta su questo dispositivo → Posizione (A11); altrimenti l'hub. Il router legge solo questo stato. Lo sblocco (A1) copre l'app dall'esterno del router, senza cambiare rotta.
+  - **Passi attivi oggi:** sessione, informativa e sblocco. Casa e posizione risultano sempre fatte finché non arrivano le loro schermate (casa dalla 4.6, inviti dalla 4.7, posizione dalla 4.8): fino ad allora A7–A10 e A11 restano segnaposto raggiungibili.
   - **Attesa:** finché lo stato non è noto si vede la schermata d'avvio (`/start`, fuori dall'inventario) con il solo logo, senza testo: mai, nemmeno per un istante, una schermata sbagliata.
   - **Offline:** lo stato si legge da Supabase (proprio profilo, `user_settings`, membro attivo) e si salva sul dispositivo per account. Senza risposta (rete assente o nessuna risposta entro 8 secondi) o con un errore di Supabase si usa l'ultimo stato salvato. Senza stato salvato la schermata d'avvio mostra "Nessuna connessione. Controlla la rete e riprova." (o "Non è stato possibile caricare i dati. Riprova." se Supabase risponde con un errore) e il tasto "Riprova".
   - **Destinazione chiesta:** un link a una schermata interna resta valido dopo i passi: la schermata chiesta passa da un passo all'altro nel parametro `from` e si apre quando non manca più nulla, se è un percorso dell'app e non una schermata dei passi attivi (`/start`, A2, A3); altrimenti l'hub. Dopo "Esci" si dimentica: il nuovo accesso apre l'hub.
@@ -33,7 +33,7 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 
 | Codice | Schermata | Percorso | Si apre da |
 |---|---|---|---|
-| A1 | Sblocco | `/unlock` | avvio con sessione (in arrivo) |
+| A1 | Sblocco | `/unlock` | copre l'app all'avvio con sessione e al ritorno dopo 1 minuto; il percorso è solo l'anteprima dell'indice |
 | A2 | Accesso | `/sign-in` | avvio senza sessione; Esci (I2) |
 | A3 | Primo accesso | `/welcome` | A2, al primo accesso |
 | A7 | Crea o entra in una casa | `/household` | A3 |
