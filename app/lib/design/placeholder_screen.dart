@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
+import 'package:homemade/design/content_column.dart';
 import 'package:homemade/theme/app_button_styles.dart';
 import 'package:homemade/theme/dimens.dart';
 import 'package:material_ui/material_ui.dart';
@@ -21,16 +22,24 @@ class PlaceholderScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // The centred column, also inside a section shell, next to its side bar.
     final body = ListView(
       padding: const EdgeInsets.all(AppSpacing.screenMargin),
       children: [
-        if (embedded) ...[
-          Text(entry.label, style: theme.textTheme.headlineLarge),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        const PlaceholderMark(),
-        const SizedBox(height: AppSpacing.sectionGap),
-        PlaceholderLinks(entry: entry),
+        ContentColumn(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (embedded) ...[
+                Text(entry.label, style: theme.textTheme.headlineLarge),
+                const SizedBox(height: AppSpacing.xs),
+              ],
+              const PlaceholderMark(),
+              const SizedBox(height: AppSpacing.sectionGap),
+              PlaceholderLinks(entry: entry),
+            ],
+          ),
+        ),
       ],
     );
     if (embedded) return body;

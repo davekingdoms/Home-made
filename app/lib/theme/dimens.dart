@@ -95,6 +95,17 @@ abstract final class AppSizes {
   static const double focusRing = 3;
 }
 
+/// Limits of the Material 3 window width classes, in dp
+/// (`docs/spec/navigazione.md`, section 5): compact below [medium], medium up
+/// to [expanded], expanded from there.
+abstract final class AppBreakpoints {
+  /// From here the window is medium: Finance moves to the side bar.
+  static const double medium = 600;
+
+  /// From here the window is expanded.
+  static const double expanded = 840;
+}
+
 /// Opacities of the component states (section 8).
 abstract final class AppOpacities {
   /// State layer of a pressed or focused component.

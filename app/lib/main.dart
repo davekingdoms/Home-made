@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:homemade/app.dart';
 import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/core/config/config_error_app.dart';
+import 'package:homemade/core/display/orientation_policy.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/supabase_auth_repository.dart';
@@ -17,6 +18,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicense();
+  OrientationPolicy().start();
 
   const config = AppConfig.fromEnvironment;
   final missingKeys = config.missingKeys;

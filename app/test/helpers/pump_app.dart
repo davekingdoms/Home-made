@@ -10,6 +10,7 @@ import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/device/device_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'fake_auth_repository.dart';
 import 'fakes.dart';
@@ -23,12 +24,32 @@ const testConfig = AppConfig(
   pagesBaseUrl: 'https://example.pages.dev',
 );
 
+/// Window of a phone, in dp: a compact window.
+const phoneWindow = Size(400, 800);
+
+/// Makes the window of the test [size] dp, until the end of the test.
+void setWindow(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size * tester.view.devicePixelRatio;
+  addTearDown(tester.view.resetPhysicalSize);
+}
+
+/// Gives every test of the enclosing group, or file, the window of a
+/// phone; without it the window of the tests is 800 × 600 dp, a medium one.
+void usePhoneWindow() {
+  final view = TestWidgetsFlutterBinding.ensureInitialized()
+      .platformDispatcher
+      .implicitView!;
+  setUp(() => view.physicalSize = phoneWindow * view.devicePixelRatio);
+  tearDown(view.resetPhysicalSize);
+}
+
 /// Pumps the whole app, started at [location], and returns its router.
 ///
 /// Every dependency is a fake: [auth] defaults to an open session, and
 /// [accounts] to an account that has done every step. [openedLinks]
 /// collects the pages the app opens in the browser. [config] defaults to
-/// [testConfig], whose `APP_ENV` is not `dev`.
+/// [testConfig], whose `APP_ENV` is not `dev`. [window] sets the size of the
+/// window, in dp.
 Future<GoRouter> pumpApp(
   WidgetTester tester, {
   String location = '/',
@@ -38,7 +59,9 @@ Future<GoRouter> pumpApp(
   DeviceRepository? devices,
   LocalStore? store,
   List<Uri>? openedLinks,
+  Size? window,
 }) async {
+  if (window != null) setWindow(tester, window);
   final container = ProviderContainer(
     overrides: [
       appConfigProvider.overrideWithValue(config),

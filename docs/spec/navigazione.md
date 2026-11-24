@@ -102,12 +102,12 @@ Totale: 32 schermate e 7 fogli.
 
 Una sola app adattiva, regolata dalla **larghezza della finestra**, non dal dispositivo: da Android 16 (SDK 36), sui dispositivi con lato corto ≥ 600 dp, i blocchi di orientamento e ridimensionamento sono ignorati, quindi un tablet può mostrare l'app in una finestra stretta (schermo diviso, finestra mobile).
 
-1. **Classi di larghezza** Material 3: compatta < 600 dp (layout del telefono), media 600–839 dp, estesa ≥ 840 dp.
-2. **Barra laterale:** da 600 dp la barra in basso di Finanze diventa un `NavigationRail` con le stesse quattro schede, etichette sempre visibili, badge su Movimenti e "+" in cima; "‹ Finanze" resta in alto. Stessa `StatefulShellRoute` e stesso tasto indietro: cambia solo il guscio della sezione.
+1. **Classi di larghezza** Material 3: compatta < 600 dp (layout del telefono), media 600–839 dp, estesa ≥ 840 dp. Si calcolano dalla larghezza della finestra, mai dal dispositivo né dal display, in un solo punto del codice.
+2. **Barra laterale:** da 600 dp la barra in basso di Finanze diventa un `NavigationRail` con le stesse quattro schede ed etichette sempre visibili; il "+" sta in cima (nel `leading`), solo su Riepilogo e Movimenti come in basso: nelle altre schede il suo spazio resta vuoto. Il badge su Movimenti arriva con l'iterazione 5, sulle due barre. "‹ Finanze" resta in alto. Stessa `StatefulShellRoute` e stesso tasto indietro: cambia solo il guscio della sezione. Al cambio di classe (finestra ridimensionata, rotazione, schermo diviso) la scheda scelta e la sua pila non si perdono.
 3. **Tutte le altre schermate:** layout del telefono centrato, larghezza massima circa 640 dp.
 4. **Layout dedicati** solo per l'hub (B1) e per Movimenti + dettaglio dalla classe estesa (elenco a sinistra, E1 a destra). Nel doppio pannello `/finance/transactions/:transactionId` si apre nel pannello destro con la barra laterale visibile: la rotta di E1 passa dentro la scheda Movimenti e, nella classe compatta, la barra si nasconde sui dettagli. Un altro layout dedicato solo con una motivazione nella specifica del gruppo.
-5. **Fogli dal basso:** restano fogli, larghezza massima 640 dp.
-6. **Orientamento:** telefono (lato corto < 600 dp) solo in verticale; tablet in entrambi gli orientamenti; lo stato si conserva quando la finestra cambia.
+5. **Fogli dal basso:** restano fogli, larghezza massima 640 dp, scritta nel tema.
+6. **Orientamento:** telefono solo in verticale; tablet in entrambi gli orientamenti; lo stato si conserva quando la finestra cambia. È un telefono il dispositivo con il lato corto del **display** (non della finestra) sotto i 600 dp: lo decide l'app all'avvio e a ogni cambio del display (pieghevole aperto o chiuso). Nessun blocco nel manifest, che fermerebbe anche i tablet fino ad Android 15.
 7. **Golden test** in formato tablet solo per la barra laterale, l'hub e Movimenti + dettaglio.
 
 ## 6. Da definire

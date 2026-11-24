@@ -10,6 +10,7 @@ import 'package:homemade/design/number_tile.dart';
 import 'package:homemade/design/numeric_keypad.dart';
 import 'package:homemade/design/palette_radio_tile.dart';
 import 'package:homemade/design/quick_tiles.dart';
+import 'package:homemade/design/section_rail.dart';
 import 'package:homemade/design/transaction_row.dart';
 import 'package:homemade/theme/app_button_styles.dart';
 import 'package:homemade/theme/app_colors.dart';
@@ -40,6 +41,7 @@ class CatalogEntry {
 /// waits for its specification.
 const componentCatalog = <CatalogEntry>[
   CatalogEntry('navigation_bar', 'Barra di navigazione', _navigationBar),
+  CatalogEntry('navigation_rail', 'Barra laterale', _navigationRail),
   CatalogEntry('top_bar', 'Barra in alto', _topBar),
   CatalogEntry('filled_button', 'Bottone principale', _filledButton),
   CatalogEntry('tonal_button', 'Bottone tonale', _tonalButton),
@@ -143,6 +145,56 @@ Widget _navigationBar(BuildContext context) => _Demo<int>(
         label: 'Conti',
       ),
     ],
+  ),
+);
+
+/// Height of the side bar in the catalog: the "+" and the four tabs, also
+/// with the labels at their limit.
+const _railHeight = 360.0;
+
+// In a row, as in the Finance shell: the bar is as wide as its tabs.
+Widget _navigationRail(BuildContext context) => _Demo<int>(
+  initial: 1,
+  builder: (context, index, select) => SizedBox(
+    height: _railHeight,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionRail(
+          selectedIndex: index,
+          onDestinationSelected: select,
+          action: const FloatingActionButton(
+            heroTag: null,
+            tooltip: 'Aggiungi',
+            onPressed: _noop,
+            child: Icon(Symbols.add_rounded),
+          ),
+          destinations: const [
+            NavigationRailDestination(
+              icon: Icon(Symbols.dashboard_rounded),
+              selectedIcon: Icon(Symbols.dashboard_rounded, fill: 1),
+              label: Text('Riepilogo'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Symbols.receipt_long_rounded),
+              selectedIcon: Icon(Symbols.receipt_long_rounded, fill: 1),
+              label: Text('Movimenti'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Symbols.insights_rounded),
+              selectedIcon: Icon(Symbols.insights_rounded, fill: 1),
+              label: Text('Analisi'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Symbols.account_balance_rounded),
+              selectedIcon: Icon(Symbols.account_balance_rounded, fill: 1),
+              label: Text('Conti'),
+            ),
+          ],
+        ),
+      ],
+    ),
   ),
 );
 

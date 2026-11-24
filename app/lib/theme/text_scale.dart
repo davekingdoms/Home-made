@@ -8,6 +8,10 @@ abstract final class AppTextScale {
   /// Limit in the hub, which does not scroll: 130%.
   static const double hubMax = 1.3;
 
+  /// Limit of the labels of the navigation bars: 130%, the one Material
+  /// gives the bottom bar, which the side bar follows.
+  static const double barLabelMax = 1.3;
+
   /// Lines that the helper and error texts of a text field may take before
   /// they are cut, enough for a message at [max].
   static const int maxFieldMessageLines = 5;

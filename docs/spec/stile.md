@@ -128,6 +128,7 @@ Stati per tutti: normale, premuto (livello di stato 10%), focus (10% più anello
 | Componente | In Flutter | Varianti | Note |
 |---|---|---|---|
 | Barra di navigazione | `NavigationBar` | 4 schede, badge | Indicatore a pillola `secondaryContainer`, etichette sempre visibili, badge su Movimenti |
+| Barra laterale | `NavigationRail` | 4 schede, "+" in cima | Da 600 dp; indicatore a pillola `secondaryContainer`, etichette sempre visibili |
 | Barra in alto | `AppBar` | "‹ Finanze" (livello 1), freccia indietro (livello 2) | Avatar solo nell'hub |
 | Bottone principale | `FilledButton` | normale, compatto 44 | `primary`/`onPrimary` |
 | Bottone tonale | `FilledButton.tonal` | — | `surfaceContainerHighest` con testo `primary` (es. Promemoria) |
@@ -188,7 +189,7 @@ La casa è **solo notturna**, anche nel tema chiaro, con le stanze accese o al b
 - `ColorScheme(brightness: …)` con tutti i ruoli della tabella (nessun `fromSeed`: palette fisse).
 - `AppColors extends ThemeExtension`: `testoTerziario`, `banda`, `suPrimarioTenue`, `avviso`, `credito`, `debito`, `nastroGiallo`, `nastroNero`.
 - `CasaColors extends ThemeExtension`: i ruoli della casa per palette e ora, calcolati con la regola della sezione 9.2.
-- `textTheme` dalla sezione 3 con `fontFamily: 'GoogleSansFlex'`; temi dei componenti (`navigationBarTheme`, `cardTheme`, `filledButtonTheme`, `segmentedButtonTheme`, `chipTheme`, `floatingActionButtonTheme`, `bottomSheetTheme`, `inputDecorationTheme`) con raggi e colori delle sezioni 4 e 8.
+- `textTheme` dalla sezione 3 con `fontFamily: 'GoogleSansFlex'`; temi dei componenti (`navigationBarTheme`, `navigationRailTheme`, `cardTheme`, `filledButtonTheme`, `segmentedButtonTheme`, `chipTheme`, `floatingActionButtonTheme`, `bottomSheetTheme`, `inputDecorationTheme`) con raggi e colori delle sezioni 4 e 8.
 - `pageTransitionsTheme`: indietro predittivo su Android; transizioni della sezione 6.
 - Palette e tema scelti dall'utente stanno in cima all'app (salvati nel profilo) e si applicano subito a tutte le schermate.
 
