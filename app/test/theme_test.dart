@@ -145,6 +145,28 @@ void main() {
         final navigationIcons = theme.navigationBarTheme.iconTheme!;
         expect(navigationIcons.resolve({WidgetState.selected})?.fill, 1);
         expect(navigationIcons.resolve(noState)?.fill, 0);
+        // The side bar has the colours, indicator, labels and icons of the
+        // bottom bar.
+        final rail = theme.navigationRailTheme;
+        final bar = theme.navigationBarTheme;
+        expect(rail.labelType, NavigationRailLabelType.all);
+        expect(rail.backgroundColor, bar.backgroundColor);
+        expect(rail.indicatorColor, tokens.secondaryContainer);
+        expect(rail.indicatorShape, const StadiumBorder());
+        expect(rail.useIndicator, isTrue);
+        expect(
+          rail.selectedLabelTextStyle,
+          bar.labelTextStyle?.resolve({WidgetState.selected}),
+        );
+        expect(
+          rail.unselectedLabelTextStyle,
+          bar.labelTextStyle?.resolve(noState),
+        );
+        expect(
+          rail.selectedIconTheme,
+          navigationIcons.resolve({WidgetState.selected}),
+        );
+        expect(rail.unselectedIconTheme, navigationIcons.resolve(noState));
 
         final filled = theme.filledButtonTheme.style!;
         expect(filled.shape?.resolve(noState), const StadiumBorder());
@@ -216,6 +238,10 @@ void main() {
             ),
           ),
         );
+        expect(
+          theme.bottomSheetTheme.constraints,
+          const BoxConstraints(maxWidth: AppSizes.maxContentWidth),
+        );
         expect(theme.cardTheme.color, tokens.surfaceContainerLow);
         expect(
           theme.cardTheme.shape,
@@ -257,6 +283,7 @@ void main() {
       expect(AppSizes.fab, 56);
       expect(AppSizes.listRowMinHeight, inInclusiveRange(60, 64));
       expect(AppSizes.topBarHeight, 64);
+      expect(AppSizes.maxContentWidth, 640);
     });
   });
 

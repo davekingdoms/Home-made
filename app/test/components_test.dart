@@ -41,8 +41,8 @@ void main() {
       final titles = componentCatalog.map((entry) => entry.title).toSet();
       expect(ids, hasLength(componentCatalog.length));
       expect(titles, hasLength(componentCatalog.length));
-      // The table has 25 rows; the hub house waits for its specification.
-      expect(componentCatalog, hasLength(24));
+      // The table has 26 rows; the hub house waits for its specification.
+      expect(componentCatalog, hasLength(25));
     });
 
     for (final entry in componentCatalog) {
@@ -72,6 +72,29 @@ void main() {
         });
       }
     }
+
+    testWidgets('the side bar shows its tabs whole, also at 200%', (
+      tester,
+    ) async {
+      final rail = componentCatalog.singleWhere(
+        (entry) => entry.id == 'navigation_rail',
+      );
+      for (final textScale in [1.0, 2.0]) {
+        await pumpInTheme(
+          tester,
+          _tealDark,
+          Builder(builder: rail.builder),
+          textScale: textScale,
+        );
+        final tabs = tester.state<ScrollableState>(
+          find.descendant(
+            of: find.byType(NavigationRail),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        expect(tabs.position.maxScrollExtent, 0, reason: '$textScale');
+      }
+    });
   });
 
   group('cookie', () {

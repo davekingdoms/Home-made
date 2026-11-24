@@ -16,6 +16,10 @@ Finder inSheet(Finder finder) =>
     find.descendant(of: find.byType(BottomSheet), matching: finder);
 
 void main() {
+  // The navigation of a phone; the wide windows are in
+  // adaptive_navigation_test.dart.
+  usePhoneWindow();
+
   // The inventory of the specification; the development screens are apart.
   final inventory = screenCatalog
       .where((entry) => entry.level != ScreenLevel.development)

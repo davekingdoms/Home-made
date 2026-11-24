@@ -46,6 +46,19 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
     ),
   );
 
+  // Labels and icons of the tabs, in the bottom bar and in the side bar.
+  TextStyle? tabLabel({required bool selected}) => textTheme.labelMedium
+      ?.copyWith(color: selected ? scheme.onSurface : scheme.onSurfaceVariant);
+  // Filled on the active tab only.
+  IconThemeData tabIcon({required bool selected}) => IconThemeData(
+    color: selected ? scheme.onSecondaryContainer : scheme.onSurfaceVariant,
+    size: AppSizes.icon,
+    fill: selected ? 1 : 0,
+    weight: 400,
+    grade: 0,
+    opticalSize: AppSizes.icon,
+  );
+
   OutlineInputBorder fieldBorder(Color color, {double width = 1}) =>
       OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.textField),
@@ -93,26 +106,25 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
       indicatorShape: const StadiumBorder(),
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => textTheme.labelMedium?.copyWith(
-          color: states.contains(WidgetState.selected)
-              ? scheme.onSurface
-              : scheme.onSurfaceVariant,
-        ),
+        (states) => tabLabel(selected: states.contains(WidgetState.selected)),
       ),
-      // Filled on the active tab only.
-      iconTheme: WidgetStateProperty.resolveWith((states) {
-        final selected = states.contains(WidgetState.selected);
-        return IconThemeData(
-          color: selected
-              ? scheme.onSecondaryContainer
-              : scheme.onSurfaceVariant,
-          size: AppSizes.icon,
-          fill: selected ? 1 : 0,
-          weight: 400,
-          grade: 0,
-          opticalSize: AppSizes.icon,
-        );
-      }),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => tabIcon(selected: states.contains(WidgetState.selected)),
+      ),
+    ),
+    // The side bar of the wide windows: the colours, indicator, labels and
+    // icons of the bottom bar.
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: scheme.surfaceContainer,
+      elevation: 0,
+      useIndicator: true,
+      indicatorColor: scheme.secondaryContainer,
+      indicatorShape: const StadiumBorder(),
+      labelType: NavigationRailLabelType.all,
+      selectedLabelTextStyle: tabLabel(selected: true),
+      unselectedLabelTextStyle: tabLabel(selected: false),
+      selectedIconTheme: tabIcon(selected: true),
+      unselectedIconTheme: tabIcon(selected: false),
     ),
     badgeTheme: BadgeThemeData(
       backgroundColor: colors.badge,
@@ -251,6 +263,9 @@ ThemeData buildAppTheme(AppPalette palette, Brightness brightness) {
       surfaceTintColor: Colors.transparent,
       dragHandleColor: scheme.onSurfaceVariant,
       clipBehavior: Clip.antiAlias,
+      // On wide windows the sheets stay sheets, at most as wide as the
+      // centred column (`docs/spec/navigazione.md`, section 5).
+      constraints: const BoxConstraints(maxWidth: AppSizes.maxContentWidth),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadii.sheet),
