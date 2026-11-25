@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:homemade/core/display/orientation_policy.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
 import 'package:homemade/design/content_column.dart';
-import 'package:homemade/design/phone_layout.dart';
 import 'package:homemade/design/section_rail.dart';
+import 'package:homemade/features/auth/sign_in_screen.dart';
+import 'package:homemade/features/auth/welcome_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/theme/dimens.dart';
 import 'package:homemade/theme/text_scale.dart';
@@ -13,6 +14,7 @@ import 'package:homemade/theme/window_class.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fakes.dart';
 import 'helpers/pump_app.dart';
 
 /// A medium window, as a tablet in portrait.
@@ -380,14 +382,25 @@ void main() {
       expectCentred(tester, Offset.zero & _wide);
     });
 
-    testWidgets('the phone layout', (tester) async {
+    testWidgets('sign-in', (tester) async {
       await pumpApp(
         tester,
         location: '/sign-in',
         auth: FakeAuthRepository(signedIn: false),
         window: _wide,
       );
-      expect(find.byType(PhoneLayout), findsOneWidget);
+      expect(find.byType(SignInScreen), findsOneWidget);
+      expectCentred(tester, Offset.zero & _wide);
+    });
+
+    testWidgets('first access', (tester) async {
+      await pumpApp(
+        tester,
+        location: '/welcome',
+        accounts: FakeAccountRepository(status: newAccount),
+        window: _wide,
+      );
+      expect(find.byType(WelcomeScreen), findsOneWidget);
       expectCentred(tester, Offset.zero & _wide);
     });
 

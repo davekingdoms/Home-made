@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:homemade/theme/dimens.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -18,6 +20,22 @@ class ContentColumn extends StatelessWidget {
 
   /// Where the column goes when it has room on both axes.
   final AlignmentGeometry alignment;
+
+  /// Side padding of a body [width] wide: the side margin of the screens
+  /// plus the system [insets], and more on wide windows, so that the column
+  /// inside is at most [AppSizes.maxContentWidth] wide already.
+  ///
+  /// [ContentColumn] limits the width of its child, but not the width at
+  /// which its intrinsic height is measured. Give this padding to a column
+  /// whose intrinsic height counts, such as the child of a
+  /// `SliverFillRemaining`, so that it is measured as wide as it is drawn.
+  static EdgeInsets sidePadding(double width, EdgeInsets insets) {
+    final wide = (width - AppSizes.maxContentWidth) / 2;
+    return EdgeInsets.only(
+      left: math.max(AppSpacing.screenMargin + insets.left, wide),
+      right: math.max(AppSpacing.screenMargin + insets.right, wide),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Align(

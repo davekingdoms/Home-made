@@ -82,7 +82,12 @@ class CookieBorder extends OutlinedBorder {
 /// Avatar of a member on a cookie: the first letter of the name over the
 /// subdued accent.
 class CookieAvatar extends StatelessWidget {
-  const new({required this.name, this.size = AppSizes.listAvatar, super.key});
+  const new({
+    required this.name,
+    this.size = AppSizes.listAvatar,
+    this.style,
+    super.key,
+  });
 
   /// Name of the member: its first letter is shown, the whole name is read
   /// by the screen reader.
@@ -90,6 +95,10 @@ class CookieAvatar extends StatelessWidget {
 
   /// 48 in the hub, 40 in the lists.
   final double size;
+
+  /// Style of the letter, `titleMedium` by default; its colour is always
+  /// `onTertiary`.
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +108,7 @@ class CookieAvatar extends StatelessWidget {
       size: size,
       semanticLabel: name,
       text: initial,
-      style: textTheme.titleMedium,
+      style: style ?? textTheme.titleMedium,
     );
   }
 }

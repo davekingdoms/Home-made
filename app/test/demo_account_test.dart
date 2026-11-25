@@ -6,6 +6,7 @@ import 'package:homemade/features/auth/welcome_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/settings/account_screen.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
+import 'package:homemade/theme/dimens.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
@@ -45,6 +46,8 @@ bool _ticked(WidgetTester tester) =>
 Future<void> _continueWelcome(WidgetTester tester) async {
   await tester.tap(find.byType(Checkbox));
   await tester.pump();
+  await tester.ensureVisible(find.text('Continua'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Continua'));
   await tester.pumpAndSettle();
 }
@@ -150,10 +153,31 @@ void main() {
         store: store,
       );
 
+      // Under the helper text of the name, 4 below, in its style.
       expect(find.text(demoAccountNotice), findsOneWidget);
+      final helper = tester.getRect(find.text(nameHelperText));
+      final notice = tester.getRect(find.text(demoAccountNotice));
+      expect(notice.top, helper.bottom + AppSpacing.xxs);
+      expect(notice.left, helper.left);
       expect(
-        tester.getTopLeft(find.text(demoAccountNotice)).dy,
-        greaterThan(tester.getBottomLeft(find.byType(TextField)).dy),
+        tester
+            .widget<RichText>(
+              find.descendant(
+                of: find.text(demoAccountNotice),
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+            .style,
+        tester
+            .widget<RichText>(
+              find.descendant(
+                of: find.text(nameHelperText),
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+            .style,
       );
 
       await _continueWelcome(tester);
