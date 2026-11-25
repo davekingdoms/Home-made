@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/features/auth/delete_demo_account.dart';
@@ -338,6 +340,70 @@ void main() {
         expect(_ticked(tester), isFalse);
       },
     );
+
+    testWidgets(
+      'leads to sign-in in silence also when the client closes the session '
+      'before the answer',
+      (tester) async {
+        final accounts = FakeAccountRepository(status: demoAccount)
+          ..deleteGate = Completer<void>();
+        final auth = FakeAuthRepository();
+        final router = await pumpApp(
+          tester,
+          location: _accountPath,
+          auth: auth,
+          accounts: accounts,
+        );
+
+        await _tapDelete(tester);
+        // The indicator of I2 turns while the deletion waits: no settling.
+        await tester.tap(find.widgetWithText(TextButton, 'Elimina'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        // The account is gone on the server: the client closes the session
+        // by itself, before the answer arrives.
+        auth.loseSession();
+        await tester.pumpAndSettle();
+        accounts.deleteGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(accounts.deletions, 1);
+        expect(router.location, _signInPath);
+        expect(find.text(sessionLostMessage), findsNothing);
+      },
+    );
+
+    testWidgets('after a failure, a session lost later says so', (
+      tester,
+    ) async {
+      final accounts = FakeAccountRepository(status: demoAccount)
+        ..deleteError = serverError;
+      final auth = FakeAuthRepository();
+      final router = await pumpApp(
+        tester,
+        location: _accountPath,
+        auth: auth,
+        accounts: accounts,
+      );
+
+      await _tapDelete(tester);
+      await _confirmDelete(tester);
+      expect(
+        find.widgetWithText(
+          SnackBar,
+          "Non è stato possibile eliminare l'account. Riprova.",
+        ),
+        findsOneWidget,
+      );
+      expect(router.location, _accountPath);
+
+      auth.loseSession();
+      await tester.pumpAndSettle();
+
+      expect(router.location, _signInPath);
+      expect(find.text(sessionLostMessage), findsOneWidget);
+    });
 
     const errors = {
       'without a network': (
