@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:homemade/core/router/app_router.dart';
+import 'package:homemade/features/auth/unlock_shield.dart';
 import 'package:homemade/theme/app_theme.dart';
 import 'package:homemade/theme/appearance.dart';
 import 'package:homemade/theme/text_scale.dart';
@@ -23,7 +24,9 @@ class HomemadeApp extends ConsumerWidget {
       supportedLocales: const [locale],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(appRouterProvider),
-      builder: (context, child) => AppTextScale.clamp(child: child!),
+      // The unlock (A1) covers the router, without being one of its screens.
+      builder: (context, child) =>
+          AppTextScale.clamp(child: UnlockShield(child: child!)),
     );
   }
 }

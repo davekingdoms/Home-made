@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/router/screen_catalog.dart';
 import 'package:homemade/features/auth/sign_in_screen.dart';
+import 'package:homemade/features/auth/unlock_screen.dart';
 import 'package:homemade/features/auth/welcome_screen.dart';
 import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
@@ -84,6 +85,10 @@ void main() {
               return;
             case 'A3':
               expect(find.byType(WelcomeScreen), findsOneWidget);
+              return;
+            case 'A1':
+              // A preview: A1 covers the app from outside the router.
+              expect(find.byType(UnlockScreen), findsOneWidget);
               return;
           }
           expect(find.text(entry.label), findsOneWidget);

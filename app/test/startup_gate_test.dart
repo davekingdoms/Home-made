@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/remote/remote_failure.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
+import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_registry.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
@@ -17,14 +18,20 @@ const bruno = SessionUser(id: 'user-bruno', name: 'Bruno');
 
 /// The gate with fakes around it.
 class _Harness {
-  new({bool signedIn = true, AccountStatus account = readyAccount})
-    : auth = FakeAuthRepository(signedIn: signedIn),
-      accounts = FakeAccountRepository(status: account);
+  new({
+    bool signedIn = true,
+    AccountStatus account = readyAccount,
+    bool secure = false,
+  }) : auth = FakeAuthRepository(signedIn: signedIn),
+       accounts = FakeAccountRepository(status: account),
+       lock = FakeDeviceLock(secure: secure);
 
   final FakeAuthRepository auth;
   final FakeAccountRepository accounts;
+  final FakeDeviceLock lock;
   final devices = FakeDeviceRepository();
   final store = MemoryLocalStore();
+  final clock = FakeClock();
 
   late final registry = DeviceRegistry(remote: devices, store: store);
 
@@ -34,6 +41,8 @@ class _Harness {
       accounts: accounts,
       store: store,
       devices: registry,
+      lock: lock,
+      clock: clock.call,
     );
     addTearDown(gate.dispose);
     return gate;
@@ -444,5 +453,336 @@ void main() {
         readyAccount,
       );
     });
+  });
+
+  group('the lock', () {
+    /// The app hidden for [duration], then back in the foreground.
+    void away(_Harness harness, StartupGate gate, Duration duration) {
+      gate.handleHide();
+      harness.clock.advance(duration);
+      gate.handleResume();
+    }
+
+    /// A gate on the hub, unlocked after its cold start.
+    Future<StartupGate> unlockedOnHub(_Harness harness) async {
+      final gate = harness.start();
+      await flush();
+      harness.lock.answer(UnlockResult.unlocked);
+      await flush();
+      expect(gate.value, const StartupState.hub());
+      return gate;
+    }
+
+    test('covers a cold start with a session and asks to unlock', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.hub().withLock(locked: true));
+      expect(harness.lock.requests, 1);
+      expect(harness.lock.requestOpen, isTrue);
+    });
+
+    test('runs alongside the read of the account', () async {
+      final harness = _Harness(secure: true, account: oldNoticeAccount)
+        ..accounts.readGate = Completer<void>();
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.checking().withLock(locked: true));
+      expect(harness.lock.requestOpen, isTrue);
+
+      harness.lock.answer(UnlockResult.unlocked);
+      await flush();
+      expect(gate.value, const StartupState.checking());
+
+      harness.accounts.readGate!.complete();
+      await flush();
+      expect(gate.value, const StartupState.welcome(noticeOnly: true));
+    });
+
+    test('shows no step before the check of the screen lock', () async {
+      final harness = _Harness(secure: true)
+        ..lock.checkGate = Completer<void>();
+      final gate = harness.start();
+      await flush();
+
+      expect(harness.accounts.reads, 1);
+      expect(gate.value, const StartupState.checking());
+
+      harness.lock.checkGate!.complete();
+      await flush();
+      expect(gate.value, const StartupState.hub().withLock(locked: true));
+    });
+
+    test('never comes without a secure screen lock', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+      away(harness, gate, const Duration(minutes: 5));
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.lock.checks, 2);
+      expect(harness.lock.requests, 0);
+    });
+
+    test('never comes with the sign-in of this run', () async {
+      final harness = _Harness(signedIn: false, secure: true);
+      final gate = harness.start();
+      await flush();
+
+      harness.auth.openSession();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.lock.requests, 0);
+    });
+
+    test(
+      'comes after a minute hidden on the hub, after a sign-in too',
+      () async {
+        final harness = _Harness(signedIn: false, secure: true);
+        final gate = harness.start();
+        await flush();
+        harness.auth.openSession();
+        await flush();
+
+        away(harness, gate, const Duration(seconds: 59));
+        await flush();
+        expect(gate.value.locked, isFalse);
+
+        away(harness, gate, StartupGate.lockAfter);
+        await flush();
+        expect(gate.value, const StartupState.hub().withLock(locked: true));
+        expect(harness.lock.requests, 1);
+      },
+    );
+
+    test('counts each time hidden on its own', () async {
+      final harness = _Harness(secure: true);
+      final gate = await unlockedOnHub(harness);
+
+      away(harness, gate, const Duration(seconds: 30));
+      away(harness, gate, const Duration(seconds: 30));
+      await flush();
+
+      expect(gate.value.locked, isFalse);
+    });
+
+    test('does not come on the steps before the hub', () async {
+      final harness = _Harness(
+        signedIn: false,
+        secure: true,
+        account: newAccount,
+      );
+      final gate = harness.start();
+      await flush();
+      harness.auth.openSession();
+      await flush();
+      expect(gate.value.step, StartupStep.welcome);
+
+      away(harness, gate, const Duration(minutes: 5));
+      await flush();
+
+      expect(gate.value.locked, isFalse);
+      expect(harness.lock.requests, 0);
+    });
+
+    test('does not come when the app was only inactive', () async {
+      final harness = _Harness(secure: true);
+      final gate = await unlockedOnHub(harness);
+
+      harness.clock.advance(const Duration(minutes: 5));
+      gate.handleResume();
+      await flush();
+
+      expect(gate.value.locked, isFalse);
+    });
+
+    test('ignores the changes of the app during a request', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+      expect(harness.lock.requests, 1);
+
+      // The screen of the PIN hides the app.
+      away(harness, gate, const Duration(minutes: 2));
+      await flush();
+      expect(harness.lock.requests, 1);
+
+      harness.lock.answer(UnlockResult.unlocked);
+      await flush();
+      expect(gate.value.locked, isFalse);
+
+      gate.handleResume();
+      await flush();
+      expect(gate.value.locked, isFalse);
+    });
+
+    test('goes when the request succeeds', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.unlocking.value, isTrue);
+      harness.lock.answer(UnlockResult.unlocked);
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(gate.unlocking.value, isFalse);
+    });
+
+    test('opens one request at a time', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      unawaited(gate.unlock());
+      await flush();
+
+      expect(harness.lock.requests, 1);
+    });
+
+    test('stays when the user cancels, until the next return', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      harness.lock.answer(UnlockResult.cancelled);
+      await flush();
+      expect(gate.value.locked, isTrue);
+      expect(gate.unlocking.value, isFalse);
+      expect(harness.lock.requestOpen, isFalse);
+
+      // The notification shade: no return from the background.
+      gate.handleResume();
+      await flush();
+      expect(harness.lock.requests, 1);
+
+      // "Sblocca".
+      unawaited(gate.unlock());
+      await flush();
+      expect(harness.lock.requests, 2);
+      harness.lock.answer(UnlockResult.cancelled);
+      await flush();
+
+      away(harness, gate, const Duration(seconds: 5));
+      await flush();
+      expect(harness.lock.requests, 3);
+      expect(harness.lock.requestOpen, isTrue);
+    });
+
+    test('stays on any other failure, without a new request', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      harness.lock.answer(UnlockResult.failed);
+      await flush();
+
+      expect(gate.value.locked, isTrue);
+      expect(harness.lock.requests, 1);
+    });
+
+    test('asks again on the return when the system stopped the request '
+        'as the app left', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      gate.handleHide();
+      harness.lock.answer(UnlockResult.failed);
+      await flush();
+      expect(harness.lock.requests, 1);
+
+      gate.handleResume();
+      await flush();
+      expect(harness.lock.requests, 2);
+    });
+
+    test(
+      'does not ask again after a cancel from the screen of the PIN',
+      () async {
+        final harness = _Harness(secure: true);
+        final gate = harness.start();
+        await flush();
+
+        gate.handleHide();
+        harness.lock.answer(UnlockResult.cancelled);
+        await flush();
+        gate.handleResume();
+        await flush();
+
+        expect(harness.lock.requests, 1);
+        expect(gate.value.locked, isTrue);
+      },
+    );
+
+    test('goes when the screen lock was removed', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      harness.lock.answer(UnlockResult.noCredentials);
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+    });
+
+    test('reads the screen lock at every return', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+      expect(gate.value.locked, isFalse);
+
+      harness.lock.secure = true;
+      away(harness, gate, const Duration(minutes: 2));
+      await flush();
+      expect(gate.value.locked, isTrue);
+      harness.lock.answer(UnlockResult.unlocked);
+      await flush();
+
+      harness.lock.secure = false;
+      away(harness, gate, const Duration(minutes: 2));
+      await flush();
+      expect(gate.value.locked, isFalse);
+      expect(harness.lock.checks, 3);
+    });
+
+    test('goes with "Esci", to sign-in without a message', () async {
+      final harness = _Harness(secure: true);
+      final gate = harness.start();
+      await flush();
+
+      await gate.signOut();
+      await flush();
+
+      expect(gate.value, const StartupState.signIn(SignInArrival.signedOut));
+    });
+
+    test(
+      'goes when the session is lost, to sign-in with the message',
+      () async {
+        final harness = _Harness(secure: true);
+        final gate = harness.start();
+        await flush();
+
+        harness.auth.loseSession();
+        await flush();
+        expect(
+          gate.value,
+          const StartupState.signIn(SignInArrival.sessionLost),
+        );
+
+        // A request that ends later changes nothing.
+        harness.lock.answer(UnlockResult.unlocked);
+        await flush();
+        expect(
+          gate.value,
+          const StartupState.signIn(SignInArrival.sessionLost),
+        );
+      },
+    );
   });
 }

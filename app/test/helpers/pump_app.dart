@@ -7,6 +7,7 @@ import 'package:homemade/core/links/link_opener.dart';
 import 'package:homemade/core/router/app_router.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
+import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
@@ -49,7 +50,8 @@ void usePhoneWindow() {
 /// [accounts] to an account that has done every step. [openedLinks]
 /// collects the pages the app opens in the browser. [config] defaults to
 /// [testConfig], whose `APP_ENV` is not `dev`. [window] sets the size of the
-/// window, in dp.
+/// window, in dp. [lock] defaults to a device without a screen lock, which
+/// never shows the unlock (A1); [clock] to a clock that stays still.
 Future<GoRouter> pumpApp(
   WidgetTester tester, {
   String location = '/',
@@ -60,6 +62,8 @@ Future<GoRouter> pumpApp(
   LocalStore? store,
   List<Uri>? openedLinks,
   Size? window,
+  DeviceLock? lock,
+  FakeClock? clock,
 }) async {
   if (window != null) setWindow(tester, window);
   final container = ProviderContainer(
@@ -73,6 +77,8 @@ Future<GoRouter> pumpApp(
         devices ?? FakeDeviceRepository(),
       ),
       localStoreProvider.overrideWithValue(store ?? MemoryLocalStore()),
+      deviceLockProvider.overrideWithValue(lock ?? FakeDeviceLock()),
+      monotonicClockProvider.overrideWithValue((clock ?? FakeClock()).call),
       linkOpenerProvider.overrideWithValue(
         (uri) async => openedLinks?.add(uri),
       ),

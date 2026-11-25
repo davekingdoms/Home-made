@@ -44,15 +44,22 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 enum _MenuAction { signOut }
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
-  late final SessionUser? _user = ref.read(authRepositoryProvider).currentUser;
-  late final TextEditingController _name = TextEditingController(
-    text: _user?.name?.trim() ?? '',
-  );
+  // Read in initState: with the checkbox alone the name field never shows,
+  // and dispose must not be the first to read the session.
+  late final SessionUser? _user;
+  late final TextEditingController _name;
   late final TapGestureRecognizer _noticeLink = TapGestureRecognizer()
     ..onTap = _openNotice;
 
   bool _noticeRead = false;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = ref.read(authRepositoryProvider).currentUser;
+    _name = TextEditingController(text: _user?.name?.trim() ?? '');
+  }
 
   @override
   void dispose() {

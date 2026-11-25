@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 /// (A2) follows, without the message of the expired session.
 ///
 /// The one way out of the account: Account (I2), the menu of first access
-/// (A3) and, from the next iterations, unlock (A1) and household (A7).
+/// (A3), unlock (A1) and, from the next iterations, household (A7).
 Future<void> confirmSignOut(BuildContext context, WidgetRef ref) async {
   final gate = ref.read(startupGateProvider);
   final confirmed = await showDialog<bool>(
