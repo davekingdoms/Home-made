@@ -372,4 +372,217 @@ void main() {
       );
     });
   });
+
+  group('invites', () {
+    /// An invented token, of the length of a real one.
+    const token = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE';
+
+    test('reads the name and the open invites, never the hash', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (request) async {
+        if (request.url.path == '/rest/v1/households') {
+          return _json({'name': 'Casa di prova'});
+        }
+        return _json([
+          {
+            'id': 'invite-2',
+            'label': null,
+            'expires_at': '2031-03-20T09:00:00+00:00',
+            'created_at': '2031-03-13T09:00:00+00:00',
+          },
+          {
+            'id': 'invite-1',
+            'label': 'Bruno',
+            'expires_at': '2031-03-18T09:00:00+00:00',
+            'created_at': '2031-03-11T09:00:00+00:00',
+          },
+        ]);
+      });
+
+      final context = await SupabaseHouseholdRepository(
+        client,
+        now: () => DateTime.utc(2031, 3, 15, 10),
+      ).readInviteContext();
+
+      expect(context.householdName, 'Casa di prova');
+      expect(context.openInvites.map((invite) => invite.label), [
+        null,
+        'Bruno',
+      ]);
+      expect(
+        context.openInvites.first.expiresAt,
+        DateTime.utc(2031, 3, 20, 9).toLocal(),
+      );
+      final invites = requests.singleWhere(
+        (request) => request.url.path == '/rest/v1/invites',
+      );
+      final query = invites.url.queryParameters;
+      expect(query['select'], 'id,label,expires_at,created_at');
+      expect(query['used_at'], 'is.null');
+      expect(query['revoked_at'], 'is.null');
+      expect(query['expires_at'], 'gt.2031-03-15T10:00:00.000Z');
+      expect(query['order'], 'created_at.desc.nullslast');
+    });
+
+    test('creates an invite with its label', () async {
+      final requests = <http.Request>[];
+      final client = _client(
+        requests,
+        (_) async => _json([
+          {'invite_id': 'invite-1', 'token': token, 'code': 'K7QMX2PA'},
+        ]),
+      );
+
+      final invite = await SupabaseHouseholdRepository(client)
+          .createInvite(label: 'Bruno');
+
+      expect(requests.single.url.path, '/rest/v1/rpc/create_invite');
+      expect(jsonDecode(requests.single.body), {'label': 'Bruno'});
+      expect(invite.id, 'invite-1');
+      expect(invite.token, token);
+      expect(invite.code, 'K7QMX2PA');
+      expect(invite.label, 'Bruno');
+    });
+
+    test('throws the key of the error of create_invite', () async {
+      final client = _client(
+        [],
+        (_) async => _json({'code': 'P0001', 'message': 'household_full'}, 400),
+      );
+
+      Object? thrown;
+      try {
+        await SupabaseHouseholdRepository(client).createInvite();
+      } on Object catch (error) {
+        thrown = error;
+      }
+      expect(CreateInviteError.of(thrown!), CreateInviteError.householdFull);
+    });
+
+    test('reads the preview, with the start date of the household', () async {
+      final requests = <http.Request>[];
+      final client = _client(
+        requests,
+        (_) async => _json([
+          {
+            'error': null,
+            'household_name': 'Casa di prova',
+            'inviter_name': 'Anna',
+            'member_names': ['Anna', 'Bruno'],
+            'household_start_date': '2031-03-01',
+          },
+        ]),
+      );
+
+      final result = await SupabaseHouseholdRepository(client)
+          .previewInvite(code: 'K7QMX2PA');
+
+      expect(requests.single.url.path, '/rest/v1/rpc/invite_preview');
+      expect(jsonDecode(requests.single.body), {
+        'code': 'K7QMX2PA',
+        'token': null,
+      });
+      expect(result.error, isNull);
+      expect(result.preview?.householdName, 'Casa di prova');
+      expect(result.preview?.inviterName, 'Anna');
+      expect(result.preview?.memberNames, ['Anna', 'Bruno']);
+      expect(result.preview?.householdStartDate, DateTime(2031, 3));
+    });
+
+    test('gives the error of the preview, without raising it', () async {
+      final client = _client(
+        [],
+        (_) async => _json([
+          {
+            'error': 'invite_expired',
+            'household_name': null,
+            'inviter_name': null,
+            'member_names': null,
+            'household_start_date': null,
+          },
+        ]),
+      );
+
+      final result = await SupabaseHouseholdRepository(client)
+          .previewInvite(token: token);
+
+      expect(result.preview, isNull);
+      expect(result.error, InviteError.expired);
+    });
+
+    test('an unknown key is an error of its own', () async {
+      final client = _client(
+        [],
+        (_) async => _json([
+          {'error': 'boh'},
+        ]),
+      );
+
+      await expectLater(
+        SupabaseHouseholdRepository(client).previewInvite(code: 'K7QMX2PA'),
+        throwsA(isA<UnknownInviteError>()),
+      );
+    });
+
+    test('joins with the token, the date and the cash', () async {
+      final requests = <http.Request>[];
+      final client = _client(
+        requests,
+        (_) async => _json([
+          {'error': null, 'member_id': 'member-1', 'household_id': 'house-1'},
+        ]),
+      );
+
+      final error = await SupabaseHouseholdRepository(client).redeemInvite(
+        token: token,
+        cashOpeningCents: 750,
+        startDate: DateTime(2031, 3, 10),
+      );
+
+      expect(error, isNull);
+      expect(requests.single.url.path, '/rest/v1/rpc/redeem_invite');
+      expect(jsonDecode(requests.single.body), {
+        'code': null,
+        'token': token,
+        'cash_opening_cents': 750,
+        'start_date': '2031-03-10',
+      });
+    });
+
+    test('joins a household not started without a date', () async {
+      final requests = <http.Request>[];
+      final client = _client(
+        requests,
+        (_) async => _json([
+          {'error': null, 'member_id': 'member-1', 'household_id': 'house-1'},
+        ]),
+      );
+
+      await SupabaseHouseholdRepository(client).redeemInvite(code: 'K7QMX2PA');
+
+      expect(
+        jsonDecode(requests.single.body),
+        containsPair('start_date', null),
+      );
+    });
+
+    test('gives the error of the join, without raising it', () async {
+      final client = _client(
+        [],
+        (_) async => _json([
+          {
+            'error': 'start_date_out_of_range',
+            'member_id': null,
+            'household_id': null,
+          },
+        ]),
+      );
+
+      expect(
+        await SupabaseHouseholdRepository(client)
+            .redeemInvite(code: 'K7QMX2PA'),
+        InviteError.startDateOutOfRange,
+      );
+    });
+  });
 }

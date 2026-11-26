@@ -6,12 +6,15 @@ import 'package:homemade/features/startup/startup_state.dart';
 /// startup steps.
 const destinationParameter = 'from';
 
-/// Path of the screen of [step]; null for the hub, where nothing is missing.
-String? startupStepPath(StartupStep step) => switch (step) {
+/// Path of the screen of the step of [startup]; null for the hub, where
+/// nothing is missing. The household step is A7, or A10 with a pending
+/// invite; A9 follows "Crea" of A8.
+String? startupStepPath(StartupState startup) => switch (startup.step) {
   StartupStep.checking || StartupStep.unavailable => startupPath,
   StartupStep.signIn => screenByCode('A2').path,
   StartupStep.welcome => screenByCode('A3').path,
-  StartupStep.household => screenByCode('A7').path,
+  StartupStep.household => screenByCode(startup.joining ? 'A10' : 'A7').path,
+  StartupStep.invite => screenByCode('A9').path,
   StartupStep.location => screenByCode('A11').path,
   StartupStep.hub => null,
 };
@@ -31,7 +34,9 @@ final Set<String> _gatePaths = {
   screenByCode('A3').path!,
 };
 
-/// Path of the household step (A7), parent of A8–A10.
+/// Path of the household step (A7), parent of A8–A10. A9 and A10 are also
+/// the screens of steps of their own: after "Crea", and with a pending
+/// invite.
 final String _householdPath = screenByCode('A7').path!;
 
 /// Whether [path] is a screen of the gate: one of [_gatePaths], or the
@@ -53,7 +58,7 @@ String? startupRedirect(StartupState startup, Uri location) {
   final destination = _isGatePath(path)
       ? location.queryParameters[destinationParameter]
       : location.toString();
-  final target = startupStepPath(startup.step);
+  final target = startupStepPath(startup);
   if (target != null) {
     if (path == target || path.startsWith('$target/')) return null;
     final keep = startup.arrival == SignInArrival.signedOut

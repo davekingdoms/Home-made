@@ -175,18 +175,72 @@ void main() {
   });
 
   test('every step has the path of its screen', () {
-    expect(startupStepPath(StartupStep.signIn), '/sign-in');
-    expect(startupStepPath(StartupStep.welcome), '/welcome');
-    expect(startupStepPath(StartupStep.household), '/household');
-    expect(startupStepPath(StartupStep.location), '/location');
-    expect(startupStepPath(StartupStep.hub), isNull);
+    expect(startupStepPath(const StartupState.signIn()), '/sign-in');
+    expect(
+      startupStepPath(const StartupState.welcome(noticeOnly: false)),
+      '/welcome',
+    );
+    expect(startupStepPath(const StartupState.household()), '/household');
+    expect(
+      startupStepPath(const StartupState.household(joining: true)),
+      '/household/join',
+    );
+    expect(startupStepPath(const StartupState.invite()), '/household/invite');
+    expect(startupStepPath(const StartupState.location()), '/location');
+    expect(startupStepPath(const StartupState.hub()), isNull);
   });
 
   test('no step leads to the unlock (A1), which covers the app', () {
-    for (final step in StartupStep.values) {
-      expect(startupStepPath(step), isNot('/unlock'), reason: step.name);
+    for (final state in [
+      const StartupState.checking(),
+      const StartupState.unavailable(RemoteFailure.connection),
+      const StartupState.signIn(),
+      const StartupState.welcome(noticeOnly: false),
+      const StartupState.household(),
+      const StartupState.household(joining: true),
+      const StartupState.invite(),
+      const StartupState.location(),
+      const StartupState.hub(),
+    ]) {
+      expect(startupStepPath(state), isNot('/unlock'), reason: '$state');
     }
     expect(_redirect(const StartupState.hub(), '/unlock'), isNull);
+  });
+
+  group('with a pending invite', () {
+    const state = StartupState.household(joining: true);
+
+    test('the household step opens A10 in place of A7', () {
+      expect(_redirect(state, '/'), '/household/join');
+      expect(_redirect(state, '/household'), '/household/join');
+      expect(_redirect(state, '/household/create'), '/household/join');
+      expect(_redirect(state, '/household/join'), isNull);
+    });
+
+    test('the screen asked for still travels along', () {
+      expect(_redirect(state, '/settings'), '/household/join?from=%2Fsettings');
+    });
+  });
+
+  group('after "Crea" of A8', () {
+    const state = StartupState.invite();
+
+    test('the step is A9', () {
+      expect(_redirect(state, '/household/create'), '/household/invite');
+      expect(_redirect(state, '/'), '/household/invite');
+      expect(_redirect(state, '/household/invite'), isNull);
+    });
+
+    test('A9 gives way to the screen asked for once closed', () {
+      expect(
+        _redirect(
+          const StartupState.hub(),
+          '/household/invite?from=%2Fsettings',
+        ),
+        '/settings',
+      );
+      expect(_redirect(const StartupState.hub(), '/household/invite'), '/');
+    });
   });
 
   test('the lock does not move the router', () {

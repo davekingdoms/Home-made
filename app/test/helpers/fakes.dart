@@ -153,6 +153,29 @@ typedef HouseholdCreation = ({
   int? cashOpeningCents,
 });
 
+/// A call to `invite_preview` or `redeem_invite`, as
+/// [FakeHouseholdRepository] received it.
+typedef InviteCall = ({
+  String? code,
+  String? token,
+  int? cashOpeningCents,
+  DateTime? startDate,
+});
+
+/// An invented token of a link: 43 characters of base64url.
+const inventedToken = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE';
+
+/// Another one, for a second invite.
+final String otherInventedToken = 'Z' * 43;
+
+/// "Casa di prova" of Anna and Bruno, started on 1 March 2031.
+final testPreview = InvitePreview(
+  householdName: 'Casa di prova',
+  inviterName: 'Anna Rossi',
+  memberNames: const ['Anna Rossi', 'Bruno'],
+  householdStartDate: DateTime(2031, 3),
+);
+
 /// [HouseholdRepository] in memory. Each call is recorded, also the ones
 /// that fail.
 class FakeHouseholdRepository implements HouseholdRepository {
@@ -164,6 +187,50 @@ class FakeHouseholdRepository implements HouseholdRepository {
 
   /// What [createHousehold] received, in order.
   final calls = <HouseholdCreation>[];
+
+  /// Name of the household of the signed-in user, for A9.
+  String householdName = 'Casa di prova';
+
+  /// Open invites of the household, the latest first.
+  List<OpenInvite> openInvites = const [];
+
+  /// When set, [readInviteContext] throws it.
+  Exception? contextError;
+
+  int contextReads = 0;
+
+  /// What [createInvite] returns, in order; then invented ones.
+  final createdInvites = <({String token, String code})>[
+    (token: inventedToken, code: 'K7QMX2PA'),
+    (token: otherInventedToken, code: 'P4RW9HTC'),
+  ];
+
+  /// When set, [createInvite] throws it.
+  Exception? inviteError;
+
+  /// When set, [createInvite] waits for it.
+  Completer<void>? inviteGate;
+
+  /// Labels [createInvite] received, in order.
+  final inviteLabels = <String?>[];
+
+  /// What [previewInvite] returns; with [previewThrows] set it throws that.
+  InvitePreviewResult previewResult = (preview: testPreview, error: null);
+  Exception? previewThrows;
+
+  /// When set, [previewInvite] waits for it.
+  Completer<void>? previewGate;
+
+  final previews = <InviteCall>[];
+
+  /// What [redeemInvite] returns; with [redeemThrows] set it throws that.
+  InviteError? redeemResult;
+  Exception? redeemThrows;
+
+  /// When set, [redeemInvite] waits for it.
+  Completer<void>? redeemGate;
+
+  final redeems = <InviteCall>[];
 
   @override
   Future<void> createHousehold({
@@ -181,6 +248,69 @@ class FakeHouseholdRepository implements HouseholdRepository {
     await gate?.future;
     final error = this.error;
     if (error != null) throw error;
+  }
+
+  @override
+  Future<InviteContext> readInviteContext() async {
+    contextReads++;
+    final error = contextError;
+    if (error != null) throw error;
+    return (householdName: householdName, openInvites: openInvites);
+  }
+
+  @override
+  Future<CreatedInvite> createInvite({String? label}) async {
+    inviteLabels.add(label);
+    await inviteGate?.future;
+    final error = inviteError;
+    if (error != null) throw error;
+    final index = inviteLabels.length - 1;
+    final made = index < createdInvites.length
+        ? createdInvites[index]
+        : (token: inventedToken, code: 'ABCD2345');
+    final number = (index + 1).toString().padLeft(2, '0');
+    return CreatedInvite(
+      id: '00000000-0000-4000-8000-0000000000$number',
+      token: made.token,
+      code: made.code,
+      label: label,
+    );
+  }
+
+  @override
+  Future<InvitePreviewResult> previewInvite({
+    String? code,
+    String? token,
+  }) async {
+    previews.add((
+      code: code,
+      token: token,
+      cashOpeningCents: null,
+      startDate: null,
+    ));
+    await previewGate?.future;
+    final error = previewThrows;
+    if (error != null) throw error;
+    return previewResult;
+  }
+
+  @override
+  Future<InviteError?> redeemInvite({
+    String? code,
+    String? token,
+    int? cashOpeningCents,
+    DateTime? startDate,
+  }) async {
+    redeems.add((
+      code: code,
+      token: token,
+      cashOpeningCents: cashOpeningCents,
+      startDate: startDate,
+    ));
+    await redeemGate?.future;
+    final error = redeemThrows;
+    if (error != null) throw error;
+    return redeemResult;
   }
 }
 
