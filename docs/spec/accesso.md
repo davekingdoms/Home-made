@@ -15,6 +15,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 | 5 | Altrimenti | Hub |
 
 - Un solo stato dell'avvio decide il passo, e il router legge solo quello: attesa, stato offline e ritorno alla schermata chiesta in [`navigazione.md`](navigazione.md), sezione 2.
+- **Passo della casa** (dalla 4.6): manca finché l'account non è membro attivo di una casa. A7 e le sue schermate (A8–A10) sono schermate del passo, come A2 e A3: mai una destinazione da riaprire; quando la casa c'è cedono il posto alla schermata chiesta o all'hub. Dopo "Crea" di A8 l'avvio passa al passo successivo; dalla 4.7 A8 porta ad A9 e un invito in sospeso apre A10.
 - **Sblocco: un blocco sopra i passi, non un passo del router.** A1 copre l'app all'avvio a freddo con una sessione salvata, qualunque sia il passo, e al ritorno in primo piano dopo almeno 1 minuto con l'app nascosta, solo sull'hub; mai con l'accesso con Google, mai durante una richiesta di sblocco, mai su un dispositivo senza blocco schermo. Lo decide lo stesso stato dell'avvio, ma il router non lo legge: niente cambi di rotta. Regole nella sezione 2.
 - **Secondo dispositivo dello stesso account:** A2 → A11 → hub; il dispositivo si registra sull'account.
 - **Dispositivo:** alla prima entrata di un account su un'installazione l'app genera l'id del dispositivo (UUID), lo salva sul dispositivo insieme all'id dell'account e inserisce la riga in `devices` (piattaforma `android`, senza nome né token per le notifiche): un secondo inserimento con lo stesso id (`23505`) vuol dire già registrato. `last_seen_at` si aggiorna al più una volta al giorno, all'avvio e al ritorno in primo piano. Ogni dispositivo dello stesso account ha la sua riga. Nei log solo il passo e il codice, mai id né modelli.
@@ -53,7 +54,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
   - In alto la card in evidenza (`primaryContainer` con le bande diagonali, raggio 32 dp, padding 24 dp), non toccabile e letta come una voce sola dal lettore di schermo. Nella card, in basso a sinistra: il logo provvisorio di 72 dp (biscotto in `tertiary` con la casa in `onTertiary`, che si distingue dalla card in entrambi i temi); 20 dp sotto, "Home-made" (displaySmall in `onPrimaryContainer`); 4 dp sotto, la frase (bodyLarge in `suPrimarioTenue`).
   - **Altezza della card:** 460/844 dell'altezza sotto la barra di stato (460 dp su un telefono alto 844), mai meno di 280 dp né del suo contenuto. Se in basso manca spazio si accorcia fino a quel minimo, lasciando almeno 12 dp tra la card e l'avviso o il tasto; poi la colonna scorre.
   - In basso, in fondo alla colonna, con 12 dp tra l'uno e l'altro: "Continua con Google", tasto pieno largo quanto la colonna, alto 56 dp; la riga "Accedi o registrati con il tuo account Google." (bodySmall in `testoTerziario`, centrata). Solo su `dev`, 8 dp sotto la riga, la casella "Modalità demo", centrata.
-  - **Avviso della sessione scaduta:** riquadro fisso con l'aspetto di uno snackbar (fondo `inverseSurface`, testo `onInverseSurface` nello stile del contenuto degli snackbar, raggio 8 dp, alto almeno 48 dp), largo quanto la colonna, 12 dp sopra il tasto; regione che il lettore di schermo annuncia (stato), senza azione né chiusura.
+  - **Avviso della sessione scaduta:** riquadro fisso con l'aspetto di uno snackbar (fondo `inverseSurface`, testo `onInverseSurface` nello stile del contenuto degli snackbar, raggio 8 dp, alto almeno 48 dp), largo quanto la colonna, 12 dp sopra il tasto; regione che il lettore di schermo annuncia (regione live), ma senza il ruolo di stato, che Flutter in quel punto vieta con un'asserzione; senza azione né chiusura.
   - Con il testo fino al 200% niente si taglia: la colonna scorre e la card tiene la sua altezza minima.
 
 | Caso | Messaggio |
@@ -81,17 +82,30 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 ## 5. A7 — Crea o entra in una casa
 
-- Due scelte con una riga di spiegazione: "Crea una casa" → A8; "Ho un invito" → A10.
-- Con un invito in sospeso A7 si salta.
-- **"Esci dall'account"** nel menu della barra in alto, come in A3.
+- **Saluto:** "Ciao, {nome}" (headlineLarge), con {nome} = la prima parola del nome visualizzato del profilo; senza nome (stato salvato prima che l'app lo leggesse), "Ciao". Sotto, a 8 dp, "Per iniziare crea la tua casa, oppure entra in quella di chi ti ha invitato." (bodyMedium in `onSurfaceVariant`). Il nome visualizzato arriva con lo stato dell'avvio, che lo legge dal profilo e lo salva sul dispositivo.
+- **"Crea una casa"** → A8: card in evidenza (`primaryContainer` con la banda diagonale, raggio 28 dp, padding 20 dp); in alto il biscotto di 56 dp in `tertiary` con la casa da aggiungere (28 dp, `onTertiary`); 32 dp sotto, il titolo (titleLarge) e "Scegli il nome e da quando tenere i conti. Gli inviti puoi mandarli anche dopo." (bodyMedium in `suPrimarioTenue`), con la freccia in basso a destra.
+- **"Ho un invito"** → A10: card `surfaceContainerLow` con le stesse misure; cerchio di 56 dp in `surfaceContainerHighest` con il link (28 dp, `primary`); "Scrivi il codice che hai ricevuto, oppure apri il link su questo dispositivo." in `onSurfaceVariant`, freccia in `onSurfaceVariant`.
+- Ogni card si tocca tutta ed è letta come una voce sola, con il ruolo di tasto.
+- In fondo, centrata, "Una casa con un solo membro funziona già: gli altri si aggiungono quando vuoi." (bodySmall in `testoTerziario`), 24 dp sopra il bordo inferiore.
+- **Disposizione:** in alto la barra con il solo menu, senza titolo né indietro; il contenuto parte sotto la barra, con 24 dp tra i blocchi, nella colonna centrata larga al massimo 640 dp; con il testo fino al 200% la colonna scorre. L'indietro di Android fa come in A3 (l'app esce).
+- **Menu della barra:** "Esci dall'account", come in A3; per un account demo anche "Elimina account demo", con il dialogo, gli errori e l'esito di I2 (sezione 12). Durante l'eliminazione al posto del menu c'è un indicatore.
+- Con un invito in sospeso A7 si salta (dalla 4.7).
 
 ## 6. A8 — Crea casa
 
-- **Nome della casa:** obbligatorio, senza valore predefinito.
-- **Data di inizio:** predefinita il primo giorno del mese in corso, modificabile; ammessa da 90 giorni prima di oggi a 12 mesi dopo. Testo sotto il campo: "L'app considera solo i movimenti da questa data. Le banche di solito restituiscono circa tre mesi di movimenti: collegale subito dopo."
+- **Disposizione:** barra alta 64 dp con l'indietro (→ A7) e il titolo "Crea casa"; campi con 16 dp ai lati e in alto e 24 dp tra l'uno e l'altro; in fondo "Crea", tasto pieno alto 56 dp, 24 dp sopra il bordo. Con la tastiera aperta o il testo grande la colonna scorre e "Crea" resta raggiungibile.
+- **Nome della casa:** campo contornato, vuoto all'apertura, con la maiuscola iniziale; obbligatorio: spazi alle estremità tolti, da 1 a 80 caratteri (vincolo di `households`).
+- **Data di inizio:** campo contornato non scrivibile con il calendario a destra; il tocco apre il selettore di data di Material in italiano. Predefinita il primo giorno del mese in corso; ammessa da 90 giorni prima di oggi a 12 mesi dopo (date locali del dispositivo; con i 12 mesi, lo stesso giorno del mese, o l'ultimo di un mese più corto). Si scrive "1° novembre 2026" (il simbolo ° solo per il giorno 1) e, se è oggi, "17 novembre 2026 · oggi". Il lettore di schermo legge "Data di inizio: 1° novembre 2026. Tocca per cambiarla" (oggi: "Data di inizio: oggi, 17 novembre 2026. Tocca per cambiarla"). Testo sotto il campo: "L'app considera solo i movimenti da questa data. Le banche di solito restituiscono circa tre mesi di movimenti: collegale subito dopo."
 - **Quote predefinite:** non si chiedono (un solo membro).
-- **Contanti:** se la data di inizio è il giorno stesso, campo facoltativo "Quanti contanti hai adesso?" (vedi sezione 10).
-- **Crea:** nascono la casa (nome, data di inizio, creata da), il primo membro (data di inizio = quella della casa) e il suo conto Contanti → A9.
+- **Contanti:** solo se la data di inizio è oggi, campo facoltativo "Quanti contanti hai adesso?" (vedi sezione 10): contornato, con "€" in fondo, segnaposto "0,00", cifre tabulari, tastiera numerica con il decimale. Si scrivono solo cifre e un separatore decimale, la virgola (il punto diventa virgola), al più 2 decimali, niente segno, al più 999.999,99; vuoto = nessun saldo. Testo sotto: "Facoltativo. È il saldo iniziale del tuo conto Contanti, non un'entrata: puoi indicarlo anche dopo." Se la data cambia il campo sparisce, ma il valore scritto resta; si manda solo se al tocco di "Crea" la data è oggi.
+- **Crea:** attivo con un nome valido; durante il salvataggio mostra un indicatore ed è disattivato. Chiama `create_household(id, name, start_date, cash_opening_cents)` con un id generato all'apertura di A8, uguale a ogni nuovo tentativo: la funzione non crea doppioni. Nascono la casa (nome, data di inizio, creata da), il primo membro (data di inizio = quella della casa) e il suo conto Contanti; poi lo stato dell'avvio dice che la casa c'è e l'avvio va al passo successivo (dalla 4.7 A9).
+
+| Caso | Messaggio |
+|---|---|
+| Senza rete | "Nessuna connessione. Controlla la rete e riprova." |
+| `start_date_out_of_range` | "La data di inizio non è più valida: scegline un'altra." |
+| `already_member` (casa creata o invito usato da un altro dispositivo) | nessuno: si rilegge lo stato e si va avanti |
+| Qualunque altro errore (anche `no_profile`; nel log solo il codice) | "Non è stato possibile creare la casa. Riprova." |
 
 ## 7. A9 — Invita
 
@@ -165,6 +179,7 @@ Strumento di sviluppo: su `dev` un account Google creato come demo si elimina da
 - **Interruttore spento con la casella spuntata** (in locale, o su `dev` prima del segreto): "Continua" di A3 dà l'errore generico "Non è stato possibile salvare. Riprova."; si esce con "Esci dall'account" dal menu di A3 e si toglie la spunta in A2.
 - **A3:** per un account demo, sotto il testo d'aiuto del nome, la riga "Account demo: si potrà eliminare da Impostazioni › Account."
 - **I2 Account:** per un account demo (letto dal profilo), sotto "Esci", il tasto **"Elimina account demo"** (colore `error`) con il dialogo **"Eliminare l'account demo?"**, testo **"Si cancellano l'account, le case rimaste senza altri membri e tutti i loro dati. Non si può annullare."**, tasti **"Annulla"** e **"Elimina"** (testo nel colore `error`). Durante l'eliminazione il tasto mostra un indicatore. Errori (snackbar): "Nessuna connessione. Controlla la rete e riprova." oppure "Non è stato possibile eliminare l'account. Riprova.". Per un account vero il tasto non c'è.
+- **A7:** per un account demo il menu della barra ha anche la voce "Elimina account demo", con lo stesso dialogo, gli stessi errori e lo stesso esito di I2; durante l'eliminazione al posto del menu c'è un indicatore. Per un account vero la voce non c'è.
 - **Eliminazione** (`delete_my_demo_account()`, in una transazione): in ogni casa di cui l'account è membro attivo, se non restano altri membri attivi la casa si cancella con **tutti** i suoi dati; se restano altri membri (demo) il membro diventa ex membro e le sue righe restano, come per ogni ex membro (le quote predefinite non si ricalcolano: rischio accettato, solo `dev`). Poi si cancella l'account, con profilo, impostazioni, dispositivi, email PayPal e credenziali di Enable Banking (con il segreto di Vault). Una seconda chiamata, dopo una risposta persa, non fa niente.
 - **Dopo l'eliminazione, sul dispositivo:** come "Esci" (id del dispositivo, stato dell'avvio salvato, uscita da Google e da Supabase), più **tutti i valori del dispositivo** (posizione chiesta, città, invito in sospeso, scelta della modalità demo), così il primo avvio si rifà intero. La riga di `devices` va con l'account: niente cancellazione separata. A2 senza il messaggio della sessione scaduta.
 - **Stato dell'avvio:** legge anche `is_demo` dal profilo e lo salva con lo stato dell'account; nessun passo nuovo.
@@ -174,8 +189,10 @@ Strumento di sviluppo: su `dev` un account Google creato come demo si elimina da
 
 - Con una sessione e una casa, l'avvio a freddo apre A1 e, dopo lo sblocco, l'hub; subito dopo l'accesso con Google A1 non compare.
 - Un secondo dispositivo con lo stesso account passa da A2 ad A11 all'hub, senza A3 né A7.
+- Senza casa l'avvio apre A7; con la casa, l'hub. Dopo "Crea" di A8 l'avvio va al passo successivo (oggi l'hub; dalla 4.7 A9).
 - In A8 la data predefinita è il primo del mese in corso; date fuori da −90 giorni / +12 mesi non si possono scegliere.
-- Il campo dei contanti in A8 compare solo se la data di inizio è il giorno stesso.
+- Il campo dei contanti in A8 compare solo se la data di inizio è il giorno stesso, e il saldo iniziale si manda solo se al tocco di "Crea" la data è oggi.
+- "Crea" ripetuto dopo un errore non crea una seconda casa (stesso id); `already_member` non mostra messaggi e porta avanti.
 - Un invito usato, scaduto o revocato non fa entrare nessuno; un account con una casa non può entrare in un'altra.
 - Un membro entrato dopo non vede le righe precedenti alla sua data di inizio e parte con il saldo del conguaglio a zero.
 - Un membro che entra in una casa non ancora iniziata ha la data di inizio della casa e non può cambiarla.
@@ -192,4 +209,4 @@ Strumento di sviluppo: su `dev` un account Google creato come demo si elimina da
 - "Nessun saldo da riportare" fissa a zero il saldo iniziale di ogni membro e toglie la voce a tutti.
 - Gli account demo esistono solo con il segreto `demo_accounts` in Vault: su `prod` né la casella di A2 né l'eliminazione, e il server rifiuta sia il flag sia l'eliminazione.
 - Un account demo non entra in una casa vera, né un account vero in una casa demo.
-- "Elimina account demo" chiede conferma ("Annulla" non elimina), cancella l'account e le case rimaste senza membri con tutti i loro dati, e il dispositivo riparte dal primo avvio, con A2 senza messaggi.
+- "Elimina account demo" (da I2 o dal menu di A7) chiede conferma ("Annulla" non elimina), cancella l'account e le case rimaste senza membri con tutti i loro dati, e il dispositivo riparte dal primo avvio, con A2 senza messaggi.
