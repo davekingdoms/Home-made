@@ -1,12 +1,13 @@
 -- Invites: create_invite, invite_preview, redeem_invite, set_my_start_date
 -- and the RLS of invites and invite_attempts, in a household that already
--- started. Invented users: Anna (a) creates "Casa di prova", Bruno (b) and
--- Carla (c) join it; Dario (d) lives alone in his household.
+-- started; then the start dates of A10. Invented users: Anna (a) creates
+-- "Casa di prova", Bruno (b) and Carla (c) join it; Dario (d) lives alone
+-- in his household.
 begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(58);
+select plan(77);
 
 create function pg_temp.login(user_id uuid)
 returns void
@@ -427,6 +428,170 @@ select is(
   10,
   'failed attempts are saved; refused ones are not'
 );
+
+-- Start dates of A10. Elena (e1) creates "Casa di Elena", started 30 days
+-- ago; Fabio (e2), Gaia (e3), Ivo (e4) and Luca (e5) join it from a start
+-- date of their own. Marta (e6) creates "Casa di Marta", starting in 20
+-- days; Nico (e7) joins it before then.
+insert into auth.users (id, aud, role) values
+  ('00000000-0000-4000-8000-0000000000e1', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-0000000000e2', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-0000000000e3', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-0000000000e4', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-0000000000e5', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-0000000000e6', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-0000000000e7', 'authenticated', 'authenticated');
+insert into public.profiles (id, display_name) values
+  ('00000000-0000-4000-8000-0000000000e1', 'Elena'),
+  ('00000000-0000-4000-8000-0000000000e2', 'Fabio'),
+  ('00000000-0000-4000-8000-0000000000e3', 'Gaia'),
+  ('00000000-0000-4000-8000-0000000000e4', 'Ivo'),
+  ('00000000-0000-4000-8000-0000000000e5', 'Luca'),
+  ('00000000-0000-4000-8000-0000000000e6', 'Marta'),
+  ('00000000-0000-4000-8000-0000000000e7', 'Nico');
+set local role authenticated;
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e1');
+select public.create_household('00000000-0000-4000-8000-0000000000f3', 'Casa di Elena', current_date - 30);
+insert into invite_codes select 'fabio', code, token from public.create_invite('per Fabio');
+insert into invite_codes select 'gaia', code, token from public.create_invite('per Gaia');
+insert into invite_codes select 'ivo', code, token from public.create_invite('per Ivo');
+insert into invite_codes select 'luca', code, token from public.create_invite('per Luca');
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e2');
+select is(
+  (select household_start_date
+   from public.invite_preview(code => (select code from invite_codes where who = 'fabio'))),
+  current_date - 30,
+  'the preview gives the start date of the household'
+);
+select is(
+  (select error from public.redeem_invite(
+    code => (select code from invite_codes where who = 'fabio'),
+    start_date => current_date - 31
+  )),
+  'start_date_out_of_range',
+  'a new member does not start before the household'
+);
+select is(
+  (select error from public.redeem_invite(
+    code => (select code from invite_codes where who = 'fabio'),
+    start_date => current_date + 2
+  )),
+  'start_date_out_of_range',
+  'nor after tomorrow'
+);
+select is(public.current_member_id(), null, 'a start date out of the range makes no member');
+select results_eq(
+  $$select error, household_id from public.redeem_invite(
+      code => (select code from invite_codes where who = 'fabio'),
+      cash_opening_cents => 1500,
+      start_date => current_date - 10
+    )$$,
+  $$values (null::text, '00000000-0000-4000-8000-0000000000f3'::uuid)$$,
+  'Fabio joins from a day in the past, the invite still unused'
+);
+select results_eq(
+  $$select start_date from public.members where user_id = '00000000-0000-4000-8000-0000000000e2'$$,
+  $$values (current_date - 10)$$,
+  'the member is born with the start date chosen'
+);
+select results_eq(
+  $$select valid_from from public.default_share_sets where member_id = public.current_member_id()$$,
+  $$values (current_date - 10)$$,
+  'the equal default shares of the join hold from that date'
+);
+select results_eq(
+  'select opening_balance_cents from public.accounts',
+  $$values (null::bigint)$$,
+  'with a start date in the past the cash is not the opening balance'
+);
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e3');
+select is(
+  (select error from public.redeem_invite(
+    code => (select code from invite_codes where who = 'gaia'),
+    start_date => current_date - 30
+  )),
+  null,
+  'Gaia joins from the start date of the household'
+);
+select results_eq(
+  $$select start_date from public.members where user_id = '00000000-0000-4000-8000-0000000000e3'$$,
+  $$values (current_date - 30)$$,
+  'and starts with it'
+);
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e4');
+select is(
+  (select error from public.redeem_invite(
+    token => (select token from invite_codes where who = 'ivo'),
+    start_date => current_date + 1
+  )),
+  null,
+  'Ivo joins from tomorrow: one day of tolerance for the time zones'
+);
+select results_eq(
+  $$select start_date from public.members where user_id = '00000000-0000-4000-8000-0000000000e4'$$,
+  $$values (current_date + 1)$$,
+  'and starts tomorrow'
+);
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e5');
+select results_eq(
+  $$select error, household_id from public.redeem_invite(
+      code => (select code from invite_codes where who = 'luca'),
+      cash_opening_cents => 750,
+      start_date => current_date
+    )$$,
+  $$values (null::text, '00000000-0000-4000-8000-0000000000f3'::uuid)$$,
+  'Luca joins from today'
+);
+select results_eq(
+  'select opening_balance_cents from public.accounts',
+  $$values (750::bigint)$$,
+  'starting today, the cash is the opening balance'
+);
+select results_eq(
+  $$select error, household_id from public.redeem_invite(
+      code => (select code from invite_codes where who = 'luca'),
+      start_date => current_date - 5
+    )$$,
+  $$values (null::text, '00000000-0000-4000-8000-0000000000f3'::uuid)$$,
+  'a second call with the same invite gives the same membership, whatever the date'
+);
+select results_eq(
+  $$select count(*)::int, min(start_date) from public.members
+    where user_id = '00000000-0000-4000-8000-0000000000e5'$$,
+  $$values (1, current_date)$$,
+  'and neither makes a second member nor moves the date'
+);
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e6');
+select public.create_household('00000000-0000-4000-8000-0000000000f4', 'Casa di Marta', current_date + 20);
+insert into invite_codes select 'nico', code, token from public.create_invite('per Nico');
+
+select pg_temp.login('00000000-0000-4000-8000-0000000000e7');
+select is(
+  (select household_start_date
+   from public.invite_preview(code => (select code from invite_codes where who = 'nico'))),
+  current_date + 20,
+  'the preview gives the start date of a household that has not started'
+);
+select is(
+  (select error from public.redeem_invite(
+    code => (select code from invite_codes where who = 'nico'),
+    start_date => current_date - 5
+  )),
+  null,
+  'Nico joins before the household starts, with a start date of his own'
+);
+select results_eq(
+  $$select start_date from public.members where user_id = '00000000-0000-4000-8000-0000000000e7'$$,
+  $$values (current_date + 20)$$,
+  'in a household that has not started the member starts with it, whatever the date sent'
+);
+reset role;
 
 -- Not signed in
 set local role anon;
