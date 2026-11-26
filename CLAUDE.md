@@ -60,7 +60,7 @@ Ogni commit segue [Conventional Commits](https://www.conventionalcommits.org/) e
 
 | Cartella | Contenuto |
 |---|---|
-| `app/lib/core/config/` | Configurazione letta da `--dart-define-from-file` (`AppConfig`) |
+| `app/lib/core/config/` | Configurazione letta da `--dart-define-from-file` (`AppConfig`), flavor della build (`AppFlavor`) e loro coerenza |
 | `app/lib/core/display/` | Orientamento: solo verticale sui telefoni (lato corto del display sotto i 600 dp), libero sui tablet |
 | `app/lib/core/links/` | Apertura delle pagine web nel browser (`url_launcher`), sostituibile nei test |
 | `app/lib/core/money/` | `Money`: importo in centesimi interi e valuta ISO 4217, formato italiano |
@@ -99,12 +99,14 @@ fvm dart run build_runner build -d        # generazione del codice (*.g.dart, *.
 fvm flutter analyze                       # analisi: zero problemi
 fvm dart format .                         # formattazione
 fvm flutter test --exclude-tags golden    # test (i golden girano solo in CI, su Linux)
-fvm flutter run --dart-define-from-file=../private/env.dev.json                   # avvio sul telefono
-fvm flutter build apk --release --dart-define-from-file=../private/env.dev.json   # build della release firmata
-fvm flutter install --release             # installazione della release sul telefono
+fvm flutter run --flavor dev --dart-define-from-file=../private/env.dev.json                   # avvio sul telefono
+fvm flutter build apk --release --flavor dev --dart-define-from-file=../private/env.dev.json   # build della release firmata
+fvm flutter install --release --flavor dev # installazione della release sul telefono
 ```
 
 La build release richiede `private/key.properties` e il keystore; le build debug no.
+
+**Flavor Android:** `dev` (pacchetto `io.github.davekingdoms.homemade.dev`, "Home-made dev") e `prod` (`io.github.davekingdoms.homemade`, "Home-made"), con la stessa chiave di firma. Senza `--flavor` la build fallisce (Gradle costruisce i due flavor, poi Flutter non trova l'APK). Il flavor `prod` si costruisce solo con `release.yml` (dalla 4.12). All'avvio l'app controlla che flavor e `APP_ENV` corrispondano (`dev` solo con `APP_ENV` = `dev`), altrimenti mostra la schermata della configurazione. L'APK di App Distribution (firma di rilascio) e una build di debug dello stesso flavor non stanno insieme sul telefono: prima si disinstalla l'altra. Le app di `dev` e di `prod` sì.
 
 ## CI
 
@@ -120,7 +122,7 @@ La build release richiede `private/key.properties` e il keystore; le build debug
 
 **Golden test:** le immagini di riferimento si generano **solo su Linux**, nella CI, perché Windows disegna i caratteri in modo diverso. Per aggiornarle: etichetta `update-goldens` sulla pull request, oppure workflow "Update goldens" avviato a mano sul branch (mai su `main`). Il workflow rigenera le immagini, le committa sul branch a nome di `github-actions[bot]` e fa ripartire la CI; poi `git pull` sul branch. Sul PC i golden non si lanciano.
 
-**Build di prova:** il workflow "Distribute test build" (`distribute.yml`), avviato a mano su un branch, compila l'APK di release configurato per `dev`, firmato con la chiave di caricamento, e lo manda ai tester con Firebase App Distribution. Usa i secrets dell'environment `dev`; l'APK non diventa mai un artifact.
+**Build di prova:** il workflow "Distribute test build" (`distribute.yml`), avviato a mano su un branch, compila l'APK di release del flavor `dev`, firmato con la chiave di caricamento, e lo manda ai tester con Firebase App Distribution. Usa i secrets dell'environment `dev`; l'APK non diventa mai un artifact.
 
 **Rilascio:** il workflow "Release" (`release.yml`, environment `prod`) porta su `prod` migrazioni ed Edge Functions. Si avvia a mano da `main`, prima con la prova (`dry_run`, predefinita: controlla solo le migrazioni) e poi senza; un tag `v*` rilascia senza prova.
 

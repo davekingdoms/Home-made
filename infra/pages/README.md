@@ -16,7 +16,7 @@ Pages pubblica **questa cartella così com'è**: nessuna build, nessuna dipenden
 | `index.html` | Radice minima con il solo nome dell'app |
 | `robots.txt` | Nessuna pagina da indicizzare |
 | `_headers` | Intestazioni di sicurezza (CSP, niente referrer, niente frame), `no-store` per `/bank-link/`, tipo JSON per `assetlinks.json` |
-| `.well-known/assetlinks.json` | Associazione con l'app Android (impronta SHA-256 della firma di rilascio) |
+| `.well-known/assetlinks.json` | Associazione con le due app Android, i flavor `prod` (`io.github.davekingdoms.homemade`) e `dev` (`io.github.davekingdoms.homemade.dev`): stessa impronta SHA-256 della firma di rilascio |
 
 ### Pagina di ritorno
 
@@ -56,4 +56,4 @@ python -m http.server 8788 --directory infra/pages
 
 Progetto Cloudflare Pages collegato al repository, ramo di produzione `main`, cartella di output `infra/pages`, **nessun comando di build**. L'indirizzo è `https://<progetto>.pages.dev`.
 
-`assetlinks.json` contiene solo l'impronta della firma di rilascio; le impronte di debug e della firma delle app di Google Play si aggiungono quando servono. Gli intent filter dell'App Link nell'app arrivano con l'iterazione 4.
+`assetlinks.json` contiene solo l'impronta della firma di rilascio, per i due pacchetti; le impronte di debug e della firma delle app di Google Play si aggiungono quando servono. Gli intent filter dell'App Link nell'app arrivano con l'iterazione 4.
