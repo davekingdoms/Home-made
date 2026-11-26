@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:homemade/core/config/app_flavor.dart';
 import 'package:homemade/core/router/app_router.dart';
 import 'package:homemade/features/auth/unlock_shield.dart';
 import 'package:homemade/theme/app_theme.dart';
@@ -16,7 +17,8 @@ class HomemadeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appearance = ref.watch(appearanceControllerProvider);
     return MaterialApp.router(
-      title: 'Home-made',
+      // On Android the title names the app in the app switcher.
+      title: AppFlavor.appName(),
       theme: buildAppTheme(appearance.palette, Brightness.light),
       darkTheme: buildAppTheme(appearance.palette, Brightness.dark),
       themeMode: appearance.themeMode,

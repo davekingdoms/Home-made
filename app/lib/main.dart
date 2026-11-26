@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:homemade/app.dart';
 import 'package:homemade/core/config/app_config.dart';
+import 'package:homemade/core/config/app_flavor.dart';
 import 'package:homemade/core/config/config_error_app.dart';
 import 'package:homemade/core/display/orientation_policy.dart';
 import 'package:homemade/core/storage/local_store.dart';
@@ -22,8 +23,15 @@ Future<void> main() async {
 
   const config = AppConfig.fromEnvironment;
   final missingKeys = config.missingKeys;
-  if (missingKeys.isNotEmpty) {
-    runApp(ConfigErrorApp(missingKeys: missingKeys));
+  const flavor = AppFlavor.current;
+  final mismatchedFlavor = config.matchesFlavor(flavor) ? null : flavor;
+  if (missingKeys.isNotEmpty || mismatchedFlavor != null) {
+    runApp(
+      ConfigErrorApp(
+        missingKeys: missingKeys,
+        mismatchedFlavor: mismatchedFlavor,
+      ),
+    );
     return;
   }
 
