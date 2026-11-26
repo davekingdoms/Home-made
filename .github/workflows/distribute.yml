@@ -1,6 +1,8 @@
-# Builds the release APK of a branch, configured for the dev project and
-# signed with the upload key, and sends it to the testers with Firebase App
-# Distribution. Start it by hand (Run workflow) on any branch.
+# Builds the release APK of the dev flavor of a branch (package .dev,
+# "Home-made dev"), configured for the dev project and signed with the upload
+# key, and sends it to the testers with Firebase App Distribution:
+# FIREBASE_APP_ID is the Firebase app of the .dev package. Start it by hand
+# (Run workflow) on any branch.
 #
 # The repository is public: the APK is never uploaded as an artifact, the
 # secrets live in the "dev" environment and the logs show outcomes only.
@@ -66,10 +68,10 @@ jobs:
 
       - uses: ./.github/actions/flutter-setup
 
-      - name: Build the release APK for dev
+      - name: Build the release APK of the dev flavor
         working-directory: app
         run: >-
-          flutter build apk --release
+          flutter build apk --release --flavor dev
           --dart-define-from-file="$PRIVATE_DIR/env.dev.json"
           --build-number=${{ github.run_number }}
 
@@ -81,7 +83,7 @@ jobs:
         run: |
           notes="Branch $BRANCH, commit ${GITHUB_SHA::7}, build $RUN_NUMBER"
           if npx --yes firebase-tools@15 appdistribution:distribute \
-              app/build/app/outputs/flutter-apk/app-release.apk \
+              app/build/app/outputs/flutter-apk/app-dev-release.apk \
               --app "$FIREBASE_APP_ID" \
               --groups testers \
               --release-notes "$notes" > "$RUNNER_TEMP/distribute.log" 2>&1; then

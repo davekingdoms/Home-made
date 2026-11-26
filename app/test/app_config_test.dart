@@ -57,6 +57,28 @@ void main() {
     }
   });
 
+  group('flavor and APP_ENV', () {
+    test('a dev build needs APP_ENV dev', () {
+      expect(_config().matchesFlavor('dev'), isTrue);
+      for (final appEnv in ['', 'prod', 'Dev', 'dev ']) {
+        expect(_config(appEnv: appEnv).matchesFlavor('dev'), isFalse);
+      }
+    });
+
+    test('a prod build refuses APP_ENV dev', () {
+      expect(_config().matchesFlavor('prod'), isFalse);
+      for (final appEnv in ['', 'prod']) {
+        expect(_config(appEnv: appEnv).matchesFlavor('prod'), isTrue);
+      }
+    });
+
+    test('without a flavor there is nothing to check', () {
+      for (final appEnv in ['', 'dev', 'prod']) {
+        expect(_config(appEnv: appEnv).matchesFlavor(null), isTrue);
+      }
+    });
+  });
+
   test('builds the address of a page of the Pages site', () {
     final config = _config(pagesBaseUrl: 'https://example.pages.dev');
 

@@ -1,3 +1,4 @@
+import 'package:homemade/core/config/app_flavor.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'app_config.g.dart';
@@ -9,7 +10,8 @@ part 'app_config.g.dart';
 ///
 /// The app does not start without the Supabase URL, the Supabase publishable
 /// key, the Google web client ID and the address of Pages: `main` shows the
-/// names of the missing ones instead. `APP_ENV` is optional.
+/// names of the missing ones instead. `APP_ENV` is optional, but must agree
+/// with the flavor of the build ([matchesFlavor]).
 class AppConfig {
   const new({
     required this.appEnv,
@@ -69,6 +71,16 @@ class AppConfig {
   /// Whether the build points to the development environment: `APP_ENV` is
   /// exactly `dev`. Only there sign-in (A2) offers the demo accounts.
   bool get isDev => appEnv == devEnv;
+
+  /// Whether this configuration fits a build of [flavor] (`--flavor`).
+  ///
+  /// The `dev` flavor needs `APP_ENV` `dev`, every other flavor (`prod`) any
+  /// other value: a `.dev` package never points to prod and the real app never
+  /// offers the demo accounts. Without a flavor, as in `flutter test`, there
+  /// is nothing to check. Like [missingKeys], `main` shows the problem in
+  /// place of the app.
+  bool matchesFlavor(String? flavor) =>
+      flavor == null || (flavor == AppFlavor.dev) == isDev;
 
   /// The page [path] of the Pages site, such as `/privacy/`.
   Uri pagesUri(String path) => Uri.parse('$pagesBaseUrl$path');
