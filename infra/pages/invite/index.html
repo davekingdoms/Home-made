@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title>Invito a Home-made</title>
+    <link rel="icon" href="data:,">
+    <!-- Absolute paths: /dev/invite/ shows this same page (_redirects). -->
+    <link rel="stylesheet" href="/invite/style.css">
+    <script src="/invite/app.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <p class="brand">Home-made</p>
+
+      <section id="invite" class="card" aria-labelledby="title" hidden>
+        <h1 id="title" class="title">Invito a Home-made</h1>
+        <p class="lead">Ti hanno invitato in una casa su Home-made.</p>
+        <ol class="steps">
+          <li>Installa Home-made: chiedi a chi ti ha invitato come scaricarla.</li>
+          <li>Accedi con il tuo account Google.</li>
+          <li>Tocca «Ho un invito» e scrivi questo codice:</li>
+        </ol>
+        <p id="code" class="code"></p>
+        <p class="text">Se Home-made è già installata su questo telefono, apri il link da qui: il codice si compila da solo.</p>
+        <p class="note">L'invito vale 7 giorni e una sola volta.</p>
+      </section>
+
+      <section id="broken" class="card" aria-labelledby="title-broken" hidden>
+        <h1 id="title-broken" class="title">Invito a Home-made</h1>
+        <p class="text">Questo link d'invito non è completo. Chiedine uno nuovo a chi ti ha invitato.</p>
+      </section>
+
+      <noscript>
+        <section class="card" aria-labelledby="title-noscript">
+          <h1 id="title-noscript" class="title">Invito a Home-made</h1>
+          <p class="text">Per vedere il codice apri il link dal telefono, oppure chiedi il codice a chi ti ha invitato.</p>
+        </section>
+      </noscript>
+    </main>
+  </body>
+</html>
