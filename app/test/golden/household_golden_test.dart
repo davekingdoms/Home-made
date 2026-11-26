@@ -1,6 +1,7 @@
 @Tags(['golden'])
 library;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/features/household/create_household_screen.dart';
 import 'package:homemade/features/household/household_choice_screen.dart';
@@ -253,8 +254,24 @@ void main() {
 
     testWidgets('second invite, with one open, phone window', (tester) async {
       _window(tester, _phone);
+      // The copy goes nowhere.
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async => null,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
       await _pumpInvite(tester);
       await _createInvite(tester, 'Bruno');
+      // Bruno's invite was handed out: "Continua", as in the board.
+      await _tap(tester, copyLinkLabel);
+      ScaffoldMessenger.of(tester.element(find.byType(InviteScreen)))
+          .removeCurrentSnackBar();
+      await tester.pumpAndSettle();
       await _tap(tester, inviteAnotherLabel);
       await _createInvite(tester, 'Carla');
 
