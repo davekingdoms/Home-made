@@ -59,7 +59,7 @@ Valori con le correzioni di contrasto della sezione 2.3. `surfaceContainer` è l
 
 **Corrispondenza con i nomi del mockup:** Sfondo = `surface`; Superficie 1 (card) = `surfaceContainerLow`; Superficie 2 (avvisi, rilievo) = `surfaceContainerHigh`; Superficie 3 (elementi interni) = `surfaceContainerHighest`; Primario pieno = `primaryContainer`; Decorazione su primario = `AppColors.banda`; Testo tenue su primario = `AppColors.suPrimarioTenue`; Accento (riempimenti tenui) = `tertiary`/`tertiaryContainer`; Accento per icone, bottoni pieni, interruttori = `primary`; Indicatore selezione = `secondaryContainer`; Testo, secondario, terziario = `onSurface`, `onSurfaceVariant`, `AppColors.testoTerziario`; Bordi = `outline`; Divisori = `outlineVariant`.
 
-**Colori fissi, uguali per tutte le palette:** testo su primario pieno #FFFFFF; badge del contatore #FFB4AB con testo #690005 nel tema scuro, `error`/`onError` nel chiaro; nastro del cantiere #FFC83D / #1F1F1F.
+**Colori fissi, uguali per tutte le palette:** testo su primario pieno #FFFFFF; badge del contatore #FFB4AB con testo #690005 nel tema scuro, `error`/`onError` nel chiaro; nastro del cantiere #FFC83D / #1F1F1F; codice QR con i moduli #161A1A su fondo #FFFFFF in entrambi i temi (le fotocamere lo leggono meglio).
 
 ### 2.2 Regole d'uso
 - **Accento tenue** (`tertiary`): solo come riempimento (biscotto, segnaposti, icona di Finanze) con sopra `onTertiary`. Nel tema chiaro non è mai testo, icona o unico segnale di stato.
@@ -152,6 +152,7 @@ Stati per tutti: normale, premuto (livello di stato 10%), focus (10% più anello
 | Trascina per aggiornare | `RefreshIndicator` | — | — |
 | Biscotto (forma) | `ShapeBorder` personalizzato | avatar, contatore | 12 lobi |
 | Banda diagonale | decorazione personalizzata | card in evidenza, card dell'hub | — |
+| Codice QR | `CustomPainter` (pacchetto `qr`) | — | Riquadro bianco con raggio 16 e margine 8, moduli scuri (colori fissi, sezione 2.1); correzione d'errore media, nessuna immagine al centro |
 | Casa dell'hub | `CustomPainter` | vedi sezione 9 | Stanze toccabili |
 
 ## 9. Casa dell'hub e cielo

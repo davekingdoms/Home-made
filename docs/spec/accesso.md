@@ -15,7 +15,9 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 | 5 | Altrimenti | Hub |
 
 - Un solo stato dell'avvio decide il passo, e il router legge solo quello: attesa, stato offline e ritorno alla schermata chiesta in [`navigazione.md`](navigazione.md), sezione 2.
-- **Passo della casa** (dalla 4.6): manca finché l'account non è membro attivo di una casa. A7 e le sue schermate (A8–A10) sono schermate del passo, come A2 e A3: mai una destinazione da riaprire; quando la casa c'è cedono il posto alla schermata chiesta o all'hub. Dopo "Crea" di A8 l'avvio passa al passo successivo; dalla 4.7 A8 porta ad A9 e un invito in sospeso apre A10.
+- **Passo della casa** (dalla 4.6): manca finché l'account non è membro attivo di una casa. A7 e le sue schermate (A8–A10) sono schermate del passo, come A2 e A3: mai una destinazione da riaprire; quando la casa c'è cedono il posto alla schermata chiesta o all'hub. Con un invito in sospeso il passo apre A10 al posto di A7, già nella fase dell'anteprima.
+- **Passo "invita"** (dalla 4.7): dopo "Crea" di A8 (anche ripetuto con lo stesso id) l'avvio mostra A9. Il passo è tenuto **solo in memoria**: "Più tardi", "Continua" o l'indietro di Android lo chiudono e l'avvio va al passo successivo; a freddo, con la casa già creata, A9 non compare. Dopo `already_member` in A8 niente A9: si rilegge lo stato e si va avanti. A9 aperta dalle impostazioni della casa (I4) arriverà con l'iterazione 11, con una rotta propria fuori dai passi.
+- **Invito in sospeso** (dalla 4.7): un link d'invito aperto su questo dispositivo diventa un invito in sospeso, valore del dispositivo e non dell'account (token, codice e momento del salvataggio). Il router lo riconosce prima di ogni altro controllo e prosegue come se fosse stata chiesta la schermata d'ingresso: il link non è mai una destinazione né una rotta mostrata; un link senza token o codice validi si ignora (nel log solo `invite_link_invalid`). Aperto prima dell'accesso o durante A3, l'invito aspetta: dopo A3 si va diretti ad A10. Se l'account ha già una casa l'invito non si salva (o si dimentica appena lo stato lo dice) e sull'hub compare lo snackbar "Fai già parte di una casa: un account può stare in una sola casa.". Si dimentica dopo l'ingresso riuscito (anche con `already_member`), con l'indietro da A10 ad A7, dopo 7 giorni dal salvataggio e con "Elimina account demo"; "Esci" lo conserva. Forma del link in [`navigazione.md`](navigazione.md), sezione 2.
 - **Sblocco: un blocco sopra i passi, non un passo del router.** A1 copre l'app all'avvio a freddo con una sessione salvata, qualunque sia il passo, e al ritorno in primo piano dopo almeno 1 minuto con l'app nascosta, solo sull'hub; mai con l'accesso con Google, mai durante una richiesta di sblocco, mai su un dispositivo senza blocco schermo. Lo decide lo stesso stato dell'avvio, ma il router non lo legge: niente cambi di rotta. Regole nella sezione 2.
 - **Secondo dispositivo dello stesso account:** A2 → A11 → hub; il dispositivo si registra sull'account.
 - **Dispositivo:** alla prima entrata di un account su un'installazione l'app genera l'id del dispositivo (UUID), lo salva sul dispositivo insieme all'id dell'account e inserisce la riga in `devices` (piattaforma `android`, senza nome né token per le notifiche): un secondo inserimento con lo stesso id (`23505`) vuol dire già registrato. `last_seen_at` si aggiorna al più una volta al giorno, all'avvio e al ritorno in primo piano. Ogni dispositivo dello stesso account ha la sua riga. Nei log solo il passo e il codice, mai id né modelli.
@@ -89,7 +91,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 - In fondo, centrata, "Una casa con un solo membro funziona già: gli altri si aggiungono quando vuoi." (bodySmall in `testoTerziario`), 24 dp sopra il bordo inferiore.
 - **Disposizione:** in alto la barra con il solo menu, senza titolo né indietro; il contenuto parte sotto la barra, con 24 dp tra i blocchi, nella colonna centrata larga al massimo 640 dp; con il testo fino al 200% la colonna scorre. L'indietro di Android fa come in A3 (l'app esce).
 - **Menu della barra:** "Esci dall'account", come in A3; per un account demo anche "Elimina account demo", con il dialogo, gli errori e l'esito di I2 (sezione 12). Durante l'eliminazione al posto del menu c'è un indicatore.
-- Con un invito in sospeso A7 si salta (dalla 4.7).
+- Con un invito in sospeso A7 si salta: il passo della casa apre A10 (sezione 1).
 
 ## 6. A8 — Crea casa
 
@@ -98,7 +100,7 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 - **Data di inizio:** campo contornato non scrivibile con il calendario a destra; il tocco apre il selettore di data di Material in italiano. Predefinita il primo giorno del mese in corso; ammessa da 90 giorni prima di oggi a 12 mesi dopo (date locali del dispositivo; con i 12 mesi, lo stesso giorno del mese, o l'ultimo di un mese più corto). Si scrive "1° novembre 2026" (il simbolo ° solo per il giorno 1) e, se è oggi, "17 novembre 2026 · oggi". Il lettore di schermo legge "Data di inizio: 1° novembre 2026. Tocca per cambiarla" (oggi: "Data di inizio: oggi, 17 novembre 2026. Tocca per cambiarla"). Testo sotto il campo: "L'app considera solo i movimenti da questa data. Le banche di solito restituiscono circa tre mesi di movimenti: collegale subito dopo."
 - **Quote predefinite:** non si chiedono (un solo membro).
 - **Contanti:** solo se la data di inizio è oggi, campo facoltativo "Quanti contanti hai adesso?" (vedi sezione 10): contornato, con "€" in fondo, segnaposto "0,00", cifre tabulari, tastiera numerica con il decimale. Si scrivono solo cifre e un separatore decimale, la virgola (il punto diventa virgola), al più 2 decimali, niente segno, al più 999.999,99; vuoto = nessun saldo. Testo sotto: "Facoltativo. È il saldo iniziale del tuo conto Contanti, non un'entrata: puoi indicarlo anche dopo." Se la data cambia il campo sparisce, ma il valore scritto resta; si manda solo se al tocco di "Crea" la data è oggi.
-- **Crea:** attivo con un nome valido; durante il salvataggio mostra un indicatore ed è disattivato. Chiama `create_household(id, name, start_date, cash_opening_cents)` con un id generato all'apertura di A8, uguale a ogni nuovo tentativo: la funzione non crea doppioni. Nascono la casa (nome, data di inizio, creata da), il primo membro (data di inizio = quella della casa) e il suo conto Contanti; poi lo stato dell'avvio dice che la casa c'è e l'avvio va al passo successivo (dalla 4.7 A9).
+- **Crea:** attivo con un nome valido; durante il salvataggio mostra un indicatore ed è disattivato. Chiama `create_household(id, name, start_date, cash_opening_cents)` con un id generato all'apertura di A8, uguale a ogni nuovo tentativo: la funzione non crea doppioni. Nascono la casa (nome, data di inizio, creata da), il primo membro (data di inizio = quella della casa) e il suo conto Contanti; poi lo stato dell'avvio dice che la casa c'è e l'avvio va ad A9 (sezione 1).
 
 | Caso | Messaggio |
 |---|---|
@@ -111,14 +113,35 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 
 - Un invito per persona: **link monouso** (App Link), **QR** dello stesso link e **codice di 8 caratteri** senza caratteri ambigui, mostrato in due gruppi da 4 (es. "K7QM X2PA"); etichetta facoltativa "per chi".
 - Scadenza **7 giorni**; revocabile dalle impostazioni della casa; può invitare qualunque membro. Il limite di membri conta anche gli inviti aperti.
-- Azioni: condividi, copia link, copia codice, "Invita un'altra persona", "Continua". Arrivando da A8 il tasto dice "Più tardi" e diventa "Continua" dopo che un invito è stato condiviso o copiato.
-- Il token del link si salva lato server solo come hash; i tentativi con il codice breve sono limitati lato server.
+- Il token del link si salva lato server solo come hash; i tentativi con il codice breve sono limitati lato server. Nell'app il token esiste solo in memoria mentre A9 mostra il suo invito: uscendo da A9 il link di un invito non si può più mostrare, il codice sì. Mai nei log, sul dispositivo né nelle analisi.
+- **Disposizione:** barra alta 64 dp con il solo titolo "Invita", senza indietro; contenuto con 16 dp ai lati e tra i blocchi, nella colonna centrata larga al massimo 640 dp, che scorre con la tastiera o il testo grande; in fondo "Più tardi" (poi "Continua"), tasto contornato alto 52 dp, 24 dp sopra il bordo.
+- In alto "Ogni invito vale per una persona, una sola volta, per 7 giorni." (bodyMedium in `onSurfaceVariant`).
+- **Inviti aperti** (non usati, non revocati, non scaduti; letti con le colonne permesse, mai l'hash del token): solo se ce ne sono, sotto il titolo "Inviti aperti", una riga per invito, i più recenti in alto, con l'icona dell'orologio, l'etichetta (o "Invito senza nome") e "Scade il 24 novembre" (l'anno solo se diverso da quello in corso). Righe `surfaceContainerHigh`, raggio 20 dp, alte almeno 56 dp; nessuna azione (la revoca è in I4).
+- **"Per chi (facoltativo)":** campo contornato, maiuscola iniziale, al più 40 caratteri, spazi alle estremità tolti, vuoto = nessuna etichetta; testo d'aiuto "Serve solo a riconoscere l'invito nell'elenco.".
+- **"Crea l'invito":** tasto pieno alto 56 dp sotto il campo; crea l'invito con l'etichetta (`create_invite`), con un indicatore durante la chiamata. Nessun invito nasce all'apertura di A9: occuperebbe un posto per 7 giorni anche con "Più tardi".
+- **Dopo la creazione** il campo resta con l'etichetta, non più modificabile, e al posto del tasto c'è la **card dell'invito** (`surfaceContainerLow`, raggio 28 dp, letta come la regione "Invito"): a sinistra il QR del link (riquadro bianco con i moduli scuri, colori fissi di [`stile.md`](stile.md), sezione 2.1), letto "QR del link d'invito"; a destra "Codice", il codice a cifre tabulari (il lettore di schermo legge i caratteri uno per uno: "Codice: K 7 Q M, X 2 P A") e la scadenza; sotto, "Copia codice" e "Copia link", tonali alti 44 dp. Poi **"Condividi l'invito"**, tasto pieno alto 56 dp che apre il foglio di condivisione del sistema, e **"Invita un'altra persona"**, tasto di testo che porta l'invito tra gli inviti aperti e torna al campo vuoto con "Crea l'invito".
+- **Testo della condivisione:** "Ti invito nella casa «{nome della casa}» su Home-made.", a capo "Apri questo link sul telefono: {link}", a capo "Oppure, nell'app, tocca «Ho un invito» e scrivi il codice K7QM X2PA.", a capo "L'invito vale fino al 24 novembre.". "Copia codice" copia il codice con lo spazio, "Copia link" il link; dopo una copia lo snackbar "Codice copiato." o "Link copiato.".
+- **"Più tardi" e "Continua":** arrivando da A8 il tasto dice "Più tardi" e diventa "Continua" dopo che un invito di questa visita è stato condiviso o copiato (tocco su "Condividi l'invito", "Copia codice" o "Copia link"); senza inviti creati resta "Più tardi". Entrambi, e l'indietro, chiudono A9.
+
+| Caso | Messaggio |
+|---|---|
+| Senza rete | "Nessuna connessione. Controlla la rete e riprova." |
+| `household_full` | "Questa casa ha già il numero massimo di membri." |
+| Qualunque altro errore (anche `not_member`; nel log solo il codice) | "Non è stato possibile creare l'invito. Riprova." |
 
 ## 8. A10 — Entra con invito
 
-- Dal link (codice compilato) o scrivendo il codice, accettato con o senza lo spazio tra i due gruppi; anteprima con nome della casa, chi invita e membri presenti → "Entra".
+- Dal link (anteprima subito) o scrivendo il codice, accettato con o senza lo spazio tra i due gruppi; anteprima con nome della casa, chi invita e membri presenti → "Entra".
 - **Senza app:** il link apre una pagina con le istruzioni e il codice. **Con l'app ma senza account:** A2 → A3 → A10.
-- **Errori:**
+- **Disposizione:** barra alta 64 dp con l'indietro e il titolo "Entra con un invito"; contenuto con 8 dp in alto, 16 dp ai lati e 24 dp tra i blocchi, nella colonna centrata larga al massimo 640 dp, che scorre con la tastiera o il testo grande. Due fasi nella stessa schermata.
+- **Fase del codice:** "Scrivi il codice di 8 caratteri che hai ricevuto." (bodyMedium in `onSurfaceVariant`); campo contornato "Codice d'invito" a cifre tabulari, con la tastiera di testo in maiuscolo senza suggerimenti: si scrivono solo lettere e cifre (le minuscole diventano maiuscole), al più 8, mostrate in due gruppi da 4 con lo spazio inserito da solo (incollare "k7qm-x2pa" dà "K7QM X2PA"). Sotto, "Continua" (tasto pieno alto 56 dp, attivo con 8 caratteri, indicatore durante la chiamata) chiede l'anteprima con il codice. Gli errori dell'invito stanno sotto il campo (bordo, testo e icona in `error`; il lettore di schermo li annuncia) e spariscono quando il codice cambia. In fondo, centrata, "Se hai ricevuto un link, aprilo su questo dispositivo: il codice si compila da solo." (bodySmall in `testoTerziario`), 24 dp sopra il bordo. Indietro → A7, e l'invito in sospeso si dimentica.
+- **Fase dell'anteprima:** dal link ci si arriva subito, con l'anteprima chiesta con il token; se fallisce si mostra la fase del codice con il codice del link e l'errore sotto. Indietro → fase del codice, con il codice.
+  - **Card della casa** (`surfaceContainerLow`, raggio 28 dp, letta come la regione "Casa che ti invita"): "Ti invita Anna" (prima parola del nome), il nome della casa, i biscotti di 32 dp delle iniziali dei membri attivi (in `tertiary`, nascosti al lettore di schermo) con i loro nomi ("Anna e Bruno"; con tre o più "Anna, Bruno e Carla"; prime parole) e "Tiene i conti dal 1° novembre 2026".
+  - **"La tua data di inizio":** campo contornato non scrivibile, come in A8. Con la casa già iniziata prima di oggi: predefinita oggi ("17 novembre 2026 · oggi"), il selettore va dalla data della casa a oggi (date locali), testo d'aiuto "Puoi anticiparla fino al 1° novembre 2026."; il lettore di schermo legge "La tua data di inizio: oggi, 17 novembre 2026. Tocca per anticiparla" (con un'altra data "La tua data di inizio: 10 novembre 2026. Tocca per cambiarla"). Con la casa iniziata oggi o non ancora iniziata il campo mostra la data della casa e non si tocca (stile disattivato, senza selettore), con "La casa parte oggi: la tua data di inizio è la stessa." oppure "La casa parte il 1° gennaio 2027: la tua data di inizio è la stessa.".
+  - **"Quanti contanti hai adesso?"** solo se la data scelta è oggi: stesso campo e stesse regole di A8, con il testo d'aiuto "Facoltativo. È il saldo iniziale del tuo conto Contanti."; il valore resta se la data cambia, ma si manda solo se al tocco di "Entra" la data è oggi.
+  - **Riquadro informativo** (`surfaceContainerHigh`, raggio 20 dp, icona di informazione): con la casa già iniziata "Parti con il conguaglio a zero e non vedi i movimenti precedenti alla tua data di inizio. Dalla tua data di inizio le quote predefinite sono uguali per tutti: potrete cambiarle nelle impostazioni."; con la casa non ancora iniziata "La casa parte il 1° gennaio 2027: da quel giorno le quote predefinite sono uguali per tutti, e potrete cambiarle nelle impostazioni.".
+  - **"Entra":** tasto pieno alto 56 dp in fondo, 24 dp sopra il bordo, con un indicatore durante la chiamata. Chiama `redeem_invite` con il codice (o il token del link), i contanti e la data scelta (nessuna con la casa non ancora iniziata). Poi lo stato dell'avvio dice che la casa c'è, l'invito in sospeso si dimentica e l'avvio va al passo successivo.
+- **Errori dell'invito**, sotto il campo del codice (da "Entra" si torna alla fase del codice):
 
 | Caso | Messaggio |
 |---|---|
@@ -126,12 +149,24 @@ All'avvio e a ogni cambio di stato il router controlla, in quest'ordine:
 | Invito scaduto | "Questo invito è scaduto: chiedine uno nuovo a chi ti ha invitato." |
 | Invito già usato | "Questo invito è già stato usato." |
 | Invito revocato | "Questo invito è stato annullato." |
+| Troppi tentativi (`too_many_attempts`) | "Troppi tentativi: riprova tra un'ora." |
+
+- **Altri errori**, in uno snackbar:
+
+| Caso | Messaggio |
+|---|---|
 | Casa piena | "Questa casa ha già il numero massimo di membri." |
-| Account già in una casa | "Fai già parte di una casa" (un account sta in una sola casa) |
+| Account già in una casa (`already_member`) | "Fai già parte di una casa." (un account sta in una sola casa); poi si rilegge lo stato e, se la lettura fallisce, vale la risposta del server |
+| Account demo e casa vera, o il contrario (`invite_demo_mismatch`, solo `dev`) | "Gli account demo e gli altri account non possono stare nella stessa casa." |
+| `start_date_out_of_range` | "La data di inizio non è più valida: scegline un'altra." |
+| Senza rete | "Nessuna connessione. Controlla la rete e riprova." |
+| Qualunque altro errore di "Continua" (nel log solo il codice) | "Non è stato possibile leggere l'invito. Riprova." |
+| Qualunque altro errore di "Entra" (anche `no_profile`; nel log solo il codice) | "Non è stato possibile entrare nella casa. Riprova." |
+
 - **Casa già avviata:** il nuovo membro parte con il saldo del conguaglio a zero e non vede le righe precedenti alla sua data di inizio. La sua **data di inizio** è la data di ingresso, modificabile qui all'indietro fino a quella della casa.
 - **Casa non ancora iniziata** (data di inizio della casa nel futuro): la data di inizio del membro è quella della casa e non si modifica.
 - **Contanti:** come in A8, se la data di inizio del membro è il giorno stesso.
-- **Quote predefinite:** all'ingresso diventano uguali per tutti i membri, valide dalla **data di inizio del nuovo membro**; gli altri membri ricevono una notifica per modificarle.
+- **Quote predefinite:** all'ingresso diventano uguali per tutti i membri, valide dalla **data di inizio del nuovo membro**, con cui il membro nasce (`redeem_invite`); gli altri membri ricevono una notifica per modificarle.
 
 Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La sua data di inizio è il 10 aprile e le quote passano da 1 a 1:1 per le spese dal 10 aprile; se Bruno sposta la sua data al 1° marzo, le quote 1:1 valgono dal 1° marzo. Se invece la casa inizia il 1° maggio e Bruno entra il 10 aprile, la sua data di inizio è il 1° maggio.
 
@@ -164,7 +199,7 @@ Esempio: in una casa con data di inizio 1° marzo, Bruno entra il 10 aprile. La 
 - **Membro:** casa, utente, data di ingresso, data di inizio propria (da cui valgono anche le sue quote predefinite).
 - **Invito:** casa, hash del token, codice breve, creato da, etichetta, scadenza, usato da e quando, revocato.
 - **Dispositivo:** id generato sul dispositivo, utente, piattaforma, ultimo accesso (token per le notifiche quando arrivano).
-- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account, scelta della modalità demo (solo `dev`, sezione 12); poi posizione chiesta, città e invito in sospeso. Mai dati delle finanze.
+- **Sul dispositivo** (mai sul server): id del dispositivo con l'account, stato dell'avvio per account, scelta della modalità demo (solo `dev`, sezione 12), invito in sospeso (token, codice e momento del salvataggio; sezione 1); poi posizione chiesta e città. Mai dati delle finanze.
 - **Conto Contanti:** creato con il membro; saldo iniziale con la data a cui si riferisce.
 - **Saldo iniziale tra i membri:** casa, membro, importo, data (= data di inizio della casa), inserito o modificato da; "Nessun saldo da riportare" salva importi a zero.
 
@@ -174,7 +209,7 @@ Strumento di sviluppo: su `dev` un account Google creato come demo si elimina da
 
 - **Interruttore lato server:** gli account demo sono attivi in un ambiente solo se in Vault c'è il segreto `demo_accounts` con valore `enabled`, inserito a mano su `dev`, mai su `prod`; nessun valore nel repository (come `project_url`). In locale e in CI lo creano e lo tolgono i test.
 - **Flag sul profilo** (`profiles.is_demo`): deciso alla creazione del profilo e poi mai cambiato. Con l'interruttore spento un profilo demo non si crea (`demo_disabled`); un account vero non diventa demo e un demo non diventa vero (`demo_immutable`).
-- **Case di soli demo:** una casa è tutta demo o tutta vera. `redeem_invite` rifiuta con `invite_demo_mismatch` chi ha il flag diverso da quello dei membri attivi della casa, dopo i controlli dell'invito e prima di quello dei posti; gli altri errori restano com'erano. Il testo per A10 arriva con gli inviti.
+- **Case di soli demo:** una casa è tutta demo o tutta vera. `redeem_invite` rifiuta con `invite_demo_mismatch` chi ha il flag diverso da quello dei membri attivi della casa, dopo i controlli dell'invito e prima di quello dei posti; gli altri errori restano com'erano. A10 dice "Gli account demo e gli altri account non possono stare nella stessa casa.".
 - **A2:** solo se `APP_ENV` è esattamente `dev` (assente o diverso: niente casella), sotto il tasto "Continua con Google" e la sua riga, la casella **"Modalità demo"**, che si spunta anche toccando il testo. La scelta si salva sul dispositivo come valore in sospeso e vale solo per un account **nuovo**: in A3 "Continua", quando crea il profilo, lo crea demo; poi il valore si cancella. Se il profilo c'è già (A3 con la sola casella, oppure un account che salta A3) il valore si cancella senza effetto. "Esci" non lo cancella: dopo un'uscita da A3 la casella mostra ancora la scelta.
 - **Interruttore spento con la casella spuntata** (in locale, o su `dev` prima del segreto): "Continua" di A3 dà l'errore generico "Non è stato possibile salvare. Riprova."; si esce con "Esci dall'account" dal menu di A3 e si toglie la spunta in A2.
 - **A3:** per un account demo, sotto il testo d'aiuto del nome, la riga "Account demo: si potrà eliminare da Impostazioni › Account."
@@ -189,13 +224,15 @@ Strumento di sviluppo: su `dev` un account Google creato come demo si elimina da
 
 - Con una sessione e una casa, l'avvio a freddo apre A1 e, dopo lo sblocco, l'hub; subito dopo l'accesso con Google A1 non compare.
 - Un secondo dispositivo con lo stesso account passa da A2 ad A11 all'hub, senza A3 né A7.
-- Senza casa l'avvio apre A7; con la casa, l'hub. Dopo "Crea" di A8 l'avvio va al passo successivo (oggi l'hub; dalla 4.7 A9).
+- Senza casa l'avvio apre A7; con la casa, l'hub. Dopo "Crea" di A8 l'avvio apre A9, e da A9 ("Più tardi", "Continua" o indietro) va al passo successivo; a freddo, con la casa, A9 non compare.
+- Un link d'invito aperto ad app chiusa o aperta, senza casa, porta ad A10 nella fase dell'anteprima; aperto prima dell'accesso, dopo A2 e A3 si va diretti ad A10; con l'account già in una casa l'invito non resta e l'hub dice "Fai già parte di una casa: un account può stare in una sola casa.". Il link non è mai una destinazione.
 - In A8 la data predefinita è il primo del mese in corso; date fuori da −90 giorni / +12 mesi non si possono scegliere.
 - Il campo dei contanti in A8 compare solo se la data di inizio è il giorno stesso, e il saldo iniziale si manda solo se al tocco di "Crea" la data è oggi.
 - "Crea" ripetuto dopo un errore non crea una seconda casa (stesso id); `already_member` non mostra messaggi e porta avanti.
 - Un invito usato, scaduto o revocato non fa entrare nessuno; un account con una casa non può entrare in un'altra.
 - Un membro entrato dopo non vede le righe precedenti alla sua data di inizio e parte con il saldo del conguaglio a zero.
 - Un membro che entra in una casa non ancora iniziata ha la data di inizio della casa e non può cambiarla.
+- In A10 la data di inizio va da oggi indietro fino a quella della casa; il membro nasce con la data scelta. Il campo dei contanti compare solo con la data di oggi, e il saldo iniziale si manda solo se al tocco di "Entra" la data è oggi.
 - Le quote predefinite uguali dopo un ingresso valgono dalla data di inizio del nuovo membro.
 - Accesso annullato: nessun messaggio.
 - Sessione persa senza "Esci": A2 con "La sessione è scaduta: accedi di nuovo."; dopo "Esci" A2 senza messaggi.

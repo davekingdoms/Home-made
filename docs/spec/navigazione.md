@@ -15,15 +15,17 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 
 - **Ingresso:** l'hub (B1) è sempre la schermata d'ingresso.
 - **Avvio e primo avvio** (dettagli in [`accesso.md`](accesso.md)): un solo **stato dell'avvio** decide il primo passo mancante, in quest'ordine, all'avvio e a ogni cambio di stato (sessione o dati letti): nessuna sessione → Accesso (A2); informativa non letta nella versione attuale → Primo accesso (A3); nessuna casa → A7 (o A10 se c'è un invito in sospeso); posizione mai chiesta su questo dispositivo → Posizione (A11); altrimenti l'hub. Il router legge solo questo stato. Lo sblocco (A1) copre l'app dall'esterno del router, senza cambiare rotta.
-  - **Passi attivi oggi:** sessione, informativa, casa e sblocco. Il passo della casa (dalla 4.6) apre A7, da cui A8; A9 e A10 restano segnaposto fino alla 4.7 (inviti). La posizione risulta sempre fatta finché non arriva la sua schermata (4.8): fino ad allora A11 resta un segnaposto raggiungibile.
+  - **Passi attivi oggi:** sessione, informativa, casa e sblocco. Il passo della casa apre A7, da cui A8 e A10, oppure A10 al posto di A7 con un invito in sospeso; dopo "Crea" di A8 l'avvio mostra A9, passo tenuto solo in memoria che "Più tardi", "Continua" o l'indietro chiudono (a freddo non compare). La posizione risulta sempre fatta finché non arriva la sua schermata (4.8): fino ad allora A11 resta un segnaposto raggiungibile.
   - **Attesa:** finché lo stato non è noto si vede la schermata d'avvio (`/start`, fuori dall'inventario) con il solo logo, senza testo: mai, nemmeno per un istante, una schermata sbagliata.
   - **Offline:** lo stato si legge da Supabase (proprio profilo, `user_settings`, membro attivo) e si salva sul dispositivo per account. Senza risposta (rete assente o nessuna risposta entro 8 secondi) o con un errore di Supabase si usa l'ultimo stato salvato. Senza stato salvato la schermata d'avvio mostra "Nessuna connessione. Controlla la rete e riprova." (o "Non è stato possibile caricare i dati. Riprova." se Supabase risponde con un errore) e il tasto "Riprova".
   - **Destinazione chiesta:** un link a una schermata interna resta valido dopo i passi: la schermata chiesta passa da un passo all'altro nel parametro `from` e si apre quando non manca più nulla, se è un percorso dell'app e non una schermata dei passi attivi (`/start`, A2, A3, e A7 con le sue sottorotte, `/household/…`); altrimenti l'hub. Le schermate dei passi non sono mai una destinazione: anche all'avvio a freddo un percorso `/household/…` passa dalla schermata d'avvio e diventa A7. Dopo "Esci" si dimentica: il nuovo accesso apre l'hub.
+  - **Link d'invito:** il router lo riconosce prima di ogni altro controllo, ne fa l'invito in sospeso (valore del dispositivo, [`accesso.md`](accesso.md), sezione 1) e prosegue come se fosse stata chiesta la schermata d'ingresso: il link non è mai una destinazione (`from`) né una rotta mostrata. Un link senza token o codice validi si ignora.
 - **Finanze:** barra Riepilogo · Movimenti · Analisi · Conti, con etichette sempre visibili (badge su Movimenti in arrivo). Ogni scheda ricorda il proprio stato (filtri, scorrimento): una pila di navigazione per scheda (`StatefulShellRoute.indexedStack`).
 - **Tasto "+":** specifico per sezione; in Finanze apre il menu F1, da cui si apre F2.
 - **Tasto indietro di Android:** chiude il foglio → chiude il dettaglio → dalla seconda, terza o quarta scheda torna alla prima (Riepilogo) → dalla prima torna all'hub → dall'hub esce dall'app. Indietro predittivo attivo.
 - **Impostazioni:** si aprono dall'avatar dell'hub; l'indietro torna all'hub.
 - **Link diretti** (notifiche, inviti, ritorno dal collegamento bancario): App Link su Cloudflare Pages; il link di invito apre A10 con il codice compilato (anche dopo A2 e A3, se manca l'account). Gli altri link da definire. Ogni link apre la schermata con sotto la sua sezione, così l'indietro funziona.
+  - **Forma del link d'invito:** `{PAGES_BASE_URL}/invite/#t={token}&c={codice}` per l'app `prod`, `{PAGES_BASE_URL}/dev/invite/#t=…&c=…` per `dev`, così le due app, che possono stare sullo stesso telefono, non si contendono i link. Token e codice stanno nel frammento, che il browser non manda al server. Lettura rigida: esattamente `t` (43 caratteri base64url) e `c` (8 caratteri dell'alfabeto dei codici, anche minuscoli), una volta ciascuno; altrimenti il link non è valido. Senza l'app il link apre la pagina degli inviti su Pages, con le istruzioni e il codice.
 - **Schermi larghi:** regole nella sezione 5.
 - **Percorsi** in inglese (codice), titoli in italiano (interfaccia). I parametri (`:…Id`) sono identificativi, mai dati leggibili.
 
@@ -38,8 +40,8 @@ Specifica tecnica della navigazione dell'app: livelli, regole, rotte e tasto ind
 | A3 | Primo accesso | `/welcome` | A2, al primo accesso |
 | A7 | Crea o entra in una casa | `/household` | A3 |
 | A8 | Crea casa | `/household/create` | A7 |
-| A9 | Invita | `/household/invite` | A8; I4 |
-| A10 | Entra con invito | `/household/join` | A7; link di invito |
+| A9 | Invita | `/household/invite` | A8; I4 con l'iterazione 11 |
+| A10 | Entra con invito | `/household/join` | A7; link d'invito |
 | A11 | Posizione | `/location` | ultimo passo del primo avvio, una volta per dispositivo |
 | B1 | Hub | `/` | avvio |
 | I1 | Impostazioni | `/settings` | avatar dell'hub |
