@@ -7,6 +7,7 @@ import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/features/household/create_household_screen.dart';
 import 'package:homemade/features/household/household_choice_screen.dart';
 import 'package:homemade/features/household/invite_screen.dart';
+import 'package:homemade/features/household/join_household_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -109,6 +110,9 @@ void main() {
               return;
             case 'A9':
               expect(find.byType(InviteScreen), findsOneWidget);
+              return;
+            case 'A10':
+              expect(find.byType(JoinHouseholdScreen), findsOneWidget);
               return;
             case 'A1':
               // A preview: A1 covers the app from outside the router.

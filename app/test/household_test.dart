@@ -11,6 +11,7 @@ import 'package:homemade/features/household/create_household_screen.dart';
 import 'package:homemade/features/household/household_choice_screen.dart';
 import 'package:homemade/features/household/household_dates.dart';
 import 'package:homemade/features/household/invite_screen.dart';
+import 'package:homemade/features/household/join_household_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/theme/app_colors.dart';
@@ -477,13 +478,12 @@ void main() {
       expect(find.byType(HouseholdChoiceScreen), findsOneWidget);
     });
 
-    testWidgets('"Ho un invito" opens the placeholder of A10, and back '
-        'returns', (tester) async {
+    testWidgets('"Ho un invito" opens A10, and back returns', (tester) async {
       await _pump(tester);
 
       await tester.tap(find.text(joinCardTitle));
       await tester.pumpAndSettle();
-      expect(find.text('A10 · Entra con invito'), findsOneWidget);
+      expect(find.byType(JoinHouseholdScreen), findsOneWidget);
 
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
