@@ -5,6 +5,7 @@ import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/features/auth/delete_demo_account.dart';
 import 'package:homemade/features/auth/sign_in_screen.dart';
 import 'package:homemade/features/auth/welcome_screen.dart';
+import 'package:homemade/features/household/household_choice_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/settings/account_screen.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
@@ -186,7 +187,7 @@ void main() {
 
       expect(accounts.saves.single.isDemo, isTrue);
       expect(store.values, isNot(contains(StartupGate.demoChoiceKey)));
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.byType(HouseholdChoiceScreen), findsOneWidget);
     });
 
     testWidgets('without the choice, creates a real account', (tester) async {

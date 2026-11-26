@@ -123,6 +123,10 @@ class StartupGate extends ChangeNotifier
   /// Whether the signed-in account is a demo account, as its profile says.
   bool get isDemo => _status?.isDemo ?? false;
 
+  /// Display name of the profile of the signed-in account, for the greeting
+  /// of A7; null when it is not known.
+  String? get displayName => _status?.displayName;
+
   /// The choice of "Modalità demo" saved on this device (A2).
   Future<bool> demoChosen() async {
     try {
@@ -181,10 +185,37 @@ class StartupGate extends ChangeNotifier
       hasProfile: status.hasProfile || displayName != null,
       noticeVersion: privacyNoticeVersion,
       isDemo: status.isDemo || demo,
+      displayName: displayName,
     );
     _status = saved;
     await _save(userId, saved);
     _set(_stepFor(saved));
+  }
+
+  /// The signed-in account is now a member of a household (A8, "Crea"):
+  /// the state says so, is saved on the device and the gate moves on to the
+  /// next step, or to the screen asked for.
+  ///
+  /// With [reread], after `already_member` (a household made, or an invite
+  /// used, on another device), the state is read again from Supabase. If
+  /// the read fails the answer of the server stands: the account is a
+  /// member. It never throws.
+  Future<void> householdJoined({bool reread = false}) async {
+    final userId = _userId;
+    final status = _status;
+    if (userId == null || status == null) return;
+    var joined = status.copyWith(hasMember: true);
+    if (reread) {
+      try {
+        joined = await _accounts.readStatus(userId).timeout(readTimeout);
+      } on Object catch (error) {
+        _log('read', error);
+      }
+    }
+    if (userId != _userId) return;
+    _status = joined;
+    await _save(userId, joined);
+    _set(_stepFor(joined));
   }
 
   /// "Esci": deletes the row of the device (without waiting long for the
@@ -399,10 +430,9 @@ class StartupGate extends ChangeNotifier
     return const StartupState.hub();
   }
 
-  /// Household (A7, A10): always done until PR 4.6 builds its screens and
-  /// checks [AccountStatus.hasMember]. Meanwhile the members of the test
-  /// household keep using the app.
-  bool _householdDone(AccountStatus status) => true;
+  /// Household (A7; A10 with a pending invite from PR 4.7): done once the
+  /// account is an active member of a household.
+  bool _householdDone(AccountStatus status) => status.hasMember;
 
   /// Location (A11), asked once per device: always done until PR 4.8 reads
   /// it from the [LocalStore].

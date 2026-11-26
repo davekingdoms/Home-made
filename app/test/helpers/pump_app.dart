@@ -9,6 +9,8 @@ import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_repository.dart';
+import 'package:homemade/features/household/household_dates.dart';
+import 'package:homemade/features/household/household_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
 import 'package:material_ui/material_ui.dart';
@@ -52,6 +54,8 @@ void usePhoneWindow() {
 /// [testConfig], whose `APP_ENV` is not `dev`. [window] sets the size of the
 /// window, in dp. [lock] defaults to a device without a screen lock, which
 /// never shows the unlock (A1); [clock] to a clock that stays still.
+/// [households] defaults to a household repository that always succeeds;
+/// [now], when given, is the time of the device for the dates of A8.
 Future<GoRouter> pumpApp(
   WidgetTester tester, {
   String location = '/',
@@ -59,11 +63,13 @@ Future<GoRouter> pumpApp(
   AuthRepository? auth,
   AccountRepository? accounts,
   DeviceRepository? devices,
+  HouseholdRepository? households,
   LocalStore? store,
   List<Uri>? openedLinks,
   Size? window,
   DeviceLock? lock,
   FakeClock? clock,
+  DateTime? now,
 }) async {
   if (window != null) setWindow(tester, window);
   final container = ProviderContainer(
@@ -76,6 +82,10 @@ Future<GoRouter> pumpApp(
       deviceRepositoryProvider.overrideWithValue(
         devices ?? FakeDeviceRepository(),
       ),
+      householdRepositoryProvider.overrideWithValue(
+        households ?? FakeHouseholdRepository(),
+      ),
+      if (now != null) wallClockProvider.overrideWithValue(() => now),
       localStoreProvider.overrideWithValue(store ?? MemoryLocalStore()),
       deviceLockProvider.overrideWithValue(lock ?? FakeDeviceLock()),
       monotonicClockProvider.overrideWithValue((clock ?? FakeClock()).call),

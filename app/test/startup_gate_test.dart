@@ -111,13 +111,16 @@ void main() {
       expect(harness.savedState, readyAccount);
     });
 
-    test('without a household is still the hub until PR 4.6', () async {
+    test('without a household is A7', () async {
+      final gate = _Harness(account: noHouseholdAccount).start();
+      await flush();
+
+      expect(gate.value, const StartupState.household());
+    });
+
+    test('with a household is the hub', () async {
       final gate = _Harness(
-        account: const AccountStatus(
-          hasProfile: true,
-          noticeVersion: privacyNoticeVersion,
-          hasMember: false,
-        ),
+        account: noHouseholdAccount.copyWith(hasMember: true),
       ).start();
       await flush();
 
@@ -169,6 +172,17 @@ void main() {
       await flush();
 
       expect(gate.value, const StartupState.unavailable(RemoteFailure.server));
+    });
+
+    test('with a saved state without a household is A7', () async {
+      final harness = _Harness()
+        ..accounts.readError = offline
+        ..saveState(noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.household());
+      expect(gate.displayName, 'Anna Maria');
     });
 
     test('ignores the state saved for another account', () async {
@@ -293,9 +307,12 @@ void main() {
         noticeVersion: privacyNoticeVersion,
         isDemo: false,
       ));
-      expect(gate.value, const StartupState.hub());
+      // No household yet: A7 is next.
+      expect(gate.value, const StartupState.household());
       expect(harness.savedState?.noticeRead, isTrue);
       expect(harness.savedState?.hasProfile, isTrue);
+      expect(harness.savedState?.displayName, 'Anna');
+      expect(gate.displayName, 'Anna');
     });
 
     test('with the checkbox only saves only the notice', () async {
@@ -320,6 +337,48 @@ void main() {
         throwsA(offline),
       );
       expect(gate.value, const StartupState.welcome(noticeOnly: false));
+    });
+  });
+
+  group('the household', () {
+    test('once created, the gate moves on to the hub, and saves it', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+      expect(gate.value, const StartupState.household());
+
+      await gate.householdJoined();
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.savedState?.hasMember, isTrue);
+      expect(harness.savedState?.displayName, 'Anna Maria');
+      // No read: the answer of create_household is enough.
+      expect(harness.accounts.reads, 1);
+    });
+
+    test('after already_member, the state is read again', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+
+      harness.accounts.status = noHouseholdAccount.copyWith(hasMember: true);
+      await gate.householdJoined(reread: true);
+
+      expect(harness.accounts.reads, 2);
+      expect(gate.value, const StartupState.hub());
+      expect(harness.savedState?.hasMember, isTrue);
+    });
+
+    test('after already_member, a failed read still moves on', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+
+      harness.accounts.readError = offline;
+      await gate.householdJoined(reread: true);
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.savedState?.hasMember, isTrue);
     });
   });
 
@@ -494,6 +553,24 @@ void main() {
         }),
         readyAccount,
       );
+    });
+
+    test('keeps the display name', () {
+      expect(
+        AccountStatus.fromJson(noHouseholdAccount.toJson()),
+        noHouseholdAccount,
+      );
+    });
+
+    test('saved before the greeting of A7 reads without a name', () {
+      final status = AccountStatus.fromJson({
+        'hasProfile': true,
+        'noticeVersion': privacyNoticeVersion,
+        'hasMember': false,
+        'isDemo': false,
+      });
+      expect(status?.displayName, isNull);
+      expect(status?.hasMember, isFalse);
     });
   });
 

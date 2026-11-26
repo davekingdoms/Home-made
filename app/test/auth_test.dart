@@ -113,9 +113,8 @@ void main() {
       });
     }
 
-    testWidgets('after first access, the screen asked for opens', (
-      tester,
-    ) async {
+    testWidgets('after first access and the household, the screen asked for '
+        'opens', (tester) async {
       final router = await pumpApp(
         tester,
         location: '/settings/appearance',
@@ -129,6 +128,18 @@ void main() {
       await tester.ensureVisible(find.text('Continua'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continua'));
+      await tester.pumpAndSettle();
+
+      // The household step carries the screen asked for to A8.
+      expect(router.location, '/household');
+      await tester.tap(find.text('Crea una casa'));
+      await tester.pumpAndSettle();
+      expect(router.location, '/household/create');
+      await tester.enterText(find.byType(TextField).first, 'Casa di prova');
+      await tester.pump();
+      await tester.ensureVisible(find.text('Crea'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Crea'));
       await tester.pumpAndSettle();
 
       expect(router.location, '/settings/appearance');
