@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:homemade/app.dart';
 import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/core/links/link_opener.dart';
+import 'package:homemade/core/links/text_sharer.dart';
 import 'package:homemade/core/router/app_router.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
@@ -57,7 +58,8 @@ void usePhoneWindow() {
 /// never shows the unlock (A1); [clock] to a clock that stays still.
 /// [households] defaults to a household repository that always succeeds;
 /// [now], when given, is the time of the device for the dates of A8–A10.
-/// [flavor] is the flavor of the build, for the invite links.
+/// [sharedTexts] collects what the app hands to the share sheet; [flavor]
+/// is the flavor of the build, for the invite links.
 Future<GoRouter> pumpApp(
   WidgetTester tester, {
   String location = '/',
@@ -72,6 +74,7 @@ Future<GoRouter> pumpApp(
   DeviceLock? lock,
   FakeClock? clock,
   DateTime? now,
+  List<String>? sharedTexts,
   String? flavor,
 }) async {
   if (window != null) setWindow(tester, window);
@@ -94,6 +97,9 @@ Future<GoRouter> pumpApp(
       monotonicClockProvider.overrideWithValue((clock ?? FakeClock()).call),
       linkOpenerProvider.overrideWithValue(
         (uri) async => openedLinks?.add(uri),
+      ),
+      textSharerProvider.overrideWithValue(
+        (text) async => sharedTexts?.add(text),
       ),
       inviteLinksProvider.overrideWithValue(
         InviteLinks(pagesBaseUrl: config.pagesBaseUrl, flavor: flavor),

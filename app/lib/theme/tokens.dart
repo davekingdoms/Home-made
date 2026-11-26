@@ -425,6 +425,11 @@ PaletteTokens tokensOf(AppPalette palette, Brightness brightness) {
 const nastroGiallo = Color(0xFFFFC83D);
 const nastroNero = Color(0xFF1F1F1F);
 
+/// QR code of the invites: dark modules on white in every theme, which the
+/// cameras read best.
+const qrModule = Color(0xFF161A1A);
+const qrBackground = Color(0xFFFFFFFF);
+
 /// Counter badge in the dark theme; the light theme uses `error` and
 /// `onError`.
 const counterBadgeDark = Color(0xFFFFB4AB);

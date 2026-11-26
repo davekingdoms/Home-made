@@ -10,6 +10,7 @@ import 'package:homemade/features/household/cash_amount.dart';
 import 'package:homemade/features/household/create_household_screen.dart';
 import 'package:homemade/features/household/household_choice_screen.dart';
 import 'package:homemade/features/household/household_dates.dart';
+import 'package:homemade/features/household/invite_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/theme/app_colors.dart';
@@ -676,7 +677,7 @@ void main() {
     });
 
     testWidgets('"Crea" sends the name without spaces, the date and the cash '
-        'of today, then the hub', (tester) async {
+        'of today, then A9', (tester) async {
       final pumped = await _pump(tester, location: _createPath);
       await _pickDay(tester, 15);
       await tester.enterText(_cashField, '12,50');
@@ -687,7 +688,7 @@ void main() {
       expect(call.name, 'Casa di prova');
       expect(call.startDate, DateTime(2031, 3, 15));
       expect(call.cashOpeningCents, 1250);
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.byType(InviteScreen), findsOneWidget);
     });
 
     testWidgets('without cash written, sends no balance', (tester) async {
@@ -734,7 +735,7 @@ void main() {
 
       pumped.households.gate!.complete();
       await tester.pumpAndSettle();
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.byType(InviteScreen), findsOneWidget);
     });
 
     final errors = <String, (Exception, String)>{
@@ -795,7 +796,7 @@ void main() {
       final [first, second] = pumped.households.calls;
       expect(second.id, first.id);
       expect(first.id, matches(RegExp(r'^[0-9a-f-]{36}$')));
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.byType(InviteScreen), findsOneWidget);
     });
 
     testWidgets('back returns to A7', (tester) async {

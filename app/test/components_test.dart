@@ -41,8 +41,8 @@ void main() {
       final titles = componentCatalog.map((entry) => entry.title).toSet();
       expect(ids, hasLength(componentCatalog.length));
       expect(titles, hasLength(componentCatalog.length));
-      // The table has 26 rows; the hub house waits for its specification.
-      expect(componentCatalog, hasLength(25));
+      // The table has 27 rows; the hub house waits for its specification.
+      expect(componentCatalog, hasLength(26));
     });
 
     for (final entry in componentCatalog) {
