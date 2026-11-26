@@ -66,6 +66,21 @@ void main() {
       });
     }
 
+    testWidgets('in the light theme, phone window', (tester) async {
+      _darkWindow(tester, _phone);
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      await pumpApp(
+        tester,
+        location: '/sign-in',
+        auth: FakeAuthRepository(signedIn: false),
+      );
+
+      await expectLater(
+        find.byType(SignInScreen),
+        matchesGoldenFile('goldens/sign_in_phone_light.png'),
+      );
+    });
+
     testWidgets('after a lost session, phone window', (tester) async {
       _darkWindow(tester, _phone);
       final auth = FakeAuthRepository();

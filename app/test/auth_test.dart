@@ -426,6 +426,39 @@ void main() {
     });
   });
 
+  group('the logo on the card', () {
+    for (final brightness in Brightness.values) {
+      testWidgets('is in tertiary, apart from the card, ${brightness.name}', (
+        tester,
+      ) async {
+        tester.platformDispatcher.platformBrightnessTestValue = brightness;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        await pumpApp(
+          tester,
+          location: _signInPath,
+          auth: FakeAuthRepository(signedIn: false),
+        );
+
+        final logo = find.byType(AppLogo);
+        final scheme = Theme.of(tester.element(logo)).colorScheme;
+        final box = tester.widget<DecoratedBox>(
+          find.descendant(of: logo, matching: find.byType(DecoratedBox)),
+        );
+        final fill = (box.decoration as ShapeDecoration).color;
+        expect(fill, scheme.tertiary);
+        expect(fill, isNot(scheme.primaryContainer));
+        expect(
+          tester
+              .widget<Icon>(
+                find.descendant(of: logo, matching: find.byType(Icon)),
+              )
+              .color,
+          scheme.onTertiary,
+        );
+      });
+    }
+  });
+
   group('A2 at 390 × 844', () {
     // The real font: the font of the tests draws every letter as a square,
     // much wider than Google Sans Flex, and wraps the lines.

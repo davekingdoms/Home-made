@@ -229,7 +229,7 @@ class _TitleCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppLogo(size: SignInScreen.logoSize),
+          const AppLogo(size: SignInScreen.logoSize, onCard: true),
           const SizedBox(height: AppSpacing.lg),
           Text(
             'Home-made',
