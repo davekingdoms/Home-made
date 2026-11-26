@@ -8,5 +8,15 @@
         "C6:E1:BB:44:79:2A:E8:2A:64:FD:B5:46:42:6A:4E:71:DA:3B:83:B9:E8:DE:C4:8D:1D:91:35:D0:36:92:13:CE"
       ]
     }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.davekingdoms.homemade.dev",
+      "sha256_cert_fingerprints": [
+        "C6:E1:BB:44:79:2A:E8:2A:64:FD:B5:46:42:6A:4E:71:DA:3B:83:B9:E8:DE:C4:8D:1D:91:35:D0:36:92:13:CE"
+      ]
+    }
   }
 ]
