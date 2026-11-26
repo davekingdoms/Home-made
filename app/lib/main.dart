@@ -10,6 +10,8 @@ import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/supabase_auth_repository.dart';
 import 'package:homemade/features/device/device_repository.dart';
 import 'package:homemade/features/device/supabase_device_repository.dart';
+import 'package:homemade/features/household/household_repository.dart';
+import 'package:homemade/features/household/supabase_household_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/supabase_account_repository.dart';
 import 'package:homemade/theme/font_license.dart';
@@ -58,6 +60,9 @@ Future<void> main() async {
         ),
         deviceRepositoryProvider.overrideWithValue(
           SupabaseDeviceRepository(supabase.client),
+        ),
+        householdRepositoryProvider.overrideWithValue(
+          SupabaseHouseholdRepository(supabase.client),
         ),
         localStoreProvider.overrideWithValue(SharedPreferencesLocalStore()),
       ],

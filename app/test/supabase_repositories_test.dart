@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/features/device/supabase_device_repository.dart';
+import 'package:homemade/features/household/household_repository.dart';
+import 'package:homemade/features/household/supabase_household_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/supabase_account_repository.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +13,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Invented ids.
 const _userId = '00000000-0000-4000-8000-00000000a001';
 const _deviceId = '00000000-0000-4000-8000-00000000d001';
+const _householdId = '00000000-0000-4000-8000-00000000c001';
 
 /// A Supabase client whose requests [handler] answers, with no network.
 /// The requests are collected in [requests].
@@ -303,6 +306,69 @@ void main() {
       await expectLater(
         SupabaseAccountRepository(client).deleteDemoAccount(),
         throwsA(isA<PostgrestException>()),
+      );
+    });
+  });
+
+  group('household', () {
+    test('creates it with its function, with the id of the device', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (_) async => _json(_householdId));
+
+      await SupabaseHouseholdRepository(client).createHousehold(
+        id: _householdId,
+        name: 'Casa di prova',
+        startDate: DateTime(2031, 3, 15),
+        cashOpeningCents: 1250,
+      );
+
+      final request = requests.single;
+      expect(request.method, 'POST');
+      expect(request.url.path, '/rest/v1/rpc/create_household');
+      expect(jsonDecode(request.body), {
+        'id': _householdId,
+        'name': 'Casa di prova',
+        'start_date': '2031-03-15',
+        'cash_opening_cents': 1250,
+      });
+    });
+
+    test('sends no cash as null', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (_) async => _json(_householdId));
+
+      await SupabaseHouseholdRepository(client).createHousehold(
+        id: _householdId,
+        name: 'Casa di prova',
+        startDate: DateTime(2031, 3),
+      );
+
+      expect(
+        jsonDecode(requests.single.body),
+        containsPair('cash_opening_cents', null),
+      );
+    });
+
+    test('throws the key of the error of the function', () async {
+      final client = _client(
+        [],
+        (_) async =>
+            _json({'code': 'P0001', 'message': 'start_date_out_of_range'}, 400),
+      );
+
+      Object? thrown;
+      try {
+        await SupabaseHouseholdRepository(client).createHousehold(
+          id: _householdId,
+          name: 'Casa di prova',
+          startDate: DateTime(2031, 3),
+        );
+      } on Object catch (error) {
+        thrown = error;
+      }
+      expect(
+        CreateHouseholdError.of(thrown!),
+        CreateHouseholdError.startDateOutOfRange,
       );
     });
   });

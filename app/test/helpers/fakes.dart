@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_repository.dart';
+import 'package:homemade/features/household/household_repository.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -143,6 +144,50 @@ class FakeAccountRepository implements AccountRepository {
     deletions++;
   }
 }
+
+/// A call to `create_household`, as [FakeHouseholdRepository] received it.
+typedef HouseholdCreation = ({
+  String id,
+  String name,
+  DateTime startDate,
+  int? cashOpeningCents,
+});
+
+/// [HouseholdRepository] in memory. Each call is recorded, also the ones
+/// that fail.
+class FakeHouseholdRepository implements HouseholdRepository {
+  /// When set, [createHousehold] throws it.
+  Exception? error;
+
+  /// When set, [createHousehold] waits for it.
+  Completer<void>? gate;
+
+  /// What [createHousehold] received, in order.
+  final calls = <HouseholdCreation>[];
+
+  @override
+  Future<void> createHousehold({
+    required String id,
+    required String name,
+    required DateTime startDate,
+    int? cashOpeningCents,
+  }) async {
+    calls.add((
+      id: id,
+      name: name,
+      startDate: startDate,
+      cashOpeningCents: cashOpeningCents,
+    ));
+    await gate?.future;
+    final error = this.error;
+    if (error != null) throw error;
+  }
+}
+
+/// An error of `create_household` with the key [key], as PostgREST sends
+/// it.
+PostgrestException householdError(String key) =>
+    PostgrestException(message: key, code: 'P0001');
 
 /// [DeviceRepository] in memory: the rows of `devices`, by id.
 class FakeDeviceRepository implements DeviceRepository {
