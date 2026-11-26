@@ -7,7 +7,12 @@ import 'package:material_ui/material_ui.dart';
 /// a cookie, in the primary colours. Like the placeholder, it is not a
 /// component of the style specification.
 class AppLogo extends StatelessWidget {
-  const new({this.size = defaultSize, this.semanticLabel, super.key});
+  const new({
+    this.size = defaultSize,
+    this.semanticLabel,
+    this.onCard = false,
+    super.key,
+  });
 
   /// Twice the avatar of the hub.
   static const double defaultSize = AppSizes.hubAvatar * 2;
@@ -17,6 +22,11 @@ class AppLogo extends StatelessWidget {
   /// What the screen reader says; null when the name of the app is already
   /// written next to the logo.
   final String? semanticLabel;
+
+  /// Whether the logo sits on a highlight card: there it is filled with the
+  /// subdued accent (`tertiary`, house in `onTertiary`), which stays apart
+  /// from `primaryContainer` in both themes; elsewhere with `primary`.
+  final bool onCard;
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +39,13 @@ class AppLogo extends StatelessWidget {
         dimension: size,
         child: DecoratedBox(
           decoration: ShapeDecoration(
-            color: scheme.primary,
+            color: onCard ? scheme.tertiary : scheme.primary,
             shape: const CookieBorder(),
           ),
           child: Icon(
             Symbols.home_rounded,
             size: size / 2,
-            color: scheme.onPrimary,
+            color: onCard ? scheme.onTertiary : scheme.onPrimary,
           ),
         ),
       ),

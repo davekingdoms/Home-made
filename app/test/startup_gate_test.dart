@@ -436,6 +436,48 @@ void main() {
       expect(harness.auth.signOuts, 0);
       expect(gate.value, const StartupState.hub());
     });
+
+    test(
+      'a session the client closes during the deletion is no lost session',
+      () async {
+        final harness = _Harness(account: demoAccount)
+          ..accounts.deleteGate = Completer<void>();
+        final gate = harness.start();
+        await flush();
+
+        final deletion = gate.deleteDemoAccount();
+        await flush();
+        // The account is gone on the server: the client closes the session
+        // before the answer arrives.
+        harness.auth.loseSession();
+        await flush();
+        expect(gate.value, const StartupState.signIn(SignInArrival.signedOut));
+
+        harness.accounts.deleteGate!.complete();
+        await deletion;
+        await flush();
+
+        expect(harness.accounts.deletions, 1);
+        expect(harness.store.values, isEmpty);
+        expect(gate.value, const StartupState.signIn(SignInArrival.signedOut));
+        expect(gate.value.sessionLost, isFalse);
+      },
+    );
+
+    test('after a failed deletion, a lost session says so', () async {
+      final harness = _Harness(account: demoAccount)
+        ..accounts.deleteError = serverError;
+      final gate = harness.start();
+      await flush();
+
+      await expectLater(gate.deleteDemoAccount(), throwsA(serverError));
+      expect(gate.value, const StartupState.hub());
+
+      harness.auth.loseSession();
+      await flush();
+
+      expect(gate.value, const StartupState.signIn(SignInArrival.sessionLost));
+    });
   });
 
   group('the saved state', () {

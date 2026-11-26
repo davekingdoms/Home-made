@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/features/auth/delete_demo_account.dart';
@@ -6,6 +8,7 @@ import 'package:homemade/features/auth/welcome_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/settings/account_screen.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
+import 'package:homemade/theme/dimens.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers/fake_auth_repository.dart';
@@ -45,6 +48,8 @@ bool _ticked(WidgetTester tester) =>
 Future<void> _continueWelcome(WidgetTester tester) async {
   await tester.tap(find.byType(Checkbox));
   await tester.pump();
+  await tester.ensureVisible(find.text('Continua'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Continua'));
   await tester.pumpAndSettle();
 }
@@ -150,10 +155,31 @@ void main() {
         store: store,
       );
 
+      // Under the helper text of the name, 4 below, in its style.
       expect(find.text(demoAccountNotice), findsOneWidget);
+      final helper = tester.getRect(find.text(nameHelperText));
+      final notice = tester.getRect(find.text(demoAccountNotice));
+      expect(notice.top, helper.bottom + AppSpacing.xxs);
+      expect(notice.left, helper.left);
       expect(
-        tester.getTopLeft(find.text(demoAccountNotice)).dy,
-        greaterThan(tester.getBottomLeft(find.byType(TextField)).dy),
+        tester
+            .widget<RichText>(
+              find.descendant(
+                of: find.text(demoAccountNotice),
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+            .style,
+        tester
+            .widget<RichText>(
+              find.descendant(
+                of: find.text(nameHelperText),
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+            .style,
       );
 
       await _continueWelcome(tester);
@@ -314,6 +340,70 @@ void main() {
         expect(_ticked(tester), isFalse);
       },
     );
+
+    testWidgets(
+      'leads to sign-in in silence also when the client closes the session '
+      'before the answer',
+      (tester) async {
+        final accounts = FakeAccountRepository(status: demoAccount)
+          ..deleteGate = Completer<void>();
+        final auth = FakeAuthRepository();
+        final router = await pumpApp(
+          tester,
+          location: _accountPath,
+          auth: auth,
+          accounts: accounts,
+        );
+
+        await _tapDelete(tester);
+        // The indicator of I2 turns while the deletion waits: no settling.
+        await tester.tap(find.widgetWithText(TextButton, 'Elimina'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        // The account is gone on the server: the client closes the session
+        // by itself, before the answer arrives.
+        auth.loseSession();
+        await tester.pumpAndSettle();
+        accounts.deleteGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(accounts.deletions, 1);
+        expect(router.location, _signInPath);
+        expect(find.text(sessionLostMessage), findsNothing);
+      },
+    );
+
+    testWidgets('after a failure, a session lost later says so', (
+      tester,
+    ) async {
+      final accounts = FakeAccountRepository(status: demoAccount)
+        ..deleteError = serverError;
+      final auth = FakeAuthRepository();
+      final router = await pumpApp(
+        tester,
+        location: _accountPath,
+        auth: auth,
+        accounts: accounts,
+      );
+
+      await _tapDelete(tester);
+      await _confirmDelete(tester);
+      expect(
+        find.widgetWithText(
+          SnackBar,
+          "Non è stato possibile eliminare l'account. Riprova.",
+        ),
+        findsOneWidget,
+      );
+      expect(router.location, _accountPath);
+
+      auth.loseSession();
+      await tester.pumpAndSettle();
+
+      expect(router.location, _signInPath);
+      expect(find.text(sessionLostMessage), findsOneWidget);
+    });
 
     const errors = {
       'without a network': (

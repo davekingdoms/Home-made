@@ -209,9 +209,12 @@ class StartupGate extends ChangeNotifier
   ///
   /// It throws when the deletion fails: I2 tells the user and stays.
   Future<void> deleteDemoAccount() async {
-    await _accounts.deleteDemoAccount();
+    // Marked before the call: once the account is gone the client may close
+    // the session by itself, and that is no lost session. A failure clears
+    // the mark again, so a session lost later still says so.
     _signingOut = true;
     try {
+      await _accounts.deleteDemoAccount();
       await _devices.forget(deleteRow: false);
       try {
         await _store.clear();

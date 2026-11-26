@@ -90,6 +90,9 @@ class FakeAccountRepository implements AccountRepository {
   /// When set, [deleteDemoAccount] throws it.
   Exception? deleteError;
 
+  /// When set, [deleteDemoAccount] waits for it.
+  Completer<void>? deleteGate;
+
   int reads = 0;
   int deletions = 0;
   final saves = <FirstAccessSave>[];
@@ -126,6 +129,7 @@ class FakeAccountRepository implements AccountRepository {
 
   @override
   Future<void> deleteDemoAccount() async {
+    await deleteGate?.future;
     final error = deleteError;
     if (error != null) throw error;
     deletions++;
