@@ -54,6 +54,30 @@ android {
         versionName = flutter.versionName
     }
 
+    // Two flavors of the same app, which fit side by side on a phone: dev
+    // (package .dev, test builds) and prod (the real app). Neither the
+    // namespace nor the Kotlin package follows the application ID. At startup
+    // the app checks that the flavor agrees with APP_ENV (AppConfig).
+    // The names also live in AppFlavor.appName, for the app switcher.
+    buildFeatures {
+        // resValue below: off by default since AGP 9.
+        resValues = true
+    }
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "Home-made dev")
+        }
+        create("prod") {
+            dimension = "env"
+            resValue("string", "app_name", "Home-made")
+        }
+    }
+
+    // One signing key for both flavors: the upload key in release builds,
+    // the debug key in debug builds.
     signingConfigs {
         create("release") {
             if (signingProblem == null) {
@@ -72,8 +96,9 @@ android {
     }
 }
 
-// Fail release builds early, with a clear message, when the signing file is missing.
-tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+// Fail release builds early, with a clear message, when the signing file is
+// missing: preDevReleaseBuild and preProdReleaseBuild.
+tasks.matching { it.name.startsWith("pre") && it.name.endsWith("ReleaseBuild") }.configureEach {
     val problem = signingProblem
     doFirst {
         if (problem != null) {
