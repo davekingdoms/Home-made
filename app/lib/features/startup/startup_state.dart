@@ -16,7 +16,7 @@ enum StartupStep {
   /// The current privacy notice is not read: first access (A3).
   welcome,
 
-  /// No household: A7, or A10 with a pending invite. Turned on by PR 4.6.
+  /// No household: A7, or A10 with a pending invite (from PR 4.7).
   household,
 
   /// Location never asked on this device: A11. Turned on by PR 4.8.
@@ -68,7 +68,7 @@ class StartupState {
       arrival = null,
       locked = false;
 
-  /// No household (A7, A10). Not produced before PR 4.6.
+  /// No household (A7, A10).
   const new household() : this._(StartupStep.household);
 
   /// Location never asked on this device (A11). Not produced before PR 4.8.

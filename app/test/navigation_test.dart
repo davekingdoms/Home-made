@@ -63,16 +63,28 @@ void main() {
     for (final entry in screens) {
       for (final location in entry.exampleLocations.keys) {
         testWidgets('${entry.code} at $location', (tester) async {
+          // A cold start passes through the startup screen, which forgets
+          // the sub-screens of the household: they open from A7.
+          final household = location.startsWith('/household/');
           final router = await pumpApp(
             tester,
-            location: location,
-            // Sign-in (A2) and first access (A3) show only while their step
-            // is missing; once done they lead to the hub.
+            location: household ? '/household' : location,
+            // Sign-in (A2), first access (A3) and the household (A7–A10)
+            // show only while their step is missing; once done they lead to
+            // the hub.
             auth: FakeAuthRepository(signedIn: entry.code != 'A2'),
             accounts: FakeAccountRepository(
-              status: entry.code == 'A3' ? newAccount : readyAccount,
+              status: switch (entry.code) {
+                'A3' => newAccount,
+                'A7' || 'A8' || 'A9' || 'A10' => noHouseholdAccount,
+                _ => readyAccount,
+              },
             ),
           );
+          if (household) {
+            router.go(location);
+            await tester.pumpAndSettle();
+          }
 
           expect(router.location, location);
           switch (entry.code) {

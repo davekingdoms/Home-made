@@ -113,9 +113,8 @@ void main() {
       });
     }
 
-    testWidgets('after first access, the screen asked for opens', (
-      tester,
-    ) async {
+    testWidgets('after first access, the household step keeps the screen '
+        'asked for', (tester) async {
       final router = await pumpApp(
         tester,
         location: '/settings/appearance',
@@ -131,7 +130,11 @@ void main() {
       await tester.tap(find.text('Continua'));
       await tester.pumpAndSettle();
 
-      expect(router.location, '/settings/appearance');
+      expect(router.location, '/household');
+      expect(
+        router.routerDelegate.currentConfiguration.uri.queryParameters['from'],
+        '/settings/appearance',
+      );
     });
   });
 

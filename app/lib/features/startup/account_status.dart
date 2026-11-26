@@ -22,6 +22,7 @@ class AccountStatus {
     required this.noticeVersion,
     required this.hasMember,
     this.isDemo = false,
+    this.displayName,
   });
 
   /// Reads what [toJson] wrote; null when [json] is not a status.
@@ -39,6 +40,11 @@ class AccountStatus {
         isDemo: switch (json) {
           {'isDemo': true} => true,
           _ => false,
+        },
+        // The states saved before the greeting of A7 have no name.
+        displayName: switch (json) {
+          {'displayName': final String name} => name,
+          _ => null,
         },
       );
     }
@@ -58,18 +64,25 @@ class AccountStatus {
   /// (`docs/spec/accesso.md`, section 12).
   final bool isDemo;
 
+  /// Display name of the profile, for the greeting of A7; null without a
+  /// profile, and in the states saved before it.
+  final String? displayName;
+
   /// Whether the current version of the privacy notice is read.
   bool get noticeRead => noticeVersion == privacyNoticeVersion;
 
   AccountStatus copyWith({
     bool? hasProfile,
     String? noticeVersion,
+    bool? hasMember,
     bool? isDemo,
+    String? displayName,
   }) => AccountStatus(
     hasProfile: hasProfile ?? this.hasProfile,
     noticeVersion: noticeVersion ?? this.noticeVersion,
-    hasMember: hasMember,
+    hasMember: hasMember ?? this.hasMember,
     isDemo: isDemo ?? this.isDemo,
+    displayName: displayName ?? this.displayName,
   );
 
   Map<String, Object?> toJson() => {
@@ -77,6 +90,7 @@ class AccountStatus {
     'noticeVersion': noticeVersion,
     'hasMember': hasMember,
     'isDemo': isDemo,
+    'displayName': displayName,
   };
 
   @override
@@ -85,10 +99,12 @@ class AccountStatus {
       other.hasProfile == hasProfile &&
       other.noticeVersion == noticeVersion &&
       other.hasMember == hasMember &&
-      other.isDemo == isDemo;
+      other.isDemo == isDemo &&
+      other.displayName == displayName;
 
   @override
-  int get hashCode => Object.hash(hasProfile, noticeVersion, hasMember, isDemo);
+  int get hashCode =>
+      Object.hash(hasProfile, noticeVersion, hasMember, isDemo, displayName);
 }
 
 /// Reads and writes the account of the signed-in user on Supabase: its

@@ -17,10 +17,11 @@ String? startupStepPath(StartupStep step) => switch (step) {
 };
 
 /// Paths of the steps the gate checks today: sign-in, first access and the
-/// startup screen. They are never a destination to return to, and once
-/// their step is done they give way to the screen asked for (or to the
-/// hub). Household and location join when PRs 4.6 and 4.8 turn their steps
-/// on; until then their screens are placeholders like the others.
+/// startup screen. Together with the household ([_householdPath] and its
+/// sub-screens) they are never a destination to return to, and once their
+/// step is done they give way to the screen asked for (or to the hub).
+/// Location joins when PR 4.8 turns its step on; until then its screen is a
+/// placeholder like the others.
 ///
 /// The unlock (A1) is not a step: it covers the app from outside the router,
 /// and no redirect leads to `/unlock`, which shows A1 only as a preview.
@@ -29,6 +30,16 @@ final Set<String> _gatePaths = {
   screenByCode('A2').path!,
   screenByCode('A3').path!,
 };
+
+/// Path of the household step (A7), parent of A8–A10.
+final String _householdPath = screenByCode('A7').path!;
+
+/// Whether [path] is a screen of the gate: one of [_gatePaths], or the
+/// household with its sub-screens.
+bool _isGatePath(String path) =>
+    _gatePaths.contains(path) ||
+    path == _householdPath ||
+    path.startsWith('$_householdPath/');
 
 /// Where the router sends [location] in the startup state [startup]; null
 /// to show it.
@@ -39,7 +50,7 @@ final Set<String> _gatePaths = {
 /// itself a screen of the gate. After "Esci" it is forgotten.
 String? startupRedirect(StartupState startup, Uri location) {
   final path = location.path;
-  final destination = _gatePaths.contains(path)
+  final destination = _isGatePath(path)
       ? location.queryParameters[destinationParameter]
       : location.toString();
   final target = startupStepPath(startup.step);
@@ -53,7 +64,7 @@ String? startupRedirect(StartupState startup, Uri location) {
       queryParameters: keep == null ? null : {destinationParameter: keep},
     ).toString();
   }
-  if (_gatePaths.contains(path)) return _admitted(destination) ?? '/';
+  if (_isGatePath(path)) return _admitted(destination) ?? '/';
   return null;
 }
 
@@ -65,6 +76,6 @@ String? _admitted(String? destination) {
   final uri = Uri.tryParse(destination);
   if (uri == null || uri.hasScheme || uri.hasAuthority) return null;
   if (uri.path == '/' && !uri.hasQuery) return null;
-  if (_gatePaths.contains(uri.path)) return null;
+  if (_isGatePath(uri.path)) return null;
   return destination;
 }

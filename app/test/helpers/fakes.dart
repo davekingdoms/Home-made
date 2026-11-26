@@ -21,6 +21,14 @@ const newAccount = AccountStatus(
   hasMember: false,
 );
 
+/// An account past first access, without a household: A7 is next.
+const noHouseholdAccount = AccountStatus(
+  hasProfile: true,
+  noticeVersion: privacyNoticeVersion,
+  hasMember: false,
+  displayName: 'Anna Maria',
+);
+
 /// A demo account that has done every step.
 const demoAccount = AccountStatus(
   hasProfile: true,

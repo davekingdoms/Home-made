@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homemade/core/config/app_config.dart';
+import 'package:homemade/core/router/screen_catalog.dart';
 import 'package:homemade/features/auth/delete_demo_account.dart';
 import 'package:homemade/features/auth/sign_in_screen.dart';
 import 'package:homemade/features/auth/welcome_screen.dart';
@@ -186,7 +187,7 @@ void main() {
 
       expect(accounts.saves.single.isDemo, isTrue);
       expect(store.values, isNot(contains(StartupGate.demoChoiceKey)));
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.text(screenByCode('A7').label), findsOneWidget);
     });
 
     testWidgets('without the choice, creates a real account', (tester) async {

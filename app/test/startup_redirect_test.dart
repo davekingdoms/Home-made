@@ -81,6 +81,31 @@ void main() {
     });
   });
 
+  group('without a household', () {
+    const state = StartupState.household();
+
+    test('every screen leads to A7, remembering where it was', () {
+      expect(_redirect(state, '/settings'), '/household?from=%2Fsettings');
+      expect(
+        _redirect(state, '/welcome?from=%2Fsettings'),
+        '/household?from=%2Fsettings',
+      );
+      expect(_redirect(state, '/'), '/household');
+    });
+
+    test('A7 and its sub-screens show, with the screen asked for', () {
+      for (final location in [
+        '/household',
+        '/household/create',
+        '/household/create?from=%2Fsettings',
+        '/household/join',
+        '/household/invite',
+      ]) {
+        expect(_redirect(state, location), isNull, reason: location);
+      }
+    });
+  });
+
   group('with every step done', () {
     const state = StartupState.hub();
 
@@ -92,6 +117,18 @@ void main() {
       expect(_redirect(state, '/start?from=%2Fsettings'), '/settings');
       expect(_redirect(state, '/sign-in'), '/');
       expect(_redirect(state, '/start'), '/');
+      expect(
+        _redirect(state, '/household/create?from=%2Fsettings%2Faccount'),
+        '/settings/account',
+      );
+      for (final location in [
+        '/household',
+        '/household/create',
+        '/household/invite',
+        '/household/join',
+      ]) {
+        expect(_redirect(state, location), '/', reason: location);
+      }
     });
 
     test('every other screen shows', () {
@@ -100,7 +137,6 @@ void main() {
         '/finance/transactions',
         '/settings/account',
         '/unlock',
-        '/household/invite',
         '/location',
       ]) {
         expect(_redirect(state, location), isNull, reason: location);
@@ -115,6 +151,8 @@ void main() {
         '/start',
         '/sign-in',
         '/welcome',
+        '/household',
+        '/household/join',
       ]) {
         final location = Uri(
           path: '/welcome',
@@ -125,10 +163,7 @@ void main() {
     });
 
     test('the placeholders of the steps not on yet are destinations', () {
-      expect(
-        _redirect(state, '/start?from=%2Fhousehold%2Fjoin'),
-        '/household/join',
-      );
+      expect(_redirect(state, '/start?from=%2Flocation'), '/location');
     });
 
     test('the query of the screen asked for comes back too', () {

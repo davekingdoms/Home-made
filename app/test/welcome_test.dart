@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:homemade/core/router/screen_catalog.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/design/cookie.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
@@ -159,7 +160,7 @@ void main() {
         noticeVersion: privacyNoticeVersion,
         isDemo: false,
       ));
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.text(screenByCode('A7').label), findsOneWidget);
     });
 
     testWidgets('shows an indicator while it saves', (tester) async {
@@ -177,7 +178,7 @@ void main() {
 
       accounts.saveGate!.complete();
       await tester.pumpAndSettle();
-      expect(find.byType(HubScreen), findsOneWidget);
+      expect(find.text(screenByCode('A7').label), findsOneWidget);
     });
 
     const errors = {
@@ -423,7 +424,7 @@ void main() {
 
         await _tick(tester);
         await _tapContinue(tester);
-        expect(find.byType(HubScreen), findsOneWidget);
+        expect(find.text(screenByCode('A7').label), findsOneWidget);
       });
     }
 
@@ -475,7 +476,7 @@ void main() {
         );
         await tester.tap(find.text('Continua'));
         await tester.pumpAndSettle();
-        expect(find.byType(HubScreen), findsOneWidget);
+        expect(find.text(screenByCode('A7').label), findsOneWidget);
       });
     }
   });

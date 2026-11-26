@@ -1,9 +1,9 @@
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// [AccountRepository] on Supabase: `profiles`, `user_settings`,
-/// `current_member_id()` and `delete_my_demo_account()`, all under the
-/// policies of the signed-in user.
+/// [AccountRepository] on Supabase: `profiles` (with the display name, for
+/// the greeting of A7), `user_settings`, `current_member_id()` and
+/// `delete_my_demo_account()`, all under the policies of the signed-in user.
 class SupabaseAccountRepository implements AccountRepository {
   const new(this._client);
 
@@ -16,7 +16,7 @@ class SupabaseAccountRepository implements AccountRepository {
     final results = await Future.wait<Object?>([
       _client
           .from('profiles')
-          .select('id, is_demo')
+          .select('id, is_demo, display_name')
           .eq('id', userId)
           .maybeSingle()
           .retry(enabled: false),
@@ -39,6 +39,10 @@ class SupabaseAccountRepository implements AccountRepository {
       isDemo: switch (profile) {
         {'is_demo': true} => true,
         _ => false,
+      },
+      displayName: switch (profile) {
+        {'display_name': final String name} => name,
+        _ => null,
       },
     );
   }

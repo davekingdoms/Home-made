@@ -178,6 +178,27 @@ void main() {
       expect(profile.url.queryParameters['select'], contains('is_demo'));
     });
 
+    test('reads the display name of the profile', () async {
+      final requests = <http.Request>[];
+      final client = _client(requests, (request) async {
+        return switch (request.url.path) {
+          '/rest/v1/profiles' => _json([
+            {'id': _userId, 'is_demo': false, 'display_name': 'Anna Maria'},
+          ]),
+          _ => _json(null),
+        };
+      });
+
+      final status = await SupabaseAccountRepository(client)
+          .readStatus(_userId);
+
+      expect(status.displayName, 'Anna Maria');
+      final profile = requests.firstWhere(
+        (request) => request.url.path == '/rest/v1/profiles',
+      );
+      expect(profile.url.queryParameters['select'], contains('display_name'));
+    });
+
     test('reads a new account as one without anything', () async {
       final client = _client([], (request) async {
         if (request.url.path.startsWith('/rest/v1/rpc/')) return _json(null);
