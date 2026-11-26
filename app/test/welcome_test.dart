@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homemade/core/router/screen_catalog.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/design/cookie.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/sign_in_screen.dart';
 import 'package:homemade/features/auth/sign_out.dart';
 import 'package:homemade/features/auth/welcome_screen.dart';
+import 'package:homemade/features/household/household_choice_screen.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
@@ -160,7 +160,7 @@ void main() {
         noticeVersion: privacyNoticeVersion,
         isDemo: false,
       ));
-      expect(find.text(screenByCode('A7').label), findsOneWidget);
+      expect(find.byType(HouseholdChoiceScreen), findsOneWidget);
     });
 
     testWidgets('shows an indicator while it saves', (tester) async {
@@ -178,7 +178,7 @@ void main() {
 
       accounts.saveGate!.complete();
       await tester.pumpAndSettle();
-      expect(find.text(screenByCode('A7').label), findsOneWidget);
+      expect(find.byType(HouseholdChoiceScreen), findsOneWidget);
     });
 
     const errors = {
@@ -424,7 +424,7 @@ void main() {
 
         await _tick(tester);
         await _tapContinue(tester);
-        expect(find.text(screenByCode('A7').label), findsOneWidget);
+        expect(find.byType(HouseholdChoiceScreen), findsOneWidget);
       });
     }
 
@@ -476,7 +476,7 @@ void main() {
         );
         await tester.tap(find.text('Continua'));
         await tester.pumpAndSettle();
-        expect(find.text(screenByCode('A7').label), findsOneWidget);
+        expect(find.byType(HouseholdChoiceScreen), findsOneWidget);
       });
     }
   });
