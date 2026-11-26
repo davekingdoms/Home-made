@@ -634,6 +634,11 @@ void main() {
       expect(_dateText('15 marzo 2031 · oggi'), findsOneWidget);
       expect(_cashField, findsOneWidget);
       expect(find.text(cashHelper), findsOneWidget);
+      // The helper of the date sits where Material puts the one of the cash.
+      expect(
+        tester.getTopLeft(find.text(startDateHelper)).dx,
+        tester.getTopLeft(find.text(cashHelper)).dx,
+      );
       expect(find.text('0,00'), findsOneWidget);
       expect(find.text('€'), findsOneWidget);
       final field = tester.widget<TextField>(_cashField);

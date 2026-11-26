@@ -331,9 +331,11 @@ class _StartDateField extends StatelessWidget {
           ),
         ),
         Padding(
+          // Where Material puts the helper of an outlined field: the padding
+          // of the content plus the gap of the border (4).
           padding: const EdgeInsetsDirectional.only(
-            start: AppSpacing.md,
-            end: AppSpacing.md,
+            start: AppSpacing.md + AppSpacing.xxs,
+            end: AppSpacing.md + AppSpacing.xxs,
             top: AppSpacing.xxs,
           ),
           child: Text(
