@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:homemade/core/router/startup_redirect.dart';
@@ -7,6 +9,7 @@ import 'package:homemade/features/dev/screen_index_screen.dart';
 import 'package:homemade/features/finance/finance_shell.dart';
 import 'package:homemade/features/finance/manual_entry/manual_entry_routes.dart';
 import 'package:homemade/features/household/household_routes.dart';
+import 'package:homemade/features/household/invite_link.dart';
 import 'package:homemade/features/hub/hub_screen.dart';
 import 'package:homemade/features/location/location_routes.dart';
 import 'package:homemade/features/settings/settings_routes.dart';
@@ -28,8 +31,15 @@ part 'app_router.g.dart';
 /// leads to its screen, then to the screen asked for ([startupRedirect]).
 /// The lock is not a step: the unlock (A1) covers the app from outside the
 /// router, which does not move when it comes or goes.
+///
+/// An invite link of [inviteLinks] comes before every other check: it goes
+/// to [onInviteLink] when it is valid (only `invite_link_invalid` in the log
+/// otherwise), then the router goes on as if the entry screen had been
+/// asked. The link is never shown, nor a destination.
 GoRouter buildAppRouter({
   required ValueListenable<StartupState> startup,
+  InviteLinks? inviteLinks,
+  void Function(InviteLinkData link)? onInviteLink,
   String initialLocation = '/',
 }) {
   final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -37,7 +47,19 @@ GoRouter buildAppRouter({
     navigatorKey: rootKey,
     initialLocation: initialLocation,
     refreshListenable: _StepChanges(startup),
-    redirect: (context, state) => startupRedirect(startup.value, state.uri),
+    redirect: (context, state) {
+      final location = state.uri;
+      if (inviteLinks != null && inviteLinks.matches(location)) {
+        final link = inviteLinks.read(location);
+        if (link == null) {
+          developer.log('invite_link_invalid', name: 'household');
+        } else {
+          onInviteLink?.call(link);
+        }
+        return startupRedirect(startup.value, Uri(path: '/')) ?? '/';
+      }
+      return startupRedirect(startup.value, location);
+    },
     routes: [
       startupRoute(),
       ...authRoutes(),
@@ -60,7 +82,12 @@ GoRouter buildAppRouter({
 
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final router = buildAppRouter(startup: ref.watch(startupGateProvider));
+  final gate = ref.watch(startupGateProvider);
+  final router = buildAppRouter(
+    startup: gate,
+    inviteLinks: ref.watch(inviteLinksProvider),
+    onInviteLink: gate.receiveInvite,
+  );
   ref.onDispose(router.dispose);
   return router;
 }

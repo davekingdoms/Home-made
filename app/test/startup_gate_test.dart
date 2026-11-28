@@ -6,6 +6,8 @@ import 'package:homemade/core/remote/remote_failure.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_registry.dart';
+import 'package:homemade/features/household/invite_link.dart';
+import 'package:homemade/features/household/pending_invite.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
 import 'package:homemade/features/startup/startup_state.dart';
@@ -33,6 +35,9 @@ class _Harness {
   final store = MemoryLocalStore();
   final clock = FakeClock();
 
+  /// Time of the device, for the age of the pending invite.
+  DateTime now = DateTime(2031, 3, 15, 10);
+
   late final registry = DeviceRegistry(remote: devices, store: store);
 
   StartupGate start() {
@@ -43,9 +48,22 @@ class _Harness {
       devices: registry,
       lock: lock,
       clock: clock.call,
+      now: () => now,
     );
     addTearDown(gate.dispose);
     return gate;
+  }
+
+  /// Saves an invite opened [age] ago as pending on the device.
+  void saveInvite({Duration age = Duration.zero}) =>
+      store.values[StartupGate.pendingInviteKey] = jsonEncode(
+        PendingInvite.fromLink(_link, now.subtract(age)).toJson(),
+      );
+
+  /// The pending invite saved on the device, if any.
+  PendingInvite? get savedInvite {
+    final saved = store.values[StartupGate.pendingInviteKey];
+    return saved == null ? null : PendingInvite.fromJson(jsonDecode(saved));
   }
 
   /// Saves [status] as the last state read for Anna.
@@ -58,6 +76,9 @@ class _Harness {
     return saved == null ? null : AccountStatus.fromJson(jsonDecode(saved));
   }
 }
+
+/// The link of an invented invite.
+const _link = InviteLinkData(token: inventedToken, code: 'K7QMX2PA');
 
 /// Lets the reads of the fakes complete.
 Future<void> flush() async {
@@ -341,7 +362,52 @@ void main() {
   });
 
   group('the household', () {
-    test('once created, the gate moves on to the hub, and saves it', () async {
+    test('once created, A9 comes next, then the hub', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+      expect(gate.value, const StartupState.household());
+
+      await gate.householdCreated();
+
+      expect(gate.value, const StartupState.invite());
+      expect(harness.savedState?.hasMember, isTrue);
+      // No read: the answer of create_household is enough.
+      expect(harness.accounts.reads, 1);
+
+      gate.inviteDone();
+      expect(gate.value, const StartupState.hub());
+    });
+
+    test('A9 is kept only in memory: a cold start goes to the hub', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+      await gate.householdCreated();
+      expect(gate.value, const StartupState.invite());
+
+      harness.accounts.status = noHouseholdAccount.copyWith(hasMember: true);
+      final again = harness.start();
+      await flush();
+
+      expect(again.value, const StartupState.hub());
+    });
+
+    test('A9 goes with the session', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+      await gate.householdCreated();
+
+      harness.auth.loseSession();
+      harness.accounts.status = noHouseholdAccount.copyWith(hasMember: true);
+      harness.auth.openSession();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+    });
+
+    test('once joined, the gate moves on to the hub, and saves it', () async {
       final harness = _Harness(account: noHouseholdAccount);
       final gate = harness.start();
       await flush();
@@ -379,6 +445,162 @@ void main() {
 
       expect(gate.value, const StartupState.hub());
       expect(harness.savedState?.hasMember, isTrue);
+    });
+  });
+
+  group('the pending invite', () {
+    test('a link without a household opens A10, and is saved', () async {
+      final harness = _Harness(account: noHouseholdAccount);
+      final gate = harness.start();
+      await flush();
+      var notified = 0;
+      gate
+        ..addListener(() => notified++)
+        ..receiveInvite(_link);
+
+      // The router reads the new step at once; the listeners hear later.
+      expect(gate.value, const StartupState.household(joining: true));
+      expect(notified, 0);
+      await flush();
+      expect(notified, 1);
+      expect(gate.pendingInvite?.token, inventedToken);
+      expect(gate.pendingInvite?.code, 'K7QMX2PA');
+      expect(harness.savedInvite, gate.pendingInvite);
+    });
+
+    test('one saved on the device opens A10 at the start', () async {
+      final harness = _Harness(account: noHouseholdAccount)..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.household(joining: true));
+      expect(gate.pendingInvite?.code, 'K7QMX2PA');
+    });
+
+    test('a link before the sign-in waits for A2 and A3, then A10', () async {
+      final harness = _Harness(signedIn: false, account: newAccount);
+      final gate = harness.start();
+      await flush();
+
+      gate.receiveInvite(_link);
+      await flush();
+      expect(gate.value, const StartupState.signIn());
+
+      harness.auth.openSession();
+      await flush();
+      expect(gate.value, const StartupState.welcome(noticeOnly: false));
+
+      await gate.saveFirstAccess(displayName: 'Carla');
+      expect(gate.value, const StartupState.household(joining: true));
+    });
+
+    test('goes after the join', () async {
+      final harness = _Harness(account: noHouseholdAccount)..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      await gate.householdJoined();
+      await flush();
+
+      expect(gate.pendingInvite, isNull);
+      expect(harness.savedInvite, isNull);
+      expect(gate.value, const StartupState.hub());
+      expect(gate.notice.value, isNull);
+    });
+
+    test('goes after already_member too, without a notice', () async {
+      final harness = _Harness(account: noHouseholdAccount)..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      harness.accounts.status = noHouseholdAccount.copyWith(hasMember: true);
+      await gate.householdJoined(reread: true);
+      await flush();
+
+      expect(gate.pendingInvite, isNull);
+      expect(gate.notice.value, isNull);
+    });
+
+    test('goes with the back from A10 to A7', () async {
+      final harness = _Harness(account: noHouseholdAccount)..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      await gate.forgetInvite();
+
+      expect(gate.value, const StartupState.household());
+      expect(harness.savedInvite, isNull);
+    });
+
+    test('goes after seven days', () async {
+      final harness = _Harness(account: noHouseholdAccount)
+        ..saveInvite(age: PendingInvite.lifetime);
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.household());
+      expect(gate.pendingInvite, isNull);
+      expect(harness.savedInvite, isNull);
+    });
+
+    test('a day younger, it stays', () async {
+      final harness = _Harness(account: noHouseholdAccount)
+        ..saveInvite(age: PendingInvite.lifetime - const Duration(days: 1));
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.household(joining: true));
+    });
+
+    test('"Esci" keeps it, as a value of the device', () async {
+      final harness = _Harness(account: noHouseholdAccount)..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      await gate.signOut();
+
+      expect(harness.savedInvite, isNotNull);
+    });
+
+    test('the deletion of a demo account forgets it', () async {
+      final harness = _Harness(
+        account: noHouseholdAccount.copyWith(isDemo: true),
+      )..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      await gate.deleteDemoAccount();
+
+      expect(harness.savedInvite, isNull);
+      expect(gate.pendingInvite, isNull);
+    });
+
+    test('with a household it is not kept, and the hub says so', () async {
+      final harness = _Harness();
+      final gate = harness.start();
+      await flush();
+
+      gate.receiveInvite(_link);
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(gate.pendingInvite, isNull);
+      expect(harness.savedInvite, isNull);
+      expect(gate.notice.value, StartupNotice.alreadyInHousehold);
+
+      gate.clearNotice();
+      expect(gate.notice.value, isNull);
+    });
+
+    test('a saved one meets an account with a household: it goes, and the '
+        'hub says so', () async {
+      final harness = _Harness()..saveInvite();
+      final gate = harness.start();
+      await flush();
+
+      expect(gate.value, const StartupState.hub());
+      expect(harness.savedInvite, isNull);
+      expect(gate.notice.value, StartupNotice.alreadyInHousehold);
     });
   });
 

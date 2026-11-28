@@ -9,6 +9,7 @@ import 'package:homemade/design/notice_card.dart';
 import 'package:homemade/design/number_tile.dart';
 import 'package:homemade/design/numeric_keypad.dart';
 import 'package:homemade/design/palette_radio_tile.dart';
+import 'package:homemade/design/qr_code_box.dart';
 import 'package:homemade/design/quick_tiles.dart';
 import 'package:homemade/design/section_rail.dart';
 import 'package:homemade/design/transaction_row.dart';
@@ -65,6 +66,7 @@ const componentCatalog = <CatalogEntry>[
   CatalogEntry('refresh_indicator', 'Trascina per aggiornare', _refresh),
   CatalogEntry('cookie', 'Biscotto', _cookie),
   CatalogEntry('diagonal_band', 'Banda diagonale', _band, hasText: false),
+  CatalogEntry('qr_code', 'Codice QR', _qrCode, hasText: false),
 ];
 
 // Invented data: example members, merchants and amounts.
@@ -658,6 +660,17 @@ Widget _cookie(BuildContext context) => Wrap(
       semanticLabel: '$_toClassify transazioni da classificare',
     ),
   ],
+);
+
+/// The QR of an invented link of an invite, of the size of A9.
+Widget _qrCode(BuildContext context) => const Align(
+  alignment: AlignmentDirectional.centerStart,
+  child: QrCodeBox(
+    data:
+        'https://example.pages.dev/invite/'
+        '#t=AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE&c=K7QMX2PA',
+    semanticLabel: "QR del link d'invito",
+  ),
 );
 
 Widget _band(BuildContext context) => SizedBox(

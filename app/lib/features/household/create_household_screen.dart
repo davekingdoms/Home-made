@@ -7,14 +7,15 @@ import 'package:homemade/core/remote/remote_failure.dart';
 import 'package:homemade/design/content_column.dart';
 import 'package:homemade/features/household/cash_amount.dart';
 import 'package:homemade/features/household/household_dates.dart';
+import 'package:homemade/features/household/household_fields.dart';
 import 'package:homemade/features/household/household_repository.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
-import 'package:homemade/theme/app_colors.dart';
-import 'package:homemade/theme/app_text_theme.dart';
 import 'package:homemade/theme/dimens.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
+
+export 'package:homemade/features/household/household_fields.dart'
+    show cashLabel;
 
 /// Longest name of a household, as the check of `households` counts it:
 /// characters after removing the spaces at both ends.
@@ -26,7 +27,6 @@ const createHouseholdTitle = 'Crea casa';
 /// Labels of the fields of A8.
 const householdNameLabel = 'Nome della casa';
 const startDateLabel = 'Data di inizio';
-const cashLabel = 'Quanti contanti hai adesso?';
 
 /// Helper texts of the fields of A8.
 const startDateHelper =
@@ -131,8 +131,9 @@ class _CreateHouseholdScreenState extends ConsumerState<CreateHouseholdScreen> {
             startDate: _startDate,
             cashOpeningCents: cash,
           );
-      // The router leaves this screen: the indicator stays until then.
-      await gate.householdJoined();
+      // The router leaves this screen for A9: the indicator stays until
+      // then.
+      await gate.householdCreated();
     } on Object catch (error) {
       final known = CreateHouseholdError.of(error);
       if (known == CreateHouseholdError.alreadyMember) {
@@ -161,8 +162,6 @@ class _CreateHouseholdScreenState extends ConsumerState<CreateHouseholdScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final amountStyle = theme.textTheme.bodyLarge?.amount;
     final today = _today();
     final withCash = isSameDay(_startDate, today);
     final canCreate = !_saving && isValidHouseholdName(_name.text);
@@ -185,37 +184,15 @@ class _CreateHouseholdScreenState extends ConsumerState<CreateHouseholdScreen> {
             ],
             onChanged: (_) => setState(() {}),
           ),
-          _StartDateField(
-            date: _startDate,
-            today: today,
+          StartDateField(
+            label: startDateLabel,
+            text: formatStartDate(_startDate, today),
+            semanticLabel: startDateSemantics(_startDate, today),
+            helper: startDateHelper,
             onTap: _saving ? null : () => unawaited(_pickDate()),
           ),
           if (withCash)
-            TextField(
-              controller: _cash,
-              enabled: !_saving,
-              style: amountStyle,
-              decoration: InputDecoration(
-                labelText: cashLabel,
-                // The label stays up, so that the placeholder and the euro
-                // show from the start.
-                floatingLabelBehavior: FloatingLabelBehavior.always,
-                hintText: '0,00',
-                hintStyle: amountStyle?.copyWith(
-                  color: context.appColors.testoTerziario,
-                ),
-                suffixText: '€',
-                suffixStyle: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                helperText: cashHelper,
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              textInputAction: TextInputAction.done,
-              inputFormatters: const [CashAmountFormatter()],
-            ),
+            CashField(controller: _cash, enabled: !_saving, helper: cashHelper),
         ],
         button: FilledButton(
           style: const ButtonStyle(
@@ -278,74 +255,6 @@ class _CreateLayout extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// "Data di inizio": an outlined field that cannot be written, with the
-/// calendar at the end; a tap opens the date picker. Under it, the helper
-/// text, as Material places the helper of a field.
-class _StartDateField extends StatelessWidget {
-  const new({required this.date, required this.today, required this.onTap});
-
-  final DateTime date;
-  final DateTime today;
-
-  /// Null while A8 saves.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final enabled = onTap != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          container: true,
-          button: true,
-          enabled: enabled,
-          label: startDateSemantics(date, today),
-          excludeSemantics: true,
-          onTap: onTap,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(AppRadii.textField),
-            child: InputDecorator(
-              decoration: InputDecoration(
-                labelText: startDateLabel,
-                enabled: enabled,
-                suffixIcon: const Icon(Symbols.calendar_month_rounded),
-              ),
-              child: Text(
-                formatStartDate(date, today),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: enabled
-                      ? theme.colorScheme.onSurface
-                      : theme.colorScheme.onSurface.withValues(
-                          alpha: AppOpacities.disabledContent,
-                        ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          // Where Material puts the helper of an outlined field: the padding
-          // of the content plus the gap of the border (4).
-          padding: const EdgeInsetsDirectional.only(
-            start: AppSpacing.md + AppSpacing.xxs,
-            end: AppSpacing.md + AppSpacing.xxs,
-            top: AppSpacing.xxs,
-          ),
-          child: Text(
-            startDateHelper,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

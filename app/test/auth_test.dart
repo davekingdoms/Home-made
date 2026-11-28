@@ -142,6 +142,13 @@ void main() {
       await tester.tap(find.text('Crea'));
       await tester.pumpAndSettle();
 
+      // A9 comes right after "Crea", then the screen asked for.
+      expect(router.location, '/household/invite');
+      await tester.ensureVisible(find.text('Più tardi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Più tardi'));
+      await tester.pumpAndSettle();
+
       expect(router.location, '/settings/appearance');
     });
   });

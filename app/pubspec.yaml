@@ -23,7 +23,9 @@ dependencies:
   local_auth_android: ^2.3.0
   material_symbols_icons: ^4.2960.0
   material_ui: ^1.11.1
+  qr: ^4.0.1
   riverpod_annotation: ^4.0.8
+  share_plus: ^13.3.1
   shared_preferences: ^2.5.6
   supabase_flutter: ^2.18.3
   url_launcher: ^6.3.3

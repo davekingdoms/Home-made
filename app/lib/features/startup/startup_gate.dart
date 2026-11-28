@@ -9,6 +9,8 @@ import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
 import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_registry.dart';
+import 'package:homemade/features/household/invite_link.dart';
+import 'package:homemade/features/household/pending_invite.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -17,8 +19,9 @@ part 'startup_gate.g.dart';
 
 /// The one place that decides the first step missing at startup
 /// (`docs/spec/accesso.md`, section 1): session (A2), privacy notice (A3),
-/// household (A7/A10), location (A11), then the hub; and whether the unlock
-/// (A1) covers the app, above the steps (section 2).
+/// household (A7, or A10 with a pending invite), A9 right after "Crea",
+/// location (A11), then the hub; and whether the unlock (A1) covers the
+/// app, above the steps (section 2).
 ///
 /// It follows the session of [AuthRepository]; with a session it reads the
 /// account from Supabase and saves it on the device for that account, so an
@@ -41,6 +44,7 @@ class StartupGate extends ChangeNotifier
     Duration Function()? clock,
   }) : _now = now ?? DateTime.now,
        _clock = clock ?? _stopwatch() {
+    _inviteRead = _readPendingInvite();
     _auth.hasSession.addListener(_onSessionChanged);
     _starting = true;
     _onSessionChanged();
@@ -61,6 +65,10 @@ class StartupGate extends ChangeNotifier
   /// Key of the choice of "Modalità demo" (A2) in the [LocalStore]: a value
   /// of the device, kept until the profile of a new account uses it.
   static const demoChoiceKey = 'auth.demo';
+
+  /// Key of the pending invite in the [LocalStore]: a value of the device,
+  /// not of the account, so "Esci" keeps it.
+  static const pendingInviteKey = 'household.invite';
 
   final AuthRepository _auth;
   final AccountRepository _accounts;
@@ -110,6 +118,24 @@ class StartupGate extends ChangeNotifier
   /// True while "Esci" runs: the session ends because the user asked.
   bool _signingOut = false;
 
+  /// The invite opened from its link on this device, until it is used or
+  /// forgotten.
+  PendingInvite? _pendingInvite;
+
+  /// The read of the pending invite saved on the device, started with the
+  /// gate: the household step waits for it.
+  late final Future<void> _inviteRead;
+
+  /// Whether the pending invite changed in this run: the saved one, read
+  /// late, does not replace it.
+  bool _inviteChanged = false;
+
+  /// Whether A9 is the next step, after "Crea" of A8. Only in memory: A9
+  /// can be skipped, and a cold start never shows it.
+  bool _inviting = false;
+
+  final _notice = ValueNotifier<StartupNotice?>(null);
+
   /// Grows at every session change and every read: an older read that
   /// completes late is ignored.
   int _generation = 0;
@@ -126,6 +152,17 @@ class StartupGate extends ChangeNotifier
   /// Display name of the profile of the signed-in account, for the greeting
   /// of A7; null when it is not known.
   String? get displayName => _status?.displayName;
+
+  /// The invite opened from its link on this device, which A10 shows; null
+  /// without one.
+  PendingInvite? get pendingInvite => _pendingInvite;
+
+  /// What the hub has to tell the user once, such as an invite opened by an
+  /// account already in a household; null when there is nothing.
+  ValueListenable<StartupNotice?> get notice => _notice;
+
+  /// The hub told [notice]: it goes.
+  void clearNotice() => _notice.value = null;
 
   /// The choice of "Modalità demo" saved on this device (A2).
   Future<bool> demoChosen() async {
@@ -192,9 +229,19 @@ class StartupGate extends ChangeNotifier
     _set(_stepFor(saved));
   }
 
-  /// The signed-in account is now a member of a household (A8, "Crea"):
-  /// the state says so, is saved on the device and the gate moves on to the
-  /// next step, or to the screen asked for.
+  /// "Crea" of A8 made the household: the state says that the account is a
+  /// member, is saved on the device, and the next step is A9, kept only in
+  /// memory until [inviteDone]. It never throws.
+  Future<void> householdCreated() async {
+    if (_userId == null || _status == null) return;
+    _inviting = true;
+    await householdJoined();
+  }
+
+  /// The signed-in account is now a member of a household (A10, "Entra"; A8
+  /// after `already_member`): the pending invite goes, the state says so, is
+  /// saved on the device and the gate moves on to the next step, or to the
+  /// screen asked for.
   ///
   /// With [reread], after `already_member` (a household made, or an invite
   /// used, on another device), the state is read again from Supabase. If
@@ -204,6 +251,7 @@ class StartupGate extends ChangeNotifier
     final userId = _userId;
     final status = _status;
     if (userId == null || status == null) return;
+    await _dropPendingInvite();
     var joined = status.copyWith(hasMember: true);
     if (reread) {
       try {
@@ -216,6 +264,44 @@ class StartupGate extends ChangeNotifier
     _status = joined;
     await _save(userId, joined);
     _set(_stepFor(joined));
+  }
+
+  /// A9 is closed ("Più tardi", "Continua" or back): the startup moves on to
+  /// the next step, or to the screen asked for.
+  void inviteDone() {
+    final status = _status;
+    if (!_inviting || status == null) return;
+    _inviting = false;
+    _set(_stepFor(status));
+  }
+
+  /// An invite link reached the router (`docs/spec/navigazione.md`, section
+  /// 2). Without a household it becomes the pending invite, which opens A10
+  /// once the account is known; an account already in a household does not
+  /// keep it, and the hub says so.
+  ///
+  /// The router calls it while it works out where to go: the state is
+  /// already new when it returns, so that the router reads it, and its
+  /// listeners hear of it a moment later.
+  void receiveInvite(InviteLinkData link) {
+    final status = _status;
+    if (status != null && status.hasMember) {
+      _notifyLater(StartupNotice.alreadyInHousehold);
+      return;
+    }
+    _pendingInvite = PendingInvite.fromLink(link, _now());
+    _inviteChanged = true;
+    unawaited(_savePendingInvite());
+    if (_userId == null || status == null) return;
+    _set(_stepFor(status), later: true);
+  }
+
+  /// Back from A10 to A7: the pending invite goes, and the household step
+  /// shows A7 again. It never throws.
+  Future<void> forgetInvite() async {
+    await _dropPendingInvite();
+    final status = _status;
+    if (status != null) _set(_stepFor(status));
   }
 
   /// "Esci": deletes the row of the device (without waiting long for the
@@ -253,6 +339,8 @@ class StartupGate extends ChangeNotifier
         _log('clear', error);
       }
       _demoChosen = false;
+      _pendingInvite = null;
+      _inviteChanged = true;
       await _auth.signOut();
     } finally {
       _signingOut = false;
@@ -319,10 +407,14 @@ class StartupGate extends ChangeNotifier
 
   @override
   void dispose() {
+    _disposed = true;
     _auth.hasSession.removeListener(_onSessionChanged);
     _unlocking.dispose();
+    _notice.dispose();
     super.dispose();
   }
+
+  bool _disposed = false;
 
   void _onSessionChanged() {
     final generation = ++_generation;
@@ -332,6 +424,7 @@ class StartupGate extends ChangeNotifier
       _userId = null;
       _status = null;
       _locked = false;
+      _inviting = false;
       if (_signingOut) {
         _set(const StartupState.signIn(SignInArrival.signedOut));
       } else if (hadSession) {
@@ -344,6 +437,8 @@ class StartupGate extends ChangeNotifier
     }
     if (user.id == _userId) return;
     _userId = user.id;
+    _status = null;
+    _inviting = false;
     // A sign-in of this run never locks; a session restored at startup does
     // after the check of the screen lock, in [_load].
     _locked = false;
@@ -395,6 +490,7 @@ class StartupGate extends ChangeNotifier
       status = await _saved(userId);
     }
     final demo = await _demoFor(status);
+    await _inviteRead;
     await lockCheck;
     if (generation != _generation) return;
     if (status == null) {
@@ -418,20 +514,35 @@ class StartupGate extends ChangeNotifier
   }
 
   /// The first step missing for an account in [status].
+  ///
+  /// A pending invite older than [PendingInvite.lifetime] goes; one that
+  /// meets an account already in a household goes too, and the hub says
+  /// so.
   StartupState _stepFor(AccountStatus status) {
+    final invite = _pendingInvite;
+    if (invite != null && invite.expiredAt(_now())) {
+      unawaited(_dropPendingInvite());
+    }
     if (!status.noticeRead) {
       return StartupState.welcome(
         noticeOnly: status.hasProfile,
         demo: !status.hasProfile && _demoChosen,
       );
     }
-    if (!_householdDone(status)) return const StartupState.household();
+    if (!_householdDone(status)) {
+      return StartupState.household(joining: _pendingInvite != null);
+    }
+    if (_pendingInvite != null) {
+      unawaited(_dropPendingInvite());
+      _notifyLater(StartupNotice.alreadyInHousehold);
+    }
+    if (_inviting) return const StartupState.invite();
     if (!_locationDone) return const StartupState.location();
     return const StartupState.hub();
   }
 
-  /// Household (A7; A10 with a pending invite from PR 4.7): done once the
-  /// account is an active member of a household.
+  /// Household (A7, or A10 with a pending invite): done once the account is
+  /// an active member of a household.
   bool _householdDone(AccountStatus status) => status.hasMember;
 
   /// Location (A11), asked once per device: always done until PR 4.8 reads
@@ -456,9 +567,50 @@ class StartupGate extends ChangeNotifier
     }
   }
 
-  void _set(StartupState step) {
+  /// The pending invite saved on the device, read once with the gate. One
+  /// that changed in the meantime stays.
+  Future<void> _readPendingInvite() async {
+    PendingInvite? saved;
+    try {
+      final json = await _store.read(pendingInviteKey);
+      saved = json == null ? null : PendingInvite.fromJson(jsonDecode(json));
+    } on Object catch (error) {
+      _log('read invite', error);
+    }
+    if (!_inviteChanged) _pendingInvite = saved;
+  }
+
+  Future<void> _savePendingInvite() async {
+    final invite = _pendingInvite;
+    if (invite == null) return;
+    try {
+      await _store.write(pendingInviteKey, jsonEncode(invite.toJson()));
+    } on Object catch (error) {
+      _log('save invite', error);
+    }
+  }
+
+  /// Forgets the pending invite, on the device too.
+  Future<void> _dropPendingInvite() async {
+    _pendingInvite = null;
+    _inviteChanged = true;
+    try {
+      await _store.remove(pendingInviteKey);
+    } on Object catch (error) {
+      _log('forget invite', error);
+    }
+  }
+
+  /// Tells [notice] to the hub, after the current work of the router.
+  void _notifyLater(StartupNotice notice) => scheduleMicrotask(() {
+    if (!_disposed) _notice.value = notice;
+  });
+
+  /// Sets [step]; with [later], the listeners hear of it after the current
+  /// work, as when the router itself asks.
+  void _set(StartupState step, {bool later = false}) {
     _step = step;
-    _publish();
+    _publish(later: later);
   }
 
   void _setLocked(bool locked) {
@@ -466,11 +618,17 @@ class StartupGate extends ChangeNotifier
     _publish();
   }
 
-  void _publish() {
+  void _publish({bool later = false}) {
     final state = _step.withLock(locked: _locked);
     if (state == _state) return;
     _state = state;
-    notifyListeners();
+    if (later) {
+      scheduleMicrotask(() {
+        if (!_disposed) notifyListeners();
+      });
+    } else {
+      notifyListeners();
+    }
   }
 
   /// A monotonic clock: the time since the gate was born.

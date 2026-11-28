@@ -61,6 +61,14 @@ String formatItalianDate(DateTime date) {
   return '$day ${_months[date.month - 1]} ${date.year}';
 }
 
+/// [date] as Italian writes it within the year of [today]: "24 novembre",
+/// "1° dicembre"; with the year when it is another one, "3 gennaio 2032".
+String formatItalianDayInYear(DateTime date, DateTime today) {
+  final day = date.day == 1 ? '1°' : '${date.day}';
+  final text = '$day ${_months[date.month - 1]}';
+  return date.year == today.year ? text : '$text ${date.year}';
+}
+
 /// The text of the start date in A8: the date, followed by "· oggi" when it
 /// is [today].
 String formatStartDate(DateTime date, DateTime today) {

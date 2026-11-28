@@ -1,0 +1,4 @@
+# The invite links of the dev app (/dev/invite/) show the page of the invites:
+# a rewrite, not a redirect, so the address and its fragment stay as they are.
+/dev/invite/ /invite/ 200
+/dev/invite /invite/ 200

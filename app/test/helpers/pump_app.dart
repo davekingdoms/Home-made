@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:homemade/app.dart';
 import 'package:homemade/core/config/app_config.dart';
 import 'package:homemade/core/links/link_opener.dart';
+import 'package:homemade/core/links/text_sharer.dart';
 import 'package:homemade/core/router/app_router.dart';
 import 'package:homemade/core/storage/local_store.dart';
 import 'package:homemade/features/auth/auth_repository.dart';
@@ -11,6 +12,7 @@ import 'package:homemade/features/auth/device_lock.dart';
 import 'package:homemade/features/device/device_repository.dart';
 import 'package:homemade/features/household/household_dates.dart';
 import 'package:homemade/features/household/household_repository.dart';
+import 'package:homemade/features/household/invite_link.dart';
 import 'package:homemade/features/startup/account_status.dart';
 import 'package:homemade/features/startup/startup_gate.dart';
 import 'package:material_ui/material_ui.dart';
@@ -55,7 +57,9 @@ void usePhoneWindow() {
 /// window, in dp. [lock] defaults to a device without a screen lock, which
 /// never shows the unlock (A1); [clock] to a clock that stays still.
 /// [households] defaults to a household repository that always succeeds;
-/// [now], when given, is the time of the device for the dates of A8.
+/// [now], when given, is the time of the device for the dates of A8–A10.
+/// [sharedTexts] collects what the app hands to the share sheet; [flavor]
+/// is the flavor of the build, for the invite links.
 Future<GoRouter> pumpApp(
   WidgetTester tester, {
   String location = '/',
@@ -70,6 +74,8 @@ Future<GoRouter> pumpApp(
   DeviceLock? lock,
   FakeClock? clock,
   DateTime? now,
+  List<String>? sharedTexts,
+  String? flavor,
 }) async {
   if (window != null) setWindow(tester, window);
   final container = ProviderContainer(
@@ -92,9 +98,18 @@ Future<GoRouter> pumpApp(
       linkOpenerProvider.overrideWithValue(
         (uri) async => openedLinks?.add(uri),
       ),
+      textSharerProvider.overrideWithValue(
+        (text) async => sharedTexts?.add(text),
+      ),
+      inviteLinksProvider.overrideWithValue(
+        InviteLinks(pagesBaseUrl: config.pagesBaseUrl, flavor: flavor),
+      ),
       appRouterProvider.overrideWith((ref) {
+        final gate = ref.watch(startupGateProvider);
         final router = buildAppRouter(
-          startup: ref.watch(startupGateProvider),
+          startup: gate,
+          inviteLinks: ref.watch(inviteLinksProvider),
+          onInviteLink: gate.receiveInvite,
           initialLocation: location,
         );
         ref.onDispose(router.dispose);
